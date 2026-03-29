@@ -1,0 +1,55 @@
+<!-- header.component.html — barre de navigation supérieure -->
+<header class="border-bottom bg-white px-3 d-flex align-items-center gap-2"
+        style="height:56px;flex-shrink:0">
+
+  <!-- Bouton hamburger (visible < md) -->
+  <button mat-icon-button class="d-md-none" (click)="toggleMenu.emit()">
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <!-- Titre / logo compact -->
+  <span class="fw-semibold text-primary d-none d-md-inline">Gestion Scolaire</span>
+
+  <!-- Espace flexible -->
+  <div class="flex-grow-1"></div>
+
+  <!-- Indicateur queue hors-ligne -->
+  @if (queueSize() > 0) {
+    <div class="d-flex align-items-center gap-1 px-2 py-1 rounded bg-warning-subtle">
+      <mat-icon style="font-size:16px;width:16px;height:16px;color:#854F0B">
+        sync
+      </mat-icon>
+      <span class="small fw-semibold" style="color:#854F0B">
+        {{ queueSize() }} en attente
+      </span>
+    </div>
+  }
+
+  <!-- Indicateur en ligne / hors ligne -->
+  <div class="d-flex align-items-center gap-1">
+    <span class="rounded-circle d-inline-block"
+          [class]="online ? 'bg-success' : 'bg-danger'"
+          style="width:8px;height:8px">
+    </span>
+    <span class="small text-muted d-none d-md-inline">
+      {{ online ? 'En ligne' : 'Hors ligne' }}
+    </span>
+  </div>
+
+  <!-- Menu utilisateur -->
+  <button mat-icon-button [matMenuTriggerFor]="userMenu">
+    <mat-icon>account_circle</mat-icon>
+  </button>
+
+  <mat-menu #userMenu="matMenu">
+    <div class="px-3 py-2 border-bottom" style="min-width:180px">
+      <div class="fw-semibold small">{{ user()?.nom }}</div>
+      <div class="text-muted small text-capitalize">{{ user()?.role }}</div>
+    </div>
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Déconnexion</span>
+    </button>
+  </mat-menu>
+
+</header>

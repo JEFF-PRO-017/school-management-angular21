@@ -1,13 +1,42 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>SchoolApp</title>
+  <title>Gestion Scolaire</title>
+
+  <!-- Viewport responsive + rotation tablette/Android -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <style>
+    /* ── Styles globaux anti-débordement ── */
+    html, body { height: 100%; margin: 0; font-family: Roboto, sans-serif; }
+
+    /* ── Curseur pointer sur les lignes de tableau cliquables ── */
+    .cursor-pointer { cursor: pointer; }
+
+    /* ── Formulaire Material + Bootstrap : supprime le double outline ── */
+    .mat-mdc-form-field { width: 100%; }
+
+    /* ── Responsive tablette : évite les tableaux trop larges ── */
+    @media (max-width: 768px) {
+      .table-responsive table { font-size: 0.875rem; }
+    }
+
+    /* ── Support rotation écran : force le recalcul du viewport ── */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .sidebar { display: none !important; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
   <app-root></app-root>
+  <!-- Bootstrap JS et Leaflet JS sont injectés automatiquement par Angular CLI -->
+  <!-- via angular.json → scripts[] → node_modules -->
 </body>
 </html>

@@ -1,12 +1,12 @@
+// app.component.ts — composant racine minimal (standalone)
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  // Le layout complet est dans LayoutComponent — ici juste le outlet racine
+  template: `<router-outlet></router-outlet>`,
 })
-export class AppComponent {
-  title = 'school-app';
-}
+export class AppComponent {}

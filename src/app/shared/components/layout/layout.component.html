@@ -1,0 +1,48 @@
+<!-- layout.component.html — coque principale responsive -->
+<!-- Bootstrap Offcanvas pour sidebar mobile, flex pour desktop -->
+<div class="d-flex vh-100 overflow-hidden">
+
+  <!-- ── Sidebar desktop (masquée < md) ── -->
+  <aside class="d-none d-md-flex flex-column border-end bg-white"
+         style="width:220px;min-width:220px;flex-shrink:0">
+    <app-sidebar></app-sidebar>
+  </aside>
+
+  <!-- ── Offcanvas sidebar mobile ── -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas"
+       style="width:220px">
+    <div class="offcanvas-header border-bottom py-2">
+      <span class="fw-bold text-primary small">Menu</span>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
+              aria-label="Fermer"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+      <app-sidebar></app-sidebar>
+    </div>
+  </div>
+
+  <!-- ── Zone principale ── -->
+  <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+
+    <!-- Header fixe en haut -->
+    <app-header (toggleMenu)="toggleSidebar()"></app-header>
+
+    <!-- Contenu scrollable -->
+    <main class="flex-grow-1 overflow-auto bg-light"
+          style="padding: 1rem 1rem 2rem">
+
+      @if (loading()) {
+        <!-- Écran de chargement initial -->
+        <div class="d-flex flex-column align-items-center justify-content-center"
+             style="height:60vh">
+          <mat-spinner diameter="48"></mat-spinner>
+          <p class="text-muted mt-3 small">Chargement des données…</p>
+        </div>
+      } @else {
+        <router-outlet></router-outlet>
+      }
+
+    </main>
+
+  </div>
+</div>

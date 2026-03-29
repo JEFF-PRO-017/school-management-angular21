@@ -1,0 +1,119 @@
+<!-- sidebar.component.html — navigation latérale selon le rôle -->
+<nav class="d-flex flex-column h-100 py-3">
+
+  <!-- Logo -->
+  <div class="px-3 pb-3 border-bottom mb-2">
+    <div class="d-flex align-items-center gap-2">
+      <mat-icon class="text-primary">school</mat-icon>
+      <span class="fw-bold text-primary">EcoleApp</span>
+    </div>
+  </div>
+
+  <!-- Liens de navigation -->
+  <ul class="nav flex-column gap-1 px-2 flex-grow-1">
+
+    <!-- Dashboard — tous les rôles -->
+    <li class="nav-item">
+      <a routerLink="/dashboard" routerLinkActive="active"
+         class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+        <mat-icon>dashboard</mat-icon> Tableau de bord
+      </a>
+    </li>
+
+    <!-- Admin uniquement -->
+    @if (isAdmin()) {
+
+      <li><div class="px-2 py-1 text-muted" style="font-size:10px;letter-spacing:.06em">
+        RÉFÉRENTIELS
+      </div></li>
+
+      <li class="nav-item">
+        <a routerLink="/familles" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>family_restroom</mat-icon> Familles
+        </a>
+      </li>
+      <li class="nav-item">
+        <a routerLink="/eleves" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>people</mat-icon> Élèves
+        </a>
+      </li>
+      <li class="nav-item">
+        <a routerLink="/classes" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>class</mat-icon> Classes
+        </a>
+      </li>
+      <li class="nav-item">
+        <a routerLink="/frais" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>account_balance_wallet</mat-icon> Frais
+        </a>
+      </li>
+
+      <li><div class="px-2 py-1 text-muted mt-1" style="font-size:10px;letter-spacing:.06em">
+        TRANSACTIONS
+      </div></li>
+    }
+
+    <!-- Admin + Caissier -->
+    @if (canPaiements()) {
+      <li class="nav-item">
+        <a routerLink="/paiements" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>payments</mat-icon> Paiements
+        </a>
+      </li>
+      <li class="nav-item">
+        <a routerLink="/insolvables" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>warning</mat-icon> Insolvables
+        </a>
+      </li>
+    }
+
+    <!-- Admin + Enseignant -->
+    @if (canNotes()) {
+
+      @if (isAdmin()) {
+        <li><div class="px-2 py-1 text-muted mt-1" style="font-size:10px;letter-spacing:.06em">
+          PÉDAGOGIE
+        </div></li>
+      }
+
+      <li class="nav-item">
+        <a routerLink="/notes" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>grade</mat-icon> Notes
+        </a>
+      </li>
+      <li class="nav-item">
+        <a routerLink="/notes/bulletins" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>description</mat-icon> Bulletins
+        </a>
+      </li>
+    }
+
+    <!-- Admin uniquement -->
+    @if (isAdmin()) {
+      <li><div class="px-2 py-1 text-muted mt-1" style="font-size:10px;letter-spacing:.06em">
+        COMMUNICATION
+      </div></li>
+      <li class="nav-item">
+        <a routerLink="/whatsapp" routerLinkActive="active"
+           class="nav-link d-flex align-items-center gap-2 rounded px-2 py-2">
+          <mat-icon>message</mat-icon> WhatsApp
+        </a>
+      </li>
+    }
+
+  </ul>
+
+  <!-- Pied de sidebar — version -->
+  <div class="px-3 pt-2 border-top mt-auto">
+    <small class="text-muted">v1.0.0</small>
+  </div>
+
+</nav>
