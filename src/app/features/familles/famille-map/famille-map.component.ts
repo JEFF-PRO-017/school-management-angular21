@@ -66,11 +66,11 @@ export class FamilleMapComponent implements OnInit, OnDestroy {
     this.total.set(familles.length);
 
     // Centrage par défaut : Yaoundé
-    this.map = L.map('familles-map').setView([3.848, 11.502], 12);
+    this.map = L.map('familles-map').setView([3.848, 11.502], 15);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap',
-      maxZoom: 19,
+      maxZoom: 23,
     }).addTo(this.map);
 
     // Icône personnalisée verte

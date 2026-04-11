@@ -31,12 +31,18 @@ export interface Eleve {
   id_eleve: string;
   id_famille: string;
   id_classe: string;
+  sequences?: SequenceNote[];  // construit côté app depuis le cache
   nom: string;
   prenom: string;
   date_naissance: string;    // ISO 'YYYY-MM-DD'
   date_inscription: string;
   statut: StatutEleve;
   photo_url?: string;
+}
+
+export interface SequenceNote {
+  notes_eleve: Note[];
+  sequence: Sequence
 }
 
 /** Élève enrichi avec jointures (construit côté app depuis le cache) */
@@ -52,6 +58,8 @@ export type Cycle = 'primaire' | 'secondaire' | 'superieur';
 export interface Classe {
   id_classe: string;
   nom_classe: string;
+  eleves?: Eleve[];
+  matieres?: MatiereConfig[];  // construit côté app depuis le cache
   niveau: string;
   cycle: Cycle;
   annee_scolaire: string;
@@ -110,6 +118,7 @@ export interface Enseignant {
   tel?: string;
   email?: string;
   classes_assignees: string;  // CSV des id_classe
+  matieres?: MatiereConfig[];  // construit côté app depuis le cache
 }
 
 // ── Matière config (F12) ─────────────────────
@@ -117,12 +126,14 @@ export interface MatiereConfig {
   id_matiere: string;
   nom_matiere: string;
   id_classe: string;
+  id_enseignant: string;
   coefficient: number;
   note_eliminatoire?: number;
 }
 
 // ── Note (F6) ────────────────────────────────
 export type Sequence = 'SEQ1' | 'SEQ2' | 'SEQ3' | 'SEQ4' | 'SEQ5' | 'SEQ6';
+export const SEQUENCES: Sequence[] = ['SEQ1', 'SEQ2', 'SEQ3', 'SEQ4', 'SEQ5', 'SEQ6'];
 
 export interface Note {
   id_note: string;

@@ -3,8 +3,6 @@
 // (ligne 1 = en-têtes ignorée, ligne 2 = index 2, etc.)
 // Ainsi updateCell et deleteRow connaissent toujours le bon index sans appel réseau
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { CacheService } from './cache.service';
 import { SheetsQueueServiceService } from './sheets-queue.service';
 import {
@@ -12,40 +10,41 @@ import {
   MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note
 } from '../models';
 import { environment } from '../../../environments/environment';
+import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 
 const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 const YEAR = new Date().getFullYear();
 
 // ── Noms des feuilles ──────────────────────────────────────────────────
 const SHEETS = {
-  familles:     'F1_FAMILLES',
-  eleves:       'F2_ELEVES',
-  classes:      'F3_CLASSES',
-  paiements:    'F4_PAIEMENTS',
-  frais:        'F5_FRAIS_CONFIG',
-  notes:        `F6_${YEAR}`,
+  familles: 'F1_FAMILLES',
+  eleves: 'F2_ELEVES',
+  classes: 'F3_CLASSES',
+  paiements: 'F4_PAIEMENTS',
+  frais: 'F5_FRAIS_CONFIG',
+  notes: `F6_${YEAR}`,
   msgTemplates: 'F7_MSG_TEMPLATES',
-  logAlertes:   'F8_LOG_ALERTES',
-  soldesSnap:   'F9_SNAP',
-  enseignants:  'F10_ENSEIGNANTS',
-  bulletinsSnap:'F11_SNAP',
-  matieres:     'F12_MATIERES_CONFIG',
+  logAlertes: 'F8_LOG_ALERTES',
+  soldesSnap: 'F9_SNAP',
+  enseignants: 'F10_ENSEIGNANTS',
+  bulletinsSnap: 'F11_SNAP',
+  matieres: 'F12_MATIERES_CONFIG',
 } as const;
 
 // ── En-têtes de colonnes (ordre = colonnes A, B, C…) ──────────────────
 const HEADERS = {
-  familles:    ['id_famille','nom_famille','tel_pere','tel_mere','tel_autre','latitude','longitude','adresse_texte'],
-  eleves:      ['id_eleve','id_famille','id_classe','nom','prenom','date_naissance','date_inscription','statut'],
-  classes:     ['id_classe','nom_classe','niveau','cycle','annee_scolaire','effectif_max','enseignant_principal'],
-  paiements:   ['id_paiement','id_eleve','id_famille','montant_verse','date_paiement','mode_paiement','periode_concernee','date_prochain_rdv','recu_numero','notes_caissier','statut_alerte_whatsapp'],
-  frais:       ['id_frais','id_classe','type_frais','montant_total_attendu','seuil_insolvable','echeance_1','echeance_2','echeance_3','annee_scolaire'],
-  notes:       ['id_note','id_eleve','id_classe','matiere','id_enseignant','sequence','note_obtenue','note_sur','annee_scolaire'],
-  enseignants: ['id_enseignant','nom','prenom','matieres_enseignees','tel','email','classes_assignees'],
-  matieres:    ['id_matiere','nom_matiere','id_classe','coefficient','note_eliminatoire'],
-  soldesSnap:  ['id_eleve','id_famille','total_verse','montant_attendu','reste_a_payer','statut_insolvable','dernier_paiement','nb_enfants_famille'],
-  bulletinsSnap:['id_eleve','id_classe','sequence','moy_ponderee','rang','premier','dernier','mention','moy_classe'],
-  msgTemplates:['id_template','type','objet','contenu','variables_dynamiques','actif','langue','destinataire'],
-  logAlertes:  ['id_log','id_eleve','id_famille','id_template','numero_dest','date_envoi','statut','hash_dedup'],
+  familles: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre', 'latitude', 'longitude', 'adresse_texte'],
+  eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance', 'date_inscription', 'statut'],
+  classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire', 'effectif_max', 'enseignant_principal'],
+  paiements: ['id_paiement', 'id_eleve', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement', 'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier', 'statut_alerte_whatsapp'],
+  frais: ['id_frais', 'id_classe', 'type_frais', 'montant_total_attendu', 'seuil_insolvable', 'echeance_1', 'echeance_2', 'echeance_3', 'annee_scolaire'],
+  notes: ['id_note', 'id_eleve', 'id_classe', 'matiere', 'id_enseignant', 'sequence', 'note_obtenue', 'note_sur', 'annee_scolaire'],
+  enseignants: ['id_enseignant', 'nom', 'prenom', 'matieres_enseignees', 'tel', 'email', 'classes_assignees'],
+  matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire'],
+  soldesSnap: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer', 'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
+  bulletinsSnap: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier', 'dernier', 'mention', 'moy_classe'],
+  msgTemplates: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif', 'langue', 'destinataire'],
+  logAlertes: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest', 'date_envoi', 'statut', 'hash_dedup'],
 };
 
 // ── Index de lignes stocké en mémoire : sheetName → id → rowIndex ────
@@ -55,9 +54,9 @@ type RowIndexMap = Map<string, Map<string, number>>;
 @Injectable({ providedIn: 'root' })
 export class DataService {
 
-  private http  = inject(HttpClient);
   private cache = inject(CacheService);
   private queue = inject(SheetsQueueServiceService);
+  private sheets = inject(GoogleSheetsService);
 
   // Dictionnaire sheetName → (id → numéro de ligne dans Sheets)
   private rowIndex: RowIndexMap = new Map();
@@ -67,8 +66,10 @@ export class DataService {
   // ─────────────────────────────────────────────────
 
   async initAppData(): Promise<void> {
+
+    this.createSheets(); // Création des feuilles si elles n'existent pas (idempotent)
     // Appel 1 : Groupe A — référentiels stables (cache 24h)
-    const groupeA = await this.batchGet([
+    const groupeA = await this.sheets.batchGet([
       `${SHEETS.familles}!A:H`,
       `${SHEETS.classes}!A:G`,
       `${SHEETS.frais}!A:I`,
@@ -76,11 +77,12 @@ export class DataService {
       `${SHEETS.matieres}!A:E`,
     ]);
 
-    const familles    = this.parseWithIndex(groupeA[0], HEADERS.familles, SHEETS.familles, 'id_famille') as Famille[];
-    const classes     = this.parseWithIndex(groupeA[1], HEADERS.classes,  SHEETS.classes,  'id_classe')  as Classe[];
-    const frais       = this.parseWithIndex(groupeA[2], HEADERS.frais,    SHEETS.frais,    'id_frais')   as FraisConfig[];
-    const enseignants = this.parseWithIndex(groupeA[3], HEADERS.enseignants, SHEETS.enseignants, 'id_enseignant') as Enseignant[];
-    const matieres    = this.parseWithIndex(groupeA[4], HEADERS.matieres, SHEETS.matieres, 'id_matiere') as MatiereConfig[];
+    const familles = this.parseWithIndex(groupeA[0], HEADERS.familles, SHEETS.familles, 'id_famille') as Famille[];
+    const classes = this.parseWithIndex(groupeA[2], HEADERS.classes, SHEETS.classes, 'id_classe') as Classe[];
+    const frais = this.parseWithIndex(groupeA[4], HEADERS.frais, SHEETS.frais, 'id_frais') as FraisConfig[];
+    const enseignants = this.parseWithIndex(groupeA[6], HEADERS.enseignants, SHEETS.enseignants, 'id_enseignant') as Enseignant[];
+    const matieres = this.parseWithIndex(groupeA[8], HEADERS.matieres, SHEETS.matieres, 'id_matiere') as MatiereConfig[];
+
 
     this.cache.setFamilles(familles);
     this.cache.setClasses(classes);
@@ -89,16 +91,29 @@ export class DataService {
     this.cache.setMatieres(matieres);
 
     // Appel 2 : Groupe B + D — élèves + snapshots
-    const groupeBD = await this.batchGet([
+    const groupeBD = await this.sheets.batchGet([
       `${SHEETS.eleves}!A:H`,
       `${SHEETS.soldesSnap}!A:H`,
     ]);
 
     const eleves = this.parseWithIndex(groupeBD[0], HEADERS.eleves, SHEETS.eleves, 'id_eleve') as Eleve[];
-    const soldes = this.parseWithIndex(groupeBD[1], HEADERS.soldesSnap, SHEETS.soldesSnap, 'id_eleve') as SoldeSnap[];
+    const soldes = this.parseWithIndex(groupeBD[2], HEADERS.soldesSnap, SHEETS.soldesSnap, 'id_eleve') as SoldeSnap[];
 
     this.cache.setEleves(eleves);
     this.cache.setSoldes(soldes);
+
+    // Appel 3 : Groupe C — notes (plus volumineux, cache 24h)
+    const notesRaw = await this.sheets.batchGet([`${SHEETS.notes}!A:I`]);
+
+    const notes = this.parseWithIndex(notesRaw[0], HEADERS.notes, SHEETS.notes, 'id_note') as Note[];
+    this.cache.setNotes(notes);
+  }
+
+
+  // Matieres
+
+  getMatieres(): MatiereConfig[] {
+    return this.cache.getMatieres() ?? [];
   }
 
   // ─────────────────────────────────────────────────
@@ -132,8 +147,8 @@ export class DataService {
     HEADERS.familles.forEach((key, colIdx) => {
       this.queue.enqueue({
         sheetName: SHEETS.familles,
-        row:   ri,
-        col:   colIdx + 1,
+        row: ri,
+        col: colIdx + 1,
         value: (f as any)[key] ?? '',
       }, 'updateCell');
     });
@@ -161,7 +176,7 @@ export class DataService {
     return this.getEleves().map(e => ({
       ...e,
       famille: fMap.get(e.id_famille),
-      classe:  cMap.get(e.id_classe),
+      classe: cMap.get(e.id_classe),
     }));
   }
 
@@ -183,8 +198,8 @@ export class DataService {
     HEADERS.eleves.forEach((key, colIdx) => {
       this.queue.enqueue({
         sheetName: SHEETS.eleves,
-        row:   ri,
-        col:   colIdx + 1,
+        row: ri,
+        col: colIdx + 1,
         value: (e as any)[key] ?? '',
       }, 'updateCell');
     });
@@ -201,6 +216,10 @@ export class DataService {
   // ─────────────────────────────────────────────────
   // CLASSES
   // ─────────────────────────────────────────────────
+
+  getClasses(): Classe[] {
+    return this.cache.getClasses() ?? [];
+  }
 
   async addClasse(c: Classe): Promise<void> {
     this.cache.upsertClasse(c);
@@ -241,7 +260,7 @@ export class DataService {
 
   private patchSoldeLocal(p: Paiement): void {
     const soldes = this.cache.getSoldes() ?? [];
-    const idx    = soldes.findIndex(s => s.id_eleve === p.id_eleve);
+    const idx = soldes.findIndex(s => s.id_eleve === p.id_eleve);
     if (idx === -1) return;
     const old = soldes[idx];
     const fraisConfig = (this.cache.getFrais() ?? []).find(f => {
@@ -253,8 +272,8 @@ export class DataService {
     const reste = Math.max(0, old.reste_a_payer - p.montant_verse);
     this.cache.upsertSolde({
       ...old,
-      total_verse:      old.total_verse + p.montant_verse,
-      reste_a_payer:    reste,
+      total_verse: old.total_verse + p.montant_verse,
+      reste_a_payer: reste,
       statut_insolvable: reste > (fraisConfig?.seuil_insolvable ?? 0),
       dernier_paiement: p.date_paiement,
     });
@@ -264,31 +283,38 @@ export class DataService {
   // NOTES
   // ─────────────────────────────────────────────────
 
-  async getNotesClasse(idClasse: string, sequence: string): Promise<Note[]> {
-    const all = await this.readSheet<Note>(SHEETS.notes, HEADERS.notes);
-    return all.filter(n => n.id_classe === idClasse && n.sequence === sequence);
-  }
 
   async saveNotesBatch(notes: Note[]): Promise<void> {
     notes.forEach(note => {
       const row = HEADERS.notes.map(k => (note as any)[k] ?? '');
       this.queue.enqueue({ sheetName: SHEETS.notes, rowData: row }, 'addRow');
     });
+    this.cache.setNotesBatch(notes);
   }
 
+  async deleteNotesBatch(noteIds: string[]): Promise<void> {
+    noteIds.forEach(id => {
+      const ri = this.getRowIndex(SHEETS.notes, id);
+      if (ri) {
+        this.queue.enqueue({ sheetName: SHEETS.notes, rowIndex: ri - 1 }, 'deleteRow');
+        this.clearRowIndex(SHEETS.notes, id);
+      }
+    });
+    this.cache.deleteNotesBatch(noteIds);
+  }
   // ─────────────────────────────────────────────────
   // SNAPSHOTS — rechargés manuellement ou après regénération
   // ─────────────────────────────────────────────────
 
   async refreshSoldesSnap(): Promise<void> {
-    const rows  = await this.fetchRaw(SHEETS.soldesSnap);
-    const data  = this.parseWithIndex(rows, HEADERS.soldesSnap, SHEETS.soldesSnap, 'id_eleve') as SoldeSnap[];
+    const rows = await this.sheets.fetchRaw(SHEETS.soldesSnap);
+    const data = this.parseWithIndex(rows, HEADERS.soldesSnap, SHEETS.soldesSnap, 'id_eleve') as SoldeSnap[];
     this.cache.setSoldes(data);
   }
 
   async refreshBulletinsSnap(): Promise<void> {
-    const rows  = await this.fetchRaw(SHEETS.bulletinsSnap);
-    const data  = this.parseWithIndex(rows, HEADERS.bulletinsSnap, SHEETS.bulletinsSnap, 'id_eleve') as BulletinSnap[];
+    const rows = await this.sheets.fetchRaw(SHEETS.bulletinsSnap);
+    const data = this.parseWithIndex(rows, HEADERS.bulletinsSnap, SHEETS.bulletinsSnap, 'id_eleve') as BulletinSnap[];
     this.cache.setBulletins(data);
   }
 
@@ -299,7 +325,7 @@ export class DataService {
   async readSheetPublic<T>(sheetName: string): Promise<T[]> {
     const headersMap: Record<string, string[]> = {
       [SHEETS.msgTemplates]: HEADERS.msgTemplates,
-      [SHEETS.logAlertes]:   HEADERS.logAlertes,
+      [SHEETS.logAlertes]: HEADERS.logAlertes,
     };
     const hdrs = headersMap[sheetName] ?? [];
     if (!hdrs.length) return [];
@@ -323,28 +349,10 @@ export class DataService {
     this.rowIndex.get(sheet)?.delete(id);
   }
 
-  // ─────────────────────────────────────────────────
-  // HELPERS PRIVÉS
-  // ─────────────────────────────────────────────────
-
-  /** batchGet — charge plusieurs plages en 1 seul appel réseau */
-  private async batchGet(ranges: string[]): Promise<any[][]> {
-    const params = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
-    const url    = `${BASE}/${environment.spreadsheetId}/values:batchGet?${params}&valueRenderOption=UNFORMATTED_VALUE`;
-    const res: any = await firstValueFrom(this.http.get(url));
-    return (res.valueRanges ?? []).map((vr: any) => vr.values ?? []);
-  }
-
-  /** Lit les lignes brutes d'une feuille (sans en-tête) */
-  private async fetchRaw(sheetName: string): Promise<any[][]> {
-    const url = `${BASE}/${environment.spreadsheetId}/values/${encodeURIComponent(sheetName)}!A:Z`;
-    const res: any = await firstValueFrom(this.http.get(url));
-    return (res.values ?? []).slice(1); // Ligne 1 = en-tête, on l'ignore
-  }
 
   /** Lit une feuille et retourne un tableau d'objets typés */
   private async readSheet<T>(sheetName: string, headers: string[]): Promise<T[]> {
-    const rows = await this.fetchRaw(sheetName);
+    const rows = await this.sheets.fetchRaw(sheetName);
     return this.parse(rows, headers) as T[];
   }
 
@@ -360,7 +368,7 @@ export class DataService {
   ): Record<string, any>[] {
     if (!rows?.length) return [];
     return rows
-      .filter(r => r.length > 0 && r[0] !== '')
+      .filter((r, i) => r.length > 0 && r[0] !== '' && i !== 0)
       .map((row, i) => {
         const obj: Record<string, any> = {};
         headers.forEach((h, j) => { obj[h] = row[j] ?? ''; });
@@ -381,5 +389,14 @@ export class DataService {
         headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
         return obj;
       });
+  }
+
+  private createSheets() {
+    Object.entries(SHEETS).forEach(([key, sheetName]) => {
+      this.sheets.createSheet({
+        sheetName: sheetName,
+        headers: HEADERS[key as keyof typeof HEADERS],
+      });
+    });
   }
 }

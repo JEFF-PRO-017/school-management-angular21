@@ -1,0 +1,179 @@
+<div class="ns-host">
+ 
+  <!-- ── Barre ── -->
+  <div class="ns-bar">
+ 
+    <select [formControl]="ctrlClasse" class="ns-select">
+      <option value="" disabled>Classe…</option>
+      @for (c of classesDisponibles(); track c.id_classe) {
+        <option [value]="c.id_classe">{{ c.nom_classe }}</option>
+      }
+    </select>
+ 
+    <span class="ns-sep"></span>
+ 
+    <!-- Pills séquences -->
+    <div class="ns-pills">
+      <span class="ns-label">Séq :</span>
+      @for (s of sequences; track s) {
+        <button class="ns-pill" [class.ns-pill--on]="seqActives.includes(s)"
+                (click)="toggleSeq(s)">{{ s }}</button>
+      }
+    </div>
+ 
+    <span class="ns-sep"></span>
+ 
+    <!-- Pills matières — chargées après "Charger" -->
+    @if (matieres().length > 0) {
+      <div class="ns-pills">
+        <span class="ns-label">Mat. :</span>
+        <button class="ns-pill ns-pill--sm"
+                [class.ns-pill--on]="matActives.length === matieres().length"
+                (click)="toutesLesMatieres()">Toutes</button>
+        @for (m of matieres(); track m.id_matiere) {
+          <button class="ns-pill ns-pill--sm"
+                  [class.ns-pill--on]="matActives.includes(m.id_matiere)"
+                  (click)="toggleMat(m.id_matiere)">{{ m.nom_matiere }}</button>
+        }
+      </div>
+    }
+ 
+    @if (isTrim) {
+      <span class="ns-trim-badge">{{ seqActives.join(' + ') }} — lecture seule</span>
+    }
+ 
+    <button class="ns-btn ns-btn--outline" style="margin-left:auto"
+            [disabled]="!ctrlClasse.value || loading()" (click)="charger()">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <path d="M13.5 8A5.5 5.5 0 112.6 5M2 2v4h4"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Charger
+    </button>
+  </div>
+ 
+  <!-- ── Squelette ── -->
+  @if (loading()) {
+    <div class="ns-skeleton">
+      @for (_ of [1,2,3,4,5]; track $index) {
+        <div class="ns-sk-row">
+          <div class="ns-sk-cell ns-sk-cell--wide"></div>
+          @for (__ of [1,2,3,4]; track $index) { <div class="ns-sk-cell"></div> }
+        </div>
+      }
+    </div>
+  }
+ 
+  <!-- ── Tableau ── -->
+  @if (!loading() && lignes.length > 0) {
+    <div class="ns-table-wrap">
+      <table class="ns-table">
+        <thead>
+          <tr>
+            <th class="ns-th ns-th--eleve ns-sticky" rowspan="2">Élève</th>
+            @for (s of seqActives; track s) {
+              <!-- colspan = nb matières actives + 1 colonne moy. -->
+              <th class="ns-th ns-th--seq" [attr.colspan]="matieresActives().length + 1">{{ s }}</th>
+            }
+            @if (isTrim) {
+              <th class="ns-th ns-th--trim" rowspan="2">Moy.<br>trim.</th>
+            }
+          </tr>
+          <tr>
+            @for (s of seqActives; track s) {
+              @for (m of matieresActives(); track m.id_matiere) {
+                <th class="ns-th ns-th--mat">
+                  {{ m.nom_matiere }}<span class="ns-coeff">c{{ m.coefficient }}</span>
+                </th>
+              }
+              <th class="ns-th ns-th--moy-seq">Moy.</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (ligne of lignes; track ligne.eleve.id_eleve; let ei = $index) {
+            <tr class="ns-tr">
+              <td class="ns-td ns-sticky ns-td--eleve">
+                <span class="ns-nom">{{ ligne.eleve.nom }} {{ ligne.eleve.prenom }}</span>
+                @if (!isTrim) {
+                  <button class="ns-icon-btn" title="Changer de classe"
+                          (click)="ouvrirTransfert(ligne.eleve)">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 8h12M10 4l4 4-4 4M6 4L2 8l4 4"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                }
+              </td>
+ 
+              @for (s of seqActives; track s; let si = $index) {
+                <!-- Seules les matières actives sont affichées -->
+                @for (m of matieresActives(); track m.id_matiere) {
+                  <!-- Retrouve l'index réel dans le tableau complet des matières -->
+                  <td class="ns-td ns-td--note">
+                    @if (!isTrim) {
+                      <input type="number" min="0" [max]="20" step="0.25"
+                             class="ns-input"
+                             [class.ns-input--changed]="estModifiee(ei, si, realMatIdx(m))"
+                             [value]="cellVal(ei, si, realMatIdx(m)) ?? ''"
+                             placeholder="—"
+                             (input)="surSaisie($event, ei, si, realMatIdx(m))">
+                    } @else {
+                      <span class="ns-readonly">
+                        {{ cellVal(ei, si, realMatIdx(m)) !== null
+                            ? cellVal(ei, si, realMatIdx(m))!.toFixed(2) : '—' }}
+                      </span>
+                    }
+                  </td>
+                }
+                <td class="ns-td ns-td--moy-seq">
+                  {{ ligne.moySeq[si] !== null ? ligne.moySeq[si]!.toFixed(2) : '—' }}
+                </td>
+              }
+ 
+              @if (isTrim) {
+                <td class="ns-td ns-td--moy-trim"
+                    [class.ns-ok]="(ligne.moyTrim ?? -1) >= 10"
+                    [class.ns-bad]="ligne.moyTrim !== null && ligne.moyTrim < 10">
+                  {{ ligne.moyTrim !== null ? ligne.moyTrim.toFixed(2) : '—' }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+ 
+    <div class="ns-footer">
+      <span class="ns-foot-info">
+        {{ lignes.length }} élève(s) · {{ matieresActives().length }}/{{ matieres().length }} matière(s) · {{ seqActives.length }} séquence(s)
+      </span>
+      <div class="ns-foot-right">
+        @if (nbModif > 0) { <span class="ns-badge-warn">{{ nbModif }} modifiée(s)</span> }
+        @if (!isTrim) {
+          <button class="ns-btn ns-btn--primary"
+                  [disabled]="saving() || nbModif === 0" (click)="enregistrer()">
+            @if (saving()) { <span class="ns-spinner"></span> }
+            @else {
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M13 2H4L2 4v9a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1zM8 12a2 2 0 110-4 2 2 0 010 4zM10 2v3H5V2h5z" fill="currentColor"/>
+              </svg>
+            }
+            Enregistrer ({{ nbModif }})
+          </button>
+        }
+      </div>
+    </div>
+  }
+ 
+  @if (!loading() && lignes.length === 0 && ctrlClasse.value) {
+    <div class="ns-empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span>Aucun élève dans cette classe</span>
+    </div>
+  }
+ 
+</div>

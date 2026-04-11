@@ -1,358 +1,300 @@
 // notes-saisie.component.ts
-// Écran principal de l'enseignant :
-// - Sélection classe (parmi ses classes assignées) + séquence
-// - Tableau des élèves trié alphabétiquement
-// - Une ligne par élève, une colonne par matière avec input note
-// - Bouton unique "Enregistrer tout" en bas
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, AbstractControl } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
+//
+// LOGIQUE PRINCIPALE :
+//   - 1 séquence sélectionnée  → tableau éditable (saisie/modif)
+//   - 2+ séquences             → toutes les notes visibles en lecture seule,
+//                                 colonne "Moy. seq." par séquence,
+//                                 colonne "Moy. trim." finale à droite
+//
+// OPTIMISATIONS :
+//   - Données lues depuis le cache DataService (synchrone, zéro réseau)
+//   - Squelette CSS shimmer pendant la construction du tableau
+//   - Seules les cellules réellement modifiées sont envoyées (PATCH minimal)
+//   - ChangeDetectionStrategy.OnPush
+
+import {
+  Component, inject, signal, computed,
+  OnInit, ChangeDetectionStrategy, ChangeDetectorRef,
+} from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { CacheService } from '../../../core/services/cache.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
 import { DataService } from '../../../core/services/data.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Note, Sequence, MatiereConfig, Eleve } from '../../../core/models';
-import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { Note, Sequence, Eleve, MatiereConfig, SEQUENCES } from '../../../core/models';
 import { TransfertEleveDialogComponent } from '../transfert-eleve-dialog/transfert-eleve-dialog.component';
+
+// ── Types internes ─────────────────────────────────────────────────────────
+
+/** Une cellule : valeur courante + valeur d'origine pour détecter les modifs */
+interface Cell {
+  key: string;
+  valeur: number | null;
+  origine: number | null;
+}
+
+/** Une ligne du tableau = un élève */
+interface Ligne {
+  eleve: Eleve;
+  cells: Cell[][];          // [seqIndex][matiereIndex]
+  moySeq: (number | null)[]; // moyenne par séquence
+  moyTrim: number | null;    // moyenne trimestrielle (moyenne des moySeq)
+}
 
 @Component({
   selector: 'app-notes-saisie',
   standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    MatFormFieldModule, MatSelectModule, MatButtonModule,
-    MatIconModule, MatInputModule,
-    MatProgressSpinnerModule, MatTooltipModule,
-    LoadingSpinnerComponent, EmptyStateComponent,
-  ],
-  template: `
-    <div class="container-fluid px-0">
-
-      <!-- Titre -->
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <h5 class="fw-bold text-primary mb-0">Saisie des notes</h5>
-        @if (dirty()) {
-          <span class="badge bg-warning text-dark">Modifications non sauvegardées</span>
-        }
-      </div>
-
-      <!-- Sélecteurs classe + séquence -->
-      <div class="row g-2 mb-3">
-        <div class="col-12 col-md-5">
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Classe</mat-label>
-            <mat-select [formControl]="ctrlClasse">
-              @for (c of classesDisponibles(); track c.id_classe) {
-                <mat-option [value]="c.id_classe">{{ c.nom_classe }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        </div>
-        <div class="col-12 col-md-4">
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Séquence</mat-label>
-            <mat-select [formControl]="ctrlSeq">
-              @for (s of sequences; track s) {
-                <mat-option [value]="s">{{ s }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        </div>
-        <div class="col-12 col-md-3 d-flex align-items-center">
-          <button mat-stroked-button class="w-100" (click)="chargerNotes()"
-                  [disabled]="!ctrlClasse.value || !ctrlSeq.value || loading()">
-            <mat-icon>refresh</mat-icon> Charger
-          </button>
-        </div>
-      </div>
-
-      <!-- État chargement -->
-      @if (loading()) {
-        <app-loading-spinner></app-loading-spinner>
-      }
-
-      <!-- Tableau de saisie -->
-      @if (!loading() && elevesTries().length === 0 && ctrlClasse.value) {
-        <app-empty-state icon="people"
-          title="Aucun élève dans cette classe">
-        </app-empty-state>
-      }
-
-      @if (!loading() && elevesTries().length > 0) {
-
-        <!-- Tableau scrollable horizontalement sur mobile -->
-        <div class="table-responsive rounded shadow-sm mb-3">
-          <table class="table table-bordered table-hover align-middle mb-0">
-            <thead class="table-primary">
-              <tr>
-                <th class="sticky-col bg-primary text-white" style="min-width:160px">Élève</th>
-                @for (m of matieres(); track m.id_matiere) {
-                  <th class="text-center text-white" style="min-width:110px">
-                    {{ m.nom_matiere }}
-                    <div class="small fw-normal">coeff {{ m.coefficient }}</div>
-                  </th>
-                }
-                <th class="text-center text-white" style="min-width:90px">Moy.</th>
-              </tr>
-            </thead>
-
-            <tbody [formGroup]="notesForm">
-              @for (eleve of elevesTries(); track eleve.id_eleve; let i = $index) {
-                <tr>
-                  <!-- Nom élève — colonne collante + bouton transfert -->
-                  <td class="sticky-col bg-white">
-                    <div class="fw-semibold small">{{ eleve.nom }} {{ eleve.prenom }}</div>
-                    <button mat-icon-button
-                            style="width:24px;height:24px;line-height:24px"
-                            matTooltip="Changer de classe"
-                            (click)="ouvrirTransfert(eleve)">
-                      <mat-icon style="font-size:16px;width:16px;height:16px">swap_horiz</mat-icon>
-                    </button>
-                  </td>
-
-                  <!-- Une cellule par matière -->
-                  @for (m of matieres(); track m.id_matiere; let j = $index) {
-                    <td class="p-1 text-center">
-                      <input
-                        type="number"
-                        class="form-control form-control-sm text-center"
-                        style="width:80px;margin:0 auto"
-                        min="0" [max]="m.note_eliminatoire ?? 20"
-                        step="0.25"
-                        [formControlName]="ctrlName(i, j)"
-                        (input)="dirty.set(true); calcMoyenne(i)"
-                        placeholder="—"
-                      >
-                    </td>
-                  }
-
-                  <!-- Moyenne calculée -->
-                  <td class="text-center fw-bold"
-                      [class.text-success]="moyennes[i] >= 10"
-                      [class.text-danger]="moyennes[i] < 10 && moyennes[i] >= 0">
-                    {{ moyennes[i] >= 0 ? moyennes[i].toFixed(2) : '—' }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Bouton enregistrer tout -->
-        <div class="d-flex justify-content-end gap-2">
-          <span class="text-muted small align-self-center">
-            {{ elevesTries().length }} élève(s) · {{ matieres().length }} matière(s)
-          </span>
-          <button mat-raised-button color="primary"
-                  (click)="enregistrerTout()"
-                  [disabled]="saving() || !dirty()">
-            @if (saving()) {
-              <mat-spinner diameter="18" class="d-inline-block me-1"></mat-spinner>
-            } @else {
-              <mat-icon>save</mat-icon>
-            }
-            Enregistrer tout
-          </button>
-        </div>
-
-      }
-
-    </div>
-  `,
-  styles: [`
-    /* Colonne élève collante sur scroll horizontal */
-    .sticky-col {
-      position: sticky;
-      left: 0;
-      z-index: 1;
-      border-right: 2px solid #dee2e6;
-    }
-  `]
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ReactiveFormsModule],
+  templateUrl: './notes-saisie.component.html',
+  styleUrl: './notes-saisie.component.css'
 })
 export class NotesSaisieComponent implements OnInit {
-
-  private cache  = inject(CacheService);
-  private data   = inject(DataService);
-  private auth   = inject(AuthService);
-  private snack  = inject(MatSnackBar);
+  private data = inject(DataService);
+  private auth = inject(AuthService);
+  private snack = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
-  sequences: Sequence[] = ['SEQ1','SEQ2','SEQ3','SEQ4','SEQ5','SEQ6'];
-
+  readonly sequences: Sequence[] = SEQUENCES;
   ctrlClasse = new FormControl('');
-  ctrlSeq    = new FormControl<Sequence>('SEQ1');
-
   loading = signal(false);
-  saving  = signal(false);
-  dirty   = signal(false);
+  saving = signal(false);
 
-  // Formulaire dynamique : une clé par cellule "eleve_i_matiere_j"
-  notesForm = new FormGroup({} as Record<string, AbstractControl>);
+  seqActives: Sequence[] = ['SEQ1'];
+  matActives: string[] = []; // ids des matières visibles
 
-  // Moyennes calculées en temps réel par ligne
-  moyennes: number[] = [];
+  get isTrim(): boolean { return this.seqActives.length > 1; }
 
-  // Données chargées
-  private notesExistantes: Note[] = [];
+  lignes: Ligne[] = [];
+  nbModif = 0;
 
-  // ── Données calculées depuis le cache ──
+  // ── Computed ──────────────────────────────────────────────────────────────
 
-  /** Classes disponibles : toutes pour admin, ses classes pour enseignant */
   classesDisponibles = computed(() => {
-    const all = this.cache.getClasses() ?? [];
+    const all = this.data.getClasses() ?? [];
     if (this.auth.isAdmin()) return all;
-    const assigned = this.auth.getClassesAssignees();
-    return all.filter(c => assigned.includes(c.id_classe));
+    return all.filter(c => this.auth.getClassesAssignees().includes(c.id_classe));
   });
 
-  /** Élèves de la classe sélectionnée, triés alphabétiquement */
-  elevesTries = computed(() => {
+  matieres = computed((): MatiereConfig[] => {
     const id = this.ctrlClasse.value;
     if (!id) return [];
-    return (this.cache.getEleves() ?? [])
-      .filter(e => e.id_classe === id && e.statut === 'actif')
-      .sort((a, b) => a.nom.localeCompare(b.nom));
+    return (this.data.getClasses() ?? []).find(c => c.id_classe === id)?.matieres ?? [];
   });
 
-  /** Matières configurées pour la classe sélectionnée */
-  matieres = computed(() => {
-    const id = this.ctrlClasse.value;
-    if (!id) return [];
-    return (this.cache.getMatieres() ?? [])
-      .filter(m => m.id_classe === id);
-  });
+  /** Sous-ensemble de matieres() actuellement actif */
+  matieresActives = (() =>
+    this.matieres().filter(m => this.matActives.includes(m.id_matiere))
+  );
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    // Pré-sélectionne la première classe disponible
     const classes = this.classesDisponibles();
-    if (classes.length > 0) {
+    if (classes.length) {
       this.ctrlClasse.setValue(classes[0].id_classe);
+      this.charger();
+    };
+  }
+
+  // ── Toggles pills ──────────────────────────────────────────────────────────
+
+  toggleSeq(seq: Sequence): void {
+    if (this.seqActives.includes(seq)) {
+      if (this.seqActives.length === 1) return;
+      this.seqActives = this.seqActives.filter(s => s !== seq);
+    } else {
+      this.seqActives = [...this.seqActives, seq]
+        .sort((a, b) => SEQUENCES.indexOf(a) - SEQUENCES.indexOf(b));
     }
+    if (this.lignes.length) this._recalcTout();
+    this._buildLignes();
+    this.cdr.markForCheck();
   }
 
-  /** Charge les notes existantes depuis Sheets pour pré-remplir le tableau */
-  async chargerNotes(): Promise<void> {
-    const idClasse = this.ctrlClasse.value;
-    const seq      = this.ctrlSeq.value;
-    if (!idClasse || !seq) return;
+  toggleMat(id: string): void {
+    if (this.matActives.includes(id)) {
+      if (this.matActives.length === 1) return; // toujours au moins 1
+      this.matActives = this.matActives.filter(m => m !== id);
+    } else {
+      // Conserve l'ordre d'origine
+      this.matActives = this.matieres()
+        .map(m => m.id_matiere)
+        .filter(m => this.matActives.includes(m) || m === id);
+    }
+    // Recalcule les moyennes (le filtre change les colonnes prises en compte)
+    this.lignes.forEach(l => this._calcMoyennes(l));
+    this.cdr.markForCheck();
+  }
 
+  toutesLesMatieres(): void {
+    this.matActives = this.matieres().map(m => m.id_matiere);
+    this.lignes.forEach(l => this._calcMoyennes(l));
+    this.cdr.markForCheck();
+  }
+
+  // ── Chargement ─────────────────────────────────────────────────────────────
+
+  async charger(): Promise<void> {
+    if (!this.ctrlClasse.value) return;
     this.loading.set(true);
-    this.notesExistantes = await this.data.getNotesClasse(idClasse, seq);
-    this.buildForm();
-    this.loading.set(false);
-    this.dirty.set(false);
+    this.lignes = [];
+    // Active toutes les matières par défaut à chaque chargement
+    this.matActives = this.matieres().map(m => m.id_matiere);
+    await Promise.resolve();
+    this._buildLignes();
+    setTimeout(() => { this.loading.set(false); }, 1000)
+    this.cdr.markForCheck();
   }
 
-  /** Construit le FormGroup dynamiquement selon élèves × matières */
-  private buildForm(): void {
-    const eleves   = this.elevesTries();
-    const matieres = this.matieres();
+  // ── Construction ───────────────────────────────────────────────────────────
 
-    // Réinitialise les contrôles
-    Object.keys(this.notesForm.controls).forEach(k =>
-      this.notesForm.removeControl(k)
-    );
-    this.moyennes = new Array(eleves.length).fill(-1);
+  private _buildLignes(): void {
+    const idClasse = this.ctrlClasse.value!;
+    const matieres = this.matieresActives();
 
-    eleves.forEach((eleve, i) => {
-      matieres.forEach((mat, j) => {
-        // Cherche la note existante pour cet élève et cette matière
-        const existante = this.notesExistantes.find(
-          n => n.id_eleve === eleve.id_eleve && n.matiere === mat.nom_matiere
-        );
-        const ctrl = new FormControl(existante?.note_obtenue ?? null);
-        this.notesForm.addControl(this.ctrlName(i, j), ctrl);
-      });
-      this.calcMoyenne(i);
-    });
-  }
+    const eleves = (this.data.getClasses() ?? [])
+      .find(c => c.id_classe === idClasse)?.eleves
+      ?.slice().sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom))
+      ?? [];
 
-  /** Clé unique d'un contrôle note : "e{i}_m{j}" */
-  ctrlName(i: number, j: number): string {
-    return `e${i}_m${j}`;
-  }
-
-  /** Recalcule la moyenne pondérée d'un élève après chaque saisie */
-  calcMoyenne(i: number): void {
-    const matieres  = this.matieres();
-    let totalPoints = 0;
-    let totalCoeff  = 0;
-    let hasValue    = false;
-
-    matieres.forEach((m, j) => {
-      const val = this.notesForm.get(this.ctrlName(i, j))?.value;
-      if (val !== null && val !== '' && !isNaN(+val)) {
-        totalPoints += (+val / (m.note_eliminatoire ?? 20)) * 20 * m.coefficient;
-        totalCoeff  += m.coefficient;
-        hasValue     = true;
-      }
-    });
-
-    this.moyennes[i] = hasValue && totalCoeff > 0
-      ? totalPoints / totalCoeff
-      : -1;
-  }
-
-  /** Enregistre toutes les notes en un seul batch */
-  async enregistrerTout(): Promise<void> {
-    const eleves      = this.elevesTries();
-    const matieres    = this.matieres();
-    const seq         = this.ctrlSeq.value!;
-    const annee       = new Date().getFullYear().toString();
-    const idEnseignant= this.auth.user()?.id ?? '';
-
-    const notes: Note[] = [];
-
-    eleves.forEach((eleve, i) => {
-      matieres.forEach((mat, j) => {
-        const val = this.notesForm.get(this.ctrlName(i, j))?.value;
-        if (val === null || val === '') return; // ne pas sauvegarder les cases vides
-
-        notes.push({
-          id_note:        `NOTE-${Date.now()}-${i}-${j}`,
-          id_eleve:       eleve.id_eleve,
-          id_classe:      eleve.id_classe,
-          matiere:        mat.nom_matiere,
-          id_enseignant:  idEnseignant,
-          sequence:       seq,
-          note_obtenue:   +val,
-          note_sur:       mat.note_eliminatoire ?? 20,
-          annee_scolaire: annee,
+    this.lignes = eleves.map(eleve => {
+      const cells: Cell[][] = this.seqActives.map(seq => {
+        const notesSeq = eleve.sequences?.find(s => s.sequence === seq)?.notes_eleve ?? [];
+        return matieres.map(mat => {
+          const val = notesSeq.find(n => n.matiere === mat.nom_matiere)?.note_obtenue ?? null;
+          return { key: `${eleve.id_eleve}_${seq}_${mat.nom_matiere}`, valeur: val, origine: val };
         });
       });
+      const ligne: Ligne = { eleve, cells, moySeq: [], moyTrim: null };
+      this._calcMoyennes(ligne);
+      return ligne;
     });
-
-    if (notes.length === 0) {
-      this.snack.open('Aucune note à enregistrer', '', { duration: 2000 });
-      return;
-    }
-
-    this.saving.set(true);
-    await this.data.saveNotesBatch(notes);
-    this.saving.set(false);
-    this.dirty.set(false);
-    this.snack.open(`${notes.length} note(s) enregistrée(s)`, 'OK', { duration: 3000 });
+    this.nbModif = 0;
   }
 
-  /** Ouvre le dialog de transfert pour déplacer un élève vers une autre classe */
+  // Recalcule tout après changement de séquences actives
+  private _recalcTout(): void {
+    const matieres = this.matieres();
+    // Ajoute les colonnes manquantes pour les nouvelles séquences
+    this.lignes.forEach(ligne => {
+      const eleve = ligne.eleve;
+      ligne.cells = this.seqActives.map((seq, si) => {
+        if (ligne.cells[si]) return ligne.cells[si]; // déjà chargée
+        const notesSeq = eleve.sequences?.find(s => s.sequence === seq)?.notes_eleve ?? [];
+        return matieres.map(mat => {
+          const val = notesSeq.find(n => n.matiere === mat.nom_matiere)?.note_obtenue ?? null;
+          return { key: `${eleve.id_eleve}_${seq}_${mat.nom_matiere}`, valeur: val, origine: val };
+        });
+      });
+      this._calcMoyennes(ligne);
+    });
+  }
+
+  // ── Calcul moyennes — basé sur matieresActives() uniquement ───────────────
+
+  private _calcMoyennes(ligne: Ligne): void {
+    const actives = this.matieresActives();
+    ligne.moySeq = this.seqActives.map((_, si) => {
+      let pts = 0, totCoeff = 0, has = false;
+      actives.forEach(m => {
+        const mi = this.realMatIdx(m);
+        const v = ligne.cells[si]?.[mi]?.valeur;
+        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true; }
+        totCoeff += (+m.coefficient);
+      });
+      return has && totCoeff > 0 ? pts / totCoeff : null;
+    });
+    const valides = ligne.moySeq.filter((v): v is number => v !== null);
+    ligne.moyTrim = valides.length ? valides.reduce((a, b) => a + b, 0) / ligne.moySeq.length : null;
+  }
+
+  // ── Accesseurs template ────────────────────────────────────────────────────
+
+  /** Index réel d'une matière dans le tableau complet (pour cells[][mi]) */
+  realMatIdx(m: MatiereConfig): number {
+    return this.matieres().findIndex(mat => mat.id_matiere === m.id_matiere);
+  }
+
+  cellVal(ei: number, si: number, mi: number): number | null {
+    const note = this.lignes[ei]?.cells[si]?.[mi].valeur;
+    return note !== null && note !== undefined ? parseFloat(note.toString().replace(',', '.')) : null;
+  }
+
+  estModifiee(ei: number, si: number, mi: number): boolean {
+    const c = this.lignes[ei]?.cells[si]?.[mi];
+    return !!c && c.valeur !== c.origine;
+  }
+
+  // ── Saisie ─────────────────────────────────────────────────────────────────
+
+  surSaisie(event: Event, ei: number, si: number, mi: number): void {
+    const raw = (event.target as HTMLInputElement).value;
+    const cell = this.lignes[ei]?.cells[si]?.[mi];
+    if (!cell) return;
+    cell.valeur = raw === '' ? null : +raw;
+    this._calcMoyennes(this.lignes[ei]);
+    this.nbModif = this._compterModifiees();
+    this.cdr.markForCheck();
+  }
+
+  private _compterModifiees(): number {
+    let n = 0;
+    this.lignes.forEach(l => l.cells.forEach(sc => sc.forEach(c => { if (c.valeur !== c.origine) n++; })));
+    return n;
+  }
+
+  // ── Enregistrement ─────────────────────────────────────────────────────────
+
+  async enregistrer(): Promise<void> {
+    const matieres = this.matieres();
+    const seq = this.seqActives[0];
+    const annee = new Date().getFullYear().toString();
+    const idEnseignant = this.auth.user()?.id ?? '';
+
+    const notes_delete: string[] = [];
+    const notes_add: Note[] = [];
+    this.lignes.forEach(ligne => {
+      ligne.cells[0]?.forEach((cell, mi) => {
+        if (cell.valeur === cell.origine || cell.valeur === null) return;
+        const mat = matieres[mi];
+        notes_add.push({
+          id_note: `${ligne.eleve.id_eleve}_${seq}_${mat.nom_matiere}`,
+          id_eleve: ligne.eleve.id_eleve,
+          id_classe: ligne.eleve.id_classe,
+          matiere: mat.nom_matiere,
+          id_enseignant: idEnseignant,
+          sequence: seq,
+          note_obtenue: cell.valeur,
+          note_sur: 20,
+          annee_scolaire: annee,
+        });
+
+        if (cell.origine !== null) {
+          notes_delete.push(cell.key);
+        }
+      });
+    });
+
+    if (!notes_add.length) { this.snack.open('Aucune modification', '', { duration: 2000 }); return; }
+
+    this.saving.set(true);
+    await this.data.saveNotesBatch(notes_add);
+    await this.data.deleteNotesBatch(notes_delete);
+    this.saving.set(false);
+    this.lignes.forEach(l => l.cells[0]?.forEach(c => { if (c.valeur !== c.origine && c.valeur !== null) c.origine = c.valeur; }));
+    this.nbModif = 0;
+    this.snack.open(`${notes_add.length} note(s) enregistrée(s)`, 'OK', { duration: 3000 });
+    this.cdr.markForCheck();
+  }
+
+  // ── Transfert ──────────────────────────────────────────────────────────────
+
   ouvrirTransfert(eleve: Eleve): void {
     this.dialog.open(TransfertEleveDialogComponent, {
-      data: { eleve },
-      width: '440px',
-      maxWidth: '95vw',
-    }).afterClosed().subscribe((eleveModifie: Eleve | undefined) => {
-      if (eleveModifie) {
-        // L'élève a changé de classe → recharge la liste de la classe courante
-        this.chargerNotes();
-      }
-    });
+      data: { eleve }, width: '440px', maxWidth: '95vw',
+    }).afterClosed().subscribe((m: Eleve | undefined) => { if (m) this.charger(); });
   }
 }

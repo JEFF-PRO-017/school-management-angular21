@@ -1,5 +1,5 @@
 // app.config.ts — configuration principale Angular 21 standalone
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -19,5 +19,7 @@ export const appConfig: ApplicationConfig = {
 
     // Animations Material async (meilleure perf au démarrage)
     provideAnimationsAsync(),
+
   ],
+
 };
