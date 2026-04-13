@@ -38,6 +38,10 @@ export interface Eleve {
   date_inscription: string;
   statut: StatutEleve;
   photo_url?: string;
+  //........................... a augmenter des champs si besoin, ex.
+  lieu_naissance?: string;
+  sexe?: 'M' | 'F';
+  matricule?: string;
 }
 
 export interface SequenceNote {
@@ -127,8 +131,11 @@ export interface MatiereConfig {
   nom_matiere: string;
   id_classe: string;
   id_enseignant: string;
+  enseignant?: Enseignant;  // construit côté app depuis le cache
   coefficient: number;
   note_eliminatoire?: number;
+  groupe?: string;
+  niveau?: string;
 }
 
 // ── Note (F6) ────────────────────────────────

@@ -40,7 +40,7 @@ const HEADERS = {
   frais: ['id_frais', 'id_classe', 'type_frais', 'montant_total_attendu', 'seuil_insolvable', 'echeance_1', 'echeance_2', 'echeance_3', 'annee_scolaire'],
   notes: ['id_note', 'id_eleve', 'id_classe', 'matiere', 'id_enseignant', 'sequence', 'note_obtenue', 'note_sur', 'annee_scolaire'],
   enseignants: ['id_enseignant', 'nom', 'prenom', 'matieres_enseignees', 'tel', 'email', 'classes_assignees'],
-  matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire'],
+  matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire', 'groupe', 'niveau'],
   soldesSnap: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer', 'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
   bulletinsSnap: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier', 'dernier', 'mention', 'moy_classe'],
   msgTemplates: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif', 'langue', 'destinataire'],
@@ -74,7 +74,7 @@ export class DataService {
       `${SHEETS.classes}!A:G`,
       `${SHEETS.frais}!A:I`,
       `${SHEETS.enseignants}!A:G`,
-      `${SHEETS.matieres}!A:E`,
+      `${SHEETS.matieres}!A:G`,
     ]);
 
     const familles = this.parseWithIndex(groupeA[0], HEADERS.familles, SHEETS.familles, 'id_famille') as Famille[];

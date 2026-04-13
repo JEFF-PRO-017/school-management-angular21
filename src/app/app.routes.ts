@@ -2,7 +2,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
-import { ShellComponent } from './shell.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -17,7 +16,6 @@ export const routes: Routes = [
   // Layout principal protégé
   {
     path: '',
-    component: ShellComponent,
     loadComponent: () =>
       import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
     canActivate: [authGuard],

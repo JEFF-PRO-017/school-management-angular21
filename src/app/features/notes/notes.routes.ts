@@ -10,6 +10,6 @@ export const NOTES_ROUTES: Routes = [
   {
     path: 'bulletins',
     loadComponent: () =>
-      import('./bulletins-view/bulletins-view.component').then(m => m.BulletinsViewComponent),
+      import('./bulletins/bulletins.component').then(m => m.BulletinsComponent),
   },
 ];

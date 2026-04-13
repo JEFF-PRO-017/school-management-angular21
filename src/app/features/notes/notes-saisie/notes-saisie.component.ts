@@ -202,13 +202,12 @@ export class NotesSaisieComponent implements OnInit {
       actives.forEach(m => {
         const mi = this.realMatIdx(m);
         const v = ligne.cells[si]?.[mi]?.valeur;
-        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true; }
-        totCoeff += (+m.coefficient);
+        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true; totCoeff += (+m.coefficient); }
       });
       return has && totCoeff > 0 ? pts / totCoeff : null;
     });
     const valides = ligne.moySeq.filter((v): v is number => v !== null);
-    ligne.moyTrim = valides.length ? valides.reduce((a, b) => a + b, 0) / ligne.moySeq.length : null;
+    ligne.moyTrim = valides.length ? valides.reduce((a, b) => a + b, 0) / valides.length : null;
   }
 
   // ── Accesseurs template ────────────────────────────────────────────────────
