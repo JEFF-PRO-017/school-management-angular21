@@ -11,6 +11,30 @@ export const IW = BANDE_X - ML - 1;
 const NOIR_FOND: RGB = [0, 0, 0];
 const GRIS_L: RGB = [245, 245, 245];
 
+
+// Cache du logo — chargé une seule fois, réutilisé sur toutes les pages
+let _logoCache: string | null = null;
+
+async function _getLogoBase64(): Promise<string | null> {
+  debugger;
+  if (_logoCache) return _logoCache;
+  try {
+    const blob = await fetch('../../../../../../public/assets/logo-csb.png').then(r => r.blob());
+    _logoCache = await new Promise<string>(res => {
+      const reader = new FileReader();
+      reader.onload = () => res((reader.result as string).split(',')[1]);
+      reader.readAsDataURL(blob);
+    });
+    return _logoCache;
+  } catch {
+    return null;
+  }
+}
+
+// Pré-charge le logo au démarrage de l'app (appeler 1 fois dans app.component.ts)
+export async function prechargerLogo(): Promise<void> {
+  await _getLogoBase64();
+}
 // ── Bande verticale droite (col J du modèle) ──────────────────────────────
 // Courier New 26pt blanc sur noir, texte vertical, rowspan 36
 
@@ -28,7 +52,7 @@ export function sectionBandeVerticale(doc: jsPDF): void {
 // Centre : logo (on dessine un espace)
 // Droite : REPUBLIQUE | PAIX | ANNÉE SCOLAIRE
 
-export function sectionEntete(doc: jsPDF, y: number, annee: string): number {
+export function sectionEntete(doc: jsPDF, y: number, annee: string): number{
   doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...NOIR);
   doc.text('MINEDUC/DELEGATION REGIONALE DU CENTRE/DDES-MAK', ML, y + 3, { baseline: 'middle' });
 
@@ -38,12 +62,18 @@ export function sectionEntete(doc: jsPDF, y: number, annee: string): number {
   doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...NOIR);
   doc.text('Téléphone: +237 679 33 78 60 / 656 48 82 90 / 674 73 50 44 / 688 01 72 67', ML, y + 19, { baseline: 'middle' });
 
+  // Logo centré — chargé depuis /assets/logo-csb.png
+  // const logo = await _getLogoBase64();
+  // if (logo) {
+  //   const logoW = 22, logoH = 22;
+  //   doc.addImage(logo, 'PNG', W / 2 - logoW / 2, y, logoW, logoH);
+  // }
+
   const xR = IW + ML;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...NOIR);
   doc.text('REPUBLIQUE DU CAMEROUN', xR, y + 3, { align: 'right', baseline: 'middle' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
   doc.text('PAIX-TRAVAIL-PATRIE', xR, y + 8, { align: 'right', baseline: 'middle' });
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
   doc.text(`ANNÉE SCOLAIRE: ${annee}`, xR, y + 14, { align: 'right', baseline: 'middle' });
 
   return y + 22;
@@ -109,7 +139,7 @@ export function sectionInfoEleve(doc: jsPDF, y: number, d: BulletinData): number
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
 
-  doc.text(`${eleve.nom} ${eleve.prenom}`, ML + w1 + paddingX, y + valueY);
+  doc.text(`${eleve.nom.toLocaleUpperCase()} ${eleve.prenom.toLocaleUpperCase()}`, ML + w1 + paddingX, y + valueY);
   doc.text(d.nomClasse, ML + w1 + w2 + w3 + paddingX, y + valueY);
 
   y += rH;
@@ -253,7 +283,7 @@ export function sectionGroupe(
   const xMoy = xAfterMat + seqs.length * wSeq;
   let totalPts = 0, totalCoef = 0;
 
-  groupe.matieres.forEach((mat :MatiereConfig) => {
+  groupe.matieres.forEach((mat: MatiereConfig) => {
     const coeff = toFloat(mat.coefficient);
     const notesSeq: (number | null)[] = seqs.map(seq =>
       toNote(eleve.sequences?.find((s: any) => s.sequence === seq)
@@ -275,7 +305,7 @@ export function sectionGroupe(
 
     // Ligne prof en italique Times 9pt
     doc.setFont('times', 'italic'); doc.setFontSize(8); doc.setTextColor(60, 60, 60);
-    doc.text(`${mat?.enseignant?.nom ?? ''} ${mat?.enseignant?.prenom ?? ''}`, ML + 1.5, y + rH + rH / 2 + 1, { baseline: 'middle' });
+    doc.text(`${mat?.enseignant?.nom.toLocaleUpperCase() ?? ''} ${mat?.enseignant?.prenom.toLocaleUpperCase() ?? ''}`, ML + 1.5, y + rH + rH / 2, { baseline: 'middle' });
 
     // Cellules notes (rowspan=2 — une seule cellule haute)
     cell(doc, ML + wMat, y, wCoef, h2, String(coeff), { fill: BLANC, fontSize: 9, border: true });
@@ -505,32 +535,32 @@ export interface TableDims {
   wMoy: number; wCoef2: number; wApp: number;
   hH: number; rH: number;
 }
- 
+
 export function calcDims(seqs: Sequence[]): TableDims {
-  const wMat   = 46;
-  const wCoef  = 10;
-  const wSeq   = Math.min(15, Math.max(10, (IW - wMat - wCoef - 18 - 18) / Math.max(seqs.length, 1)));
-  const wMoy   = 16;
+  const wMat = 46;
+  const wCoef = 10;
+  const wSeq = Math.min(15, Math.max(10, (IW - wMat - wCoef - 18 - 18) / Math.max(seqs.length, 1)));
+  const wMoy = 16;
   const wCoef2 = 18;
-  const wApp   = IW - wMat - wCoef - wSeq * seqs.length - wMoy - wCoef2;
+  const wApp = IW - wMat - wCoef - wSeq * seqs.length - wMoy - wCoef2;
   return { wMat, wCoef, wSeq, wMoy, wCoef2, wApp, hH: 6, rH: 5.5 };
 }
- 
+
 // ════════════════════════════════════════════════════════════════════════════
 // PV DE CLASSE — Paysage A4
 // ════════════════════════════════════════════════════════════════════════════
- 
+
 const WL = 297, GRIS_H: RGB = [211, 211, 211];
- 
+
 export function sectionPVEntete(doc: jsPDF, y: number, nomClasse: string, titreExamen: string): number {
   const mL = ML, mR = MR;
   const lignes: [string, string, boolean][] = [
-    ['REPUBLIQUE DU CAMEROUN',         'REPUBLIC OF CAMEROON',       true],
-    ['PAIX-TRAVAIL-PATRIE',            'PEACE-WORK-FATHERLAND',      false],
-    ['MINISEC',                        'MINISEC',                    true],
+    ['REPUBLIQUE DU CAMEROUN', 'REPUBLIC OF CAMEROON', true],
+    ['PAIX-TRAVAIL-PATRIE', 'PEACE-WORK-FATHERLAND', false],
+    ['MINISEC', 'MINISEC', true],
     ['DELEGATION REGIONALE DU CENTRE', 'CENTER REGIONAL DELEGATION', true],
-    ['DDES-MAK',                       'DDES-MAK',                   true],
-    ['CSB BERCEAU DU SAVOIR',          'CSB BERCEAU DU SAVOIR',      true],
+    ['DDES-MAK', 'DDES-MAK', true],
+    ['CSB BERCEAU DU SAVOIR', 'CSB BERCEAU DU SAVOIR', true],
   ];
   lignes.forEach(([fr, en, bold], i) => {
     doc.setFont('helvetica', bold ? 'bold' : 'italic'); doc.setFontSize(8); doc.setTextColor(...NOIR);
@@ -539,30 +569,30 @@ export function sectionPVEntete(doc: jsPDF, y: number, nomClasse: string, titreE
   });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
   doc.text('Téléphone: +237 679 33 78 60', mL, y + 27, { baseline: 'middle' });
-  doc.text('Téléphone: 237 679 33 78 60',  WL - mR, y + 27, { align: 'right', baseline: 'middle' });
+  doc.text('Téléphone: 237 679 33 78 60', WL - mR, y + 27, { align: 'right', baseline: 'middle' });
   y += 33;
- 
+
   doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...NOIR);
   doc.text('COLLEGE BILINGUE BERCEAU DU SAVOIR', WL / 2, y + 4, { align: 'center', baseline: 'middle' }); y += 9;
- 
+
   const tw = doc.getTextWidth(titreExamen);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
   doc.text(titreExamen, WL / 2, y + 4, { align: 'center', baseline: 'middle' });
   doc.setLineWidth(0.4); doc.setDrawColor(...NOIR);
   doc.line(WL / 2 - tw / 2 - 1, y + 6, WL / 2 + tw / 2 + 1, y + 6);
   y += 10;
- 
+
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
   doc.text(`CLASSE: ${nomClasse}`, mL, y + 3, { baseline: 'middle' }); y += 7;
- 
+
   return y;
 }
- 
+
 export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
-  const HL         = 210;            // hauteur page paysage A4
-  const MARGE_BAS  = 18;            // espace réservé pour les signatures
-  const Y_MAX      = HL - MARGE_BAS; // y limite avant nouvelle page
- 
+  const HL = 210;            // hauteur page paysage A4
+  const MARGE_BAS = 18;            // espace réservé pour les signatures
+  const Y_MAX = HL - MARGE_BAS; // y limite avant nouvelle page
+
   const usableW = WL - ML - MR;
   const seqs = d.config.sequences;
   const mats = d.matieres;
@@ -573,7 +603,7 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
   const wDec = usableW - wN - wNom - wMats.reduce((a, b) => a + b, 0) - seqs.length * wMoySeq - wTot - wRang - wMoy;
   const hH = 5.5, rH = 5.5;
   const totalCoef = mats.reduce((a, m) => a + toFloat(m.coefficient), 0);
- 
+
   // Dessine les 2 lignes d'en-tête (COEFTS + noms colonnes)
   // Réutilisé à chaque saut de page
   const drawHeader = (yh: number): number => {
@@ -583,24 +613,24 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
     if (seqs.length > 1) seqs.forEach(() => { cell(doc, cx, yh, wMoySeq, hH, '', { fill: GRIS_H, border: true }); cx += wMoySeq; });
     cell(doc, cx, yh, wTot, hH, String(totalCoef), { fill: BLANC, bold: true, fontSize: 8, border: true }); cx += wTot;
     cell(doc, cx, yh, wRang, hH, '', { fill: BLANC, border: true }); cx += wRang;
-    cell(doc, cx, yh, wMoy,  hH, '', { fill: BLANC, border: true }); cx += wMoy;
-    cell(doc, cx, yh, wDec,  hH, '', { fill: BLANC, border: true });
+    cell(doc, cx, yh, wMoy, hH, '', { fill: BLANC, border: true }); cx += wMoy;
+    cell(doc, cx, yh, wDec, hH, '', { fill: BLANC, border: true });
     yh += hH;
- 
+
     cx = ML;
-    cell(doc, cx, yh, wN,   hH, 'N°',            { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wN;
+    cell(doc, cx, yh, wN, hH, 'N°', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wN;
     cell(doc, cx, yh, wNom, hH, 'NOMS & PRENOMS', { fill: GRIS_H, bold: true, fontSize: 8, align: 'left', border: true }); cx += wNom;
     mats.forEach((m, i) => { cell(doc, cx, yh, wMats[i], hH, m.nom_matiere.slice(0, 5), { fill: GRIS_H, bold: true, fontSize: 7, border: true }); cx += wMats[i]; });
     if (seqs.length > 1) seqs.forEach(s => { cell(doc, cx, yh, wMoySeq, hH, `M.${s.replace('SEQ', '')}`, { fill: GRIS_H, bold: true, fontSize: 6.5, border: true }); cx += wMoySeq; });
-    cell(doc, cx, yh, wTot,  hH, 'TOTAUX',    { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wTot;
-    cell(doc, cx, yh, wRang, hH, 'RANG',      { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wRang;
-    cell(doc, cx, yh, wMoy,  hH, 'MOY',       { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wMoy;
-    cell(doc, cx, yh, wDec,  hH, 'DECISIONS', { fill: GRIS_H, bold: true, fontSize: 8, border: true });
+    cell(doc, cx, yh, wTot, hH, 'TOTAUX', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wTot;
+    cell(doc, cx, yh, wRang, hH, 'RANG', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wRang;
+    cell(doc, cx, yh, wMoy, hH, 'MOY', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wMoy;
+    cell(doc, cx, yh, wDec, hH, 'DECISIONS', { fill: GRIS_H, bold: true, fontSize: 8, border: true });
     return yh + hH;
   };
- 
+
   y = drawHeader(y);
- 
+
   // Lignes élèves — avec saut de page automatique
   d.lignes.forEach((ligne, ri) => {
     // Si plus de place : nouvelle page, répète l'en-tête
@@ -609,11 +639,11 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
       doc.addPage('a4', 'landscape');
       y = drawHeader(6);
     }
- 
+
     const alt: RGB = ri % 2 === 0 ? BLANC : [248, 250, 255];
     let cx = ML;
-    cell(doc, cx, y, wN,   rH, String(ligne.numero), { fill: alt, fontSize: 7.5, border: true }); cx += wN;
-    cell(doc, cx, y, wNom, rH, `${ligne.eleve.nom} ${ligne.eleve.prenom}`.slice(0, 20), { fill: alt, fontSize: 7, align: 'left', border: true }); cx += wNom;
+    cell(doc, cx, y, wN, rH, String(ligne.numero), { fill: alt, fontSize: 7.5, border: true }); cx += wN;
+    cell(doc, cx, y, wNom, rH, `${ligne.eleve.nom.toLocaleUpperCase()} ${ligne.eleve.prenom.toLocaleUpperCase()}`.slice(0, 20), { fill: alt, fontSize: 7, align: 'left', border: true }); cx += wNom;
     mats.forEach((m, mi) => {
       const vals = seqs.map(seq => toNote(ligne.eleve.sequences?.find((s: any) => s.sequence === seq)?.notes_eleve?.find((n: any) => n.matiere === m.nom_matiere)?.note_obtenue));
       const n = seqs.length === 1 ? vals[0] : moyenneSimple(vals);
@@ -623,52 +653,52 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
       const ms = ligne.moyParSeq?.[seq] ?? null;
       cell(doc, cx, y, wMoySeq, rH, fmt(ms), { fill: [240, 248, 240], bold: true, fontSize: 7, border: true, textColor: ms !== null && ms < 10 ? ROUGE : NOIR }); cx += wMoySeq;
     });
-    cell(doc, cx, y, wTot,  rH, fmt(ligne.total, 1), { fill: alt, fontSize: 7.5, border: true }); cx += wTot;
+    cell(doc, cx, y, wTot, rH, fmt(ligne.total, 1), { fill: alt, fontSize: 7.5, border: true }); cx += wTot;
     cell(doc, cx, y, wRang, rH, ligne.rang !== null ? String(ligne.rang) : '', { fill: alt, fontSize: 7.5, border: true }); cx += wRang;
-    cell(doc, cx, y, wMoy,  rH, fmt(ligne.moyGlobale), { fill: alt, bold: true, fontSize: 7.5, border: true, textColor: ligne.moyGlobale !== null && ligne.moyGlobale < 10 ? ROUGE : NOIR }); cx += wMoy;
-    cell(doc, cx, y, wDec,  rH, ligne.decision, { fill: alt, bold: true, fontSize: 7.5, border: true, textColor: ligne.decision === 'ADMIS' ? VERT : ROUGE });
+    cell(doc, cx, y, wMoy, rH, fmt(ligne.moyGlobale), { fill: alt, bold: true, fontSize: 7.5, border: true, textColor: ligne.moyGlobale !== null && ligne.moyGlobale < 10 ? ROUGE : NOIR }); cx += wMoy;
+    cell(doc, cx, y, wDec, rH, ligne.decision, { fill: alt, bold: true, fontSize: 7.5, border: true, textColor: ligne.decision === 'ADMIS' ? VERT : ROUGE });
     y += rH;
   });
   return y;
 }
- 
+
 export function sectionPVSignatures(doc: jsPDF, y: number): void {
   y += 6;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...NOIR);
   doc.text('CELLULE INFORMATIQUE', ML, y, { baseline: 'middle' });
-  doc.text('DIRECTION DES ETUDES',  WL / 2, y, { align: 'center', baseline: 'middle' });
-  doc.text('LE PRINCIPAL',          WL - MR, y, { align: 'right', baseline: 'middle' });
+  doc.text('DIRECTION DES ETUDES', WL / 2, y, { align: 'center', baseline: 'middle' });
+  doc.text('LE PRINCIPAL', WL - MR, y, { align: 'right', baseline: 'middle' });
 }
 
 
 // ── Fiche de saisie ─────────────────────────────────────────────────────────
- 
+
 // 1 page (portrait) par matière par séquence.
 // Si les élèves débordent → nouvelle page avec le même en-tête.
 export function sectionFicheSaisie(doc: jsPDF, d: FicheSaisieData, seq: Sequence): void {
-  const HP        = 297;  // hauteur portrait
+  const HP = 297;  // hauteur portrait
   const MARGE_BAS = 16;
-  const Y_MAX     = HP - MARGE_BAS;
-  const WP        = 210;  // largeur portrait
-  const rH        = 7;
+  const Y_MAX = HP - MARGE_BAS;
+  const WP = 210;  // largeur portrait
+  const rH = 7;
   const BLEU_F: RGB = [0, 84, 166];
- 
+
   // ── En-tête + tableau pour 1 matière ─────────────────────────────────────
   const startPage = (mat: MatiereConfig): number => {
     const prof = ((mat as any).professeur ?? '') as string;
     let y = 8;
- 
+
     // Titre école
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...BLEU_F);
     doc.text(d.nomEcole, WP / 2, y, { align: 'center', baseline: 'middle' }); y += 7;
- 
+
     // Sous-titre
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...NOIR);
     doc.text(
       `FICHE DE SAISIE — ${seq} — Classe : ${d.nomClasse} — Année : ${d.annee}`,
       WP / 2, y, { align: 'center', baseline: 'middle' }
     ); y += 7;
- 
+
     // Bloc matière + enseignant
     doc.setFillColor(...BLEU_F);
     doc.rect(ML, y, WP - ML - MR, 12, 'F');
@@ -677,22 +707,22 @@ export function sectionFicheSaisie(doc: jsPDF, d: FicheSaisieData, seq: Sequence
     doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(200, 220, 255);
     doc.text(prof, WP / 2, y + 10, { align: 'center', baseline: 'middle' });
     y += 14;
- 
+
     // Info coeff
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
     doc.text(`Coefficient : ${toFloat(mat.coefficient)}   /20`, ML, y, { baseline: 'middle' }); y += 6;
- 
+
     // En-tête colonnes
-    const wNom  = WP - ML - MR - 30 - 20; // note + appréciation
+    const wNom = WP - ML - MR - 30 - 20; // note + appréciation
     const wNote = 30, wApp = 20;
-    cell(doc, ML,            y, wNom,  8, 'NOM & PRÉNOM',  { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, align: 'left', border: true });
-    cell(doc, ML + wNom,     y, wNote, 8, `NOTE /20`,      { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
-    cell(doc, ML + wNom + wNote, y, wApp, 8, 'APP.',       { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
+    cell(doc, ML, y, wNom, 8, 'NOM & PRÉNOM', { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, align: 'left', border: true });
+    cell(doc, ML + wNom, y, wNote, 8, `NOTE /20`, { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
+    cell(doc, ML + wNom + wNote, y, wApp, 8, 'APP.', { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
     y += 8;
- 
+
     return y;
   };
- 
+
   const drawFooter = (y: number, mat: MatiereConfig): void => {
     y += 6;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...NOIR);
@@ -700,33 +730,32 @@ export function sectionFicheSaisie(doc: jsPDF, d: FicheSaisieData, seq: Sequence
     doc.text(`${seq} — ${mat.nom_matiere}`, WP / 2, y, { align: 'center', baseline: 'middle' });
     doc.text('VISA DIRECTION', WP - MR, y, { align: 'right', baseline: 'middle' });
   };
- 
+
   // ── Boucle : 1 page par matière ───────────────────────────────────────────
-  const wNom  = WP - ML - MR - 30 - 20;
+  const wNom = WP - ML - MR - 30 - 20;
   const wNote = 30, wApp = 20;
   let firstPage = true;
- 
+
   d.matieres.forEach(mat => {
     if (!firstPage) doc.addPage('a4', 'portrait');
     firstPage = false;
- 
+
     let y = startPage(mat);
- 
+
     d.eleves.forEach((eleve, i) => {
       if (y + rH > Y_MAX) {
         drawFooter(y, mat);
         doc.addPage('a4', 'portrait');
         y = startPage(mat);
       }
- 
+
       const alt: RGB = i % 2 === 0 ? BLANC : [248, 250, 255];
-      cell(doc, ML,            y, wNom,  rH, `${i + 1}. ${eleve.nom} ${eleve.prenom}`, { fill: alt, align: 'left', fontSize: 7.5, border: true });
-      cell(doc, ML + wNom,     y, wNote, rH, '', { fill: alt, border: true });
+      cell(doc, ML, y, wNom, rH, `${i + 1}. ${eleve.nom.toLocaleUpperCase()} ${eleve.prenom.toLocaleUpperCase()}`, { fill: alt, align: 'left', fontSize: 7.5, border: true });
+      cell(doc, ML + wNom, y, wNote, rH, '', { fill: alt, border: true });
       cell(doc, ML + wNom + wNote, y, wApp, rH, '', { fill: alt, border: true });
       y += rH;
     });
- 
+
     drawFooter(y, mat);
   });
 }
- 

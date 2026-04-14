@@ -7,16 +7,17 @@ import {
   OnInit,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatDialog }    from '@angular/material/dialog';
-import { MatSnackBar }  from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { DataService }       from '../../../core/services/data.service';
-import { AuthService }       from '../../../core/services/auth.service';
+import { DataService } from '../../../core/services/data.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { Eleve, MatiereConfig, Sequence, SEQUENCES } from '../../../core/models';
 import { BulletinConfigModal } from '../helper/bulletin-config.modal';
 import { BulletinConfig, GroupeMatiere, BulletinData, NiveauClasse, PVData, PVLigne, FicheSaisieData } from '../helper/bulletin.models';
 import { toFloat, toNote } from '../helper/pdf-helpers';
 import { BulletinPdfService } from '../services/bulletin-pdf.service';
+import { prechargerLogo } from './components/bulletin-sections';
 
 
 @Component({
@@ -30,7 +31,7 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
   <!-- ── Barre ── -->
   <div class="bl-bar">
 
-    <select [formControl]="ctrlClasse" class="bl-select">
+    <select [formControl]="ctrlClasse" class="bl-select" (change)="onChnageClasse()">
       <option value="" disabled>Classe…</option>
       @for (c of classesDisponibles(); track c.id_classe) {
         <option [value]="c.id_classe">{{ c.nom_classe }}</option>
@@ -207,29 +208,29 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
 })
 export class BulletinsComponent implements OnInit {
 
-  private data    = inject(DataService);
-  private auth    = inject(AuthService);
-  private pdfSvc  = inject(BulletinPdfService);
-  private dialog  = inject(MatDialog);
-  private snack   = inject(MatSnackBar);
-  private cdr     = inject(ChangeDetectorRef);
+  private data = inject(DataService);
+  private auth = inject(AuthService);
+  private pdfSvc = inject(BulletinPdfService);
+  private dialog = inject(MatDialog);
+  private snack = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
 
   ctrlClasse = new FormControl('');
-  loading    = signal(false);
-  genAll     = signal(false);
-  genPV      = signal(false);
+  loading = signal(false);
+  genAll = signal(false);
+  genPV = signal(false);
 
   /** Config courante — modifiable via le modal */
   config: BulletinConfig = {
-    titre:     'BULLETIN TRIMESTRIEL 1',
+    titre: 'BULLETIN TRIMESTRIEL 1',
     trimestre: 1,
-    annee:     `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`,
+    annee: `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`,
     sequences: ['SEQ1', 'SEQ2'],
   };
 
-  private _eleves   = signal<Eleve[]>([]);
+  private _eleves = signal<Eleve[]>([]);
   private _matieres = signal<MatiereConfig[]>([]);
-  private _groupes  = signal<GroupeMatiere[]>([]);
+  private _groupes = signal<GroupeMatiere[]>([]);
 
   classesDisponibles = computed(() => {
     const all = this.data.getClasses() ?? [];
@@ -240,7 +241,7 @@ export class BulletinsComponent implements OnInit {
   // ── Tableau résultats ──────────────────────────────────────────────────────
 
   rows = computed(() => {
-    const eleves   = this._eleves();
+    const eleves = this._eleves();
     const matieres = this._matieres();
     if (!eleves.length || !matieres.length) return [];
 
@@ -258,7 +259,7 @@ export class BulletinsComponent implements OnInit {
       .sort((a, b) => b - a);
 
     return withMoy.map(r => {
-      const moy  = r.moyTrim ?? r.moySeqs[0];
+      const moy = r.moyTrim ?? r.moySeqs[0];
       const rang = moy !== null ? sorted.indexOf(moy) + 1 : null;
       return { ...r, rang };
     });
@@ -271,8 +272,13 @@ export class BulletinsComponent implements OnInit {
       this.ctrlClasse.setValue(classes[0].id_classe);
       this.charger();
     };
+    prechargerLogo()
   }
 
+  onChnageClasse(): void {
+    // const _ = this.matieres();
+    this.charger()
+  }
   // ── Modal config ──────────────────────────────────────────────────────────
 
   ouvrirConfig(): void {
@@ -290,7 +296,7 @@ export class BulletinsComponent implements OnInit {
   async charger(): Promise<void> {
     if (!this.ctrlClasse.value) return;
     this.loading.set(true); await Promise.resolve();
-    const classe   = (this.data.getClasses() ?? []).find(c => c.id_classe === this.ctrlClasse.value);
+    const classe = (this.data.getClasses() ?? []).find(c => c.id_classe === this.ctrlClasse.value);
     const matieres = classe?.matieres ?? [];
     this._matieres.set(matieres);
     this._eleves.set((classe?.eleves ?? []).slice().sort((a, b) => a.nom.localeCompare(b.nom)));
@@ -307,7 +313,7 @@ export class BulletinsComponent implements OnInit {
       const key = (m as any).groupe ?? 'Matières';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(m);
-      map.get(key)!.sort((a:MatiereConfig,b:MatiereConfig)=> {
+      map.get(key)!.sort((a: MatiereConfig, b: MatiereConfig) => {
         const aNiveau = (a as any).niveau ?? 0;
         const bNiveau = (b as any).niveau ?? 0;
         return aNiveau - bNiveau;
@@ -329,25 +335,25 @@ export class BulletinsComponent implements OnInit {
   }
 
   private _buildBulletinData(eleve: Eleve): BulletinData {
-    const classe  = (this.data.getClasses() ?? []).find(c => c.id_classe === this.ctrlClasse.value);
-    const rws     = this.rows();
-    const row     = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);
-    const moys    = rws.map(r => r.moyTrim ?? r.moySeqs[0]).filter((v): v is number => v !== null);
-    const niveau  = this._detectNiveau(classe?.nom_classe ?? '');
+    const classe = (this.data.getClasses() ?? []).find(c => c.id_classe === this.ctrlClasse.value);
+    const rws = this.rows();
+    const row = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);
+    const moys = rws.map(r => r.moyTrim ?? r.moySeqs[0]).filter((v): v is number => v !== null);
+    const niveau = this._detectNiveau(classe?.nom_classe ?? '');
 
     return {
       eleve,
-      nomClasse:         classe?.nom_classe ?? '',
+      nomClasse: classe?.nom_classe ?? '',
       niveau,
-      config:            this.config,
-      groupes:           this._groupes(),
-      rang:              row?.rang ?? null,
-      effectif:          rws.length,
-      moyPremier:        moys.length ? Math.max(...moys) : null,
-      moyDernier:        moys.length ? Math.min(...moys) : null,
-      tauxReussite:      moys.length ? (moys.filter(m => m >= 10).length / moys.length) * 100 : null,
+      config: this.config,
+      groupes: this._groupes(),
+      rang: row?.rang ?? null,
+      effectif: rws.length,
+      moyPremier: moys.length ? Math.max(...moys) : null,
+      moyDernier: moys.length ? Math.min(...moys) : null,
+      tauxReussite: moys.length ? (moys.filter(m => m >= 10).length / moys.length) * 100 : null,
       moyGeneraleClasse: moys.length ? moys.reduce((a, b) => a + b, 0) / moys.length : null,
-      absJustifiees:     0, absNonJustifiees: 0, appreciations: '',
+      absJustifiees: 0, absNonJustifiees: 0, appreciations: '',
       avertissementConduite: false, blameConduite: false,
       consigne: 0, exclusion: 0, retards: 0, conseilDiscipline: false,
     };
@@ -356,7 +362,7 @@ export class BulletinsComponent implements OnInit {
   private _detectNiveau(nomClasse: string): NiveauClasse {
     const n = nomClasse.toLowerCase();
     if (n.includes('tech') || n.includes('pro')) return 'technique';
-    if (n.includes('ang')  || n.includes('bil')) return 'secondaire-ang';
+    if (n.includes('ang') || n.includes('bil')) return 'secondaire-ang';
     if (n.includes('cm') || n.includes('ce') || n.includes('cp')) return 'primaire';
     return 'secondaire-fr';
   }
@@ -393,28 +399,28 @@ export class BulletinsComponent implements OnInit {
 
     const pvData: PVData = {
       nomClasse: cls?.nom_classe ?? '',
-      config:    this.config,
+      config: this.config,
       matieres,
       lignes: this.rows().map((row, i): PVLigne => {
         const moy = row.moyTrim ?? row.moySeqs[0];
         return {
-          numero:      i + 1,
-          eleve:       row.eleve,
+          numero: i + 1,
+          eleve: row.eleve,
           notesParSeq: Object.fromEntries(
             this.config.sequences.map(seq => [seq, matieres.map(m =>
               toNote(row.eleve.sequences?.find(s => s.sequence === seq)
                 ?.notes_eleve?.find(n => n.matiere === m.nom_matiere)?.note_obtenue)
             )])
           ),
-          moyParSeq:  Object.fromEntries(this.config.sequences.map((seq, si) => [seq, row.moySeqs[si]])),
-          moyGlobale:  moy,
-          total:       matieres.reduce((acc, m, mi) => {
+          moyParSeq: Object.fromEntries(this.config.sequences.map((seq, si) => [seq, row.moySeqs[si]])),
+          moyGlobale: moy,
+          total: matieres.reduce((acc, m, mi) => {
             const n = toNote(row.eleve.sequences?.find(s => s.sequence === this.config.sequences[0])
               ?.notes_eleve?.find(n => n.matiere === m.nom_matiere)?.note_obtenue);
             return acc + (n !== null ? n * toFloat(m.coefficient) : 0);
           }, 0),
-          rang:        row.rang,
-          decision:    moy !== null ? (moy >= 10 ? 'ADMIS' : 'ECHEC') : '',
+          rang: row.rang,
+          decision: moy !== null ? (moy >= 10 ? 'ADMIS' : 'ECHEC') : '',
         };
       }),
     };
@@ -433,11 +439,11 @@ export class BulletinsComponent implements OnInit {
     const cls = (this.data.getClasses() ?? []).find(c => c.id_classe === this.ctrlClasse.value);
     const data: FicheSaisieData = {
       nomClasse: cls?.nom_classe ?? '',
-      nomEcole:  'CSB BERCEAU DU SAVOIR',
+      nomEcole: 'CSB BERCEAU DU SAVOIR',
       sequences: this.config.sequences,
-      annee:     this.config.annee,
+      annee: this.config.annee,
       matieres,
-      eleves:    this._eleves(),
+      eleves: this._eleves(),
     };
     this.pdfSvc.telecharger(
       this.pdfSvc.genererFicheSaisie(data),
@@ -459,8 +465,8 @@ export class BulletinsComponent implements OnInit {
 
   mentionCls(moy: number | null): string {
     if (moy === null) return 'bl-mention--none';
-    if (moy >= 10)    return 'bl-mention--ok';
-    if (moy >= 8)     return 'bl-mention--warn';
+    if (moy >= 10) return 'bl-mention--ok';
+    if (moy >= 8) return 'bl-mention--warn';
     return 'bl-mention--bad';
   }
 }

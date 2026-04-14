@@ -8,9 +8,9 @@ import { sectionBandeVerticale, sectionEntete, sectionTitreBulletin, sectionInfo
 
 // ── Bulletin individuel ────────────────────────────────────────────────────
 
-export function renderBulletinSecondaire(doc: jsPDF, d: BulletinData): void {
+export  function renderBulletinSecondaire(doc: jsPDF, d: BulletinData): void {
   // sectionBandeVerticale(doc);
-  let y = sectionEntete(doc, 6, d.config.annee);
+  let y =   sectionEntete(doc, 6, d.config.annee);
   y = sectionTitreBulletin(doc, y, d.config.titre);
   y = sectionInfoEleve(doc, y, d);
   const dims = calcDims(d.config.sequences);

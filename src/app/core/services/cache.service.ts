@@ -32,6 +32,7 @@ export class CacheService {
     effect(() => this.enrichirElevesAvecNotes());
     effect(() => this.enrichirClassesAvecEleves());
     effect(() => this.enrichirClassesAvecMatiere());
+    effect(() => this.enrichirMatieresAvecEnseignant());
   }
 
   // ── Groupe A : Référentiels ─────────────────────
@@ -75,7 +76,7 @@ export class CacheService {
       }))
     ));
   }
-
+  // Quand les matières changent → enrichir les classes avec leurs matières
   private enrichirClassesAvecMatiere(): void {
     const matieres = this._matieres();
     const classes = untracked(() => this._classes());
@@ -89,6 +90,20 @@ export class CacheService {
     ));
   }
 
+  //Quand les enseignants changent → enrichir les matières avec leurs enseignants
+  private enrichirMatieresAvecEnseignant(): void {
+    const enseignants = this._enseignants();
+    const matieres = untracked(() => this._matieres());
+    
+    if (!enseignants?.data || !matieres?.data) return;  
+    untracked(() => this.setMatieres(
+      matieres.data.map(m => ({
+        ...m,
+        enseignant: enseignants.data.find(e => e.id_enseignant === m.id_enseignant)
+      }))
+    ));
+  }
+  
   private findElevesByClasse(classeId: string, eleves: Eleve[]): Eleve[] {
     return eleves.filter(e => e.id_classe === classeId);
   }

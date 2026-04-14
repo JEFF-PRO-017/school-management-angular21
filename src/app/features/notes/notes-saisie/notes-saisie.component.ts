@@ -15,6 +15,7 @@
 import {
   Component, inject, signal, computed,
   OnInit, ChangeDetectionStrategy, ChangeDetectorRef,
+  effect,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
@@ -78,11 +79,11 @@ export class NotesSaisieComponent implements OnInit {
     return all.filter(c => this.auth.getClassesAssignees().includes(c.id_classe));
   });
 
-  matieres = computed((): MatiereConfig[] => {
+  matieres = (): MatiereConfig[] => {
     const id = this.ctrlClasse.value;
     if (!id) return [];
     return (this.data.getClasses() ?? []).find(c => c.id_classe === id)?.matieres ?? [];
-  });
+  };
 
   /** Sous-ensemble de matieres() actuellement actif */
   matieresActives = (() =>
@@ -90,6 +91,11 @@ export class NotesSaisieComponent implements OnInit {
   );
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  onChnageClasse(): void {
+    const _ = this.matieres();
+    this.charger()
+  }
 
   ngOnInit(): void {
     const classes = this.classesDisponibles();
@@ -202,7 +208,8 @@ export class NotesSaisieComponent implements OnInit {
       actives.forEach(m => {
         const mi = this.realMatIdx(m);
         const v = ligne.cells[si]?.[mi]?.valeur;
-        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true; totCoeff += (+m.coefficient); }
+        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true;  }
+        totCoeff += (+m.coefficient);
       });
       return has && totCoeff > 0 ? pts / totCoeff : null;
     });

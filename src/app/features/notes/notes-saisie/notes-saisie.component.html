@@ -3,10 +3,10 @@
   <!-- ── Barre ── -->
   <div class="ns-bar">
  
-    <select [formControl]="ctrlClasse" class="ns-select">
+    <select [formControl]="ctrlClasse" class="ns-select" (change)="onChnageClasse()">
       <option value="" disabled>Classe…</option>
       @for (c of classesDisponibles(); track c.id_classe) {
-        <option [value]="c.id_classe">{{ c.nom_classe }}</option>
+        <option [value]="c.id_classe" >{{ c.nom_classe }}</option>
       }
     </select>
  

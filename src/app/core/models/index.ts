@@ -118,7 +118,7 @@ export interface Enseignant {
   id_enseignant: string;
   nom: string;
   prenom: string;
-  matieres_enseignees: string;
+  matieres_enseignees?: string;
   tel?: string;
   email?: string;
   classes_assignees: string;  // CSV des id_classe
