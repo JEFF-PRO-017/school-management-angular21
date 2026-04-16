@@ -1,266 +1,188 @@
-// cache.service.ts — store central en mémoire avec TTL par groupe
-// Groupe A (référentiels) : TTL 24h
-// Groupe B (élèves)       : TTL session (invalidé manuellement)
-// Groupe C (transactions) : jamais mis en cache global
-import { Injectable, signal, computed, effect, untracked } from '@angular/core';
+// cache.service.ts — modèle Famille unifié (frais intégrés)
+import { Injectable, signal, computed } from '@angular/core';
 import {
-  Famille, Eleve, Classe, FraisConfig,
-  Enseignant, MatiereConfig, SoldeSnap, BulletinSnap,
-  Note,
-  Sequence,
-  SEQUENCES
+  Famille, Eleve, Classe, FraisConfig, Enseignant,
+  MatiereConfig, SoldeSnap, BulletinSnap,
+  Note, Sequence, SEQUENCES, Paiement,
+  MsgTemplate,
+  LogAlerte
 } from '../models';
-
-/** Entrée de cache avec horodatage */
-interface CacheEntry<T> {
-  data: T;
-  loadedAt: number;  // timestamp ms
-}
-
-const TTL_24H = 24 * 60 * 60 * 1000;
-const TTL_SESSION = Infinity;  // invalidation manuelle uniquement
 
 @Injectable({ providedIn: 'root' })
 export class CacheService {
 
-  private initCache: CacheEntry<any> = {
-    data: null,
-    loadedAt: 0
-  };
+  // ── Signaux bruts ──────────────────────────────────────────────
+  private _familles = signal<Famille[]>([]);
+  private _classes = signal<Classe[]>([]);
+  private _frais = signal<FraisConfig[]>([]);
+  private _enseignants = signal<Enseignant[]>([]);
+  private _matieres = signal<MatiereConfig[]>([]);
+  private _notes = signal<Note[]>([]);
+  private _paiements = signal<Paiement[]>([]);
+  private _eleves = signal<Eleve[]>([]);
+  private _soldes = signal<SoldeSnap[]>([]);
+  private _bulletins = signal<BulletinSnap[]>([]);
+  private _templates = signal<MsgTemplate[]>([]);
+  private _logs = signal<LogAlerte[]>([]);
 
-  constructor() {
-    effect(() => this.enrichirElevesAvecNotes());
-    effect(() => this.enrichirClassesAvecEleves());
-    effect(() => this.enrichirClassesAvecMatiere());
-    effect(() => this.enrichirMatieresAvecEnseignant());
-  }
-
-  // ── Groupe A : Référentiels ─────────────────────
-  private _familles = signal<CacheEntry<Famille[]> | null>(this.initCache);
-  private _classes = signal<CacheEntry<Classe[]> | null>(this.initCache);
-  private _frais = signal<CacheEntry<FraisConfig[]> | null>(this.initCache);
-  private _enseignants = signal<CacheEntry<Enseignant[]> | null>(this.initCache);
-  private _matieres = signal<CacheEntry<MatiereConfig[]> | null>(this.initCache);
-  private _notes = signal<CacheEntry<Note[]> | null>(this.initCache);
-
-
-  // Quand les notes changent → enrichir les élèves avec leurs notes
-  private enrichirElevesAvecNotes(): void {
-    const notes = this._notes();
-    const eleves = untracked(() => this._eleves());
-
-    if (!notes?.data || !eleves?.data) return;
-
-    untracked(() => this.setEleves(
-      eleves.data.map(e => ({
-        ...e,
-        sequences: SEQUENCES.map(seq => ({
-          sequence: seq,
-          notes_eleve: this.findNotesByEleveBySequence(e.id_eleve, seq, e.id_classe, notes.data)
-        }))
-      }))
-    ));
-  }
-
-  // Quand les élèves changent → enrichir les classes avec leurs élèves
-  private enrichirClassesAvecEleves(): void {
-    const eleves = this._eleves();
-    const classes = untracked(() => this._classes());
-
-    if (!eleves?.data || !classes?.data) return;
-
-    untracked(() => this.setClasses(
-      classes.data.map(c => ({
-        ...c,
-        eleves: this.findElevesByClasse(c.id_classe, eleves.data)
-      }))
-    ));
-  }
-  // Quand les matières changent → enrichir les classes avec leurs matières
-  private enrichirClassesAvecMatiere(): void {
-    const matieres = this._matieres();
-    const classes = untracked(() => this._classes());
-
-    if (!matieres?.data || !classes?.data) return;
-    untracked(() => this.setClasses(
-      classes.data.map(c => ({
-        ...c,
-        matieres: matieres.data.filter(m => m.id_classe === c.id_classe)
-      }))
-    ));
-  }
-
-  //Quand les enseignants changent → enrichir les matières avec leurs enseignants
-  private enrichirMatieresAvecEnseignant(): void {
-    const enseignants = this._enseignants();
-    const matieres = untracked(() => this._matieres());
-    
-    if (!enseignants?.data || !matieres?.data) return;  
-    untracked(() => this.setMatieres(
-      matieres.data.map(m => ({
-        ...m,
-        enseignant: enseignants.data.find(e => e.id_enseignant === m.id_enseignant)
-      }))
-    ));
-  }
-  
-  private findElevesByClasse(classeId: string, eleves: Eleve[]): Eleve[] {
-    return eleves.filter(e => e.id_classe === classeId);
-  }
-
-  private findNotesByEleveBySequence(id_eleve: string, sequence: Sequence, id_classe: string, notes: Note[]): Note[] {
-    return notes.filter(n => n.id_eleve === id_eleve && n.sequence === sequence && n.id_classe === id_classe);
-  }
-
-  // ── Groupe B : Élèves (cache session) ───────────
-  private _eleves = signal<CacheEntry<Eleve[]> | null>(this.initCache);
-
-  // ── Groupe D : Snapshots ─────────────────────────
-  private _soldes = signal<CacheEntry<SoldeSnap[]> | null>(this.initCache);
-  private _bulletins = signal<CacheEntry<BulletinSnap[]> | null>(this.initCache);
-
-  // ── Maps calculées pour jointures O(1) ──────────
-  readonly famillesMap = computed(() => {
-    const entry = this._familles();
-    return entry ? new Map(entry.data.map(f => [f.id_famille, f])) : new Map<string, Famille>();
+  // ── Niveau 1 : index notes pour O(1) ──────────────────────────
+  // Clé : "id_eleve|sequence|id_classe"
+  private _notesIndex = computed(() => {
+    const idx = new Map<string, Note[]>();
+    for (const n of this._notes()) {
+      const k = `${n.id_eleve}|${n.sequence}|${n.id_classe}`;
+      const arr = idx.get(k);
+      if (arr) arr.push(n); else idx.set(k, [n]);
+    }
+    return idx;
   });
 
-  readonly classesMap = computed(() => {
-    const entry = this._classes();
-    return entry ? new Map(entry.data.map(c => [c.id_classe, c])) : new Map<string, Classe>();
+  // Niveau 1 : index paiements par famille pour O(1)
+  // Clé : id_famille → Paiement[]
+  // On construit cet index UNE SEULE FOIS et les niveaux suivants s'en servent
+  private _paiementsParFamille = computed(() => {
+    const idx = new Map<string, Paiement[]>();
+    for (const p of this._paiements()) {
+      const arr = idx.get(p.id_famille);
+      if (arr) arr.push(p); else idx.set(p.id_famille, [p]);
+    }
+    return idx;
   });
 
-  readonly matieresMap = computed(() => {
-    const entry = this._matieres();
-    return entry ? new Map(entry.data.map(m => [m.id_matiere, m])) : new Map<string, MatiereConfig>();
+  // ── Niveau 2 : élèves enrichis ────────────────────────────────
+  private _elevesEnrichis = computed<Eleve[]>(() => {
+    const famMap = new Map(this._familles().map(f => [f.id_famille, f]));
+    const notesIdx = this._notesIndex();
+    return this._eleves().map(e => ({
+      ...e,
+      famille: famMap.get(e.id_famille),
+      sequences: SEQUENCES.map((seq: Sequence) => ({
+        sequence: seq,
+        notes_eleve: notesIdx.get(`${e.id_eleve}|${seq}|${e.id_classe}`) ?? [],
+      })),
+    }));
   });
 
-  // ── Getters avec vérification TTL ───────────────
+  // ── Niveau 3 : familles enrichies ─────────────────────────────
+  // Lit : _familles (brut) + _elevesEnrichis (N2) + _paiementsParFamille (N1)
+  //
+  // RÈGLE RESPECTÉE : on crée un NOUVEL objet avec { ...f } pour chaque famille
+  // On ne mute jamais un objet existant dans un computed()
+  private _famillesEnrichies = computed<Famille[]>(() => {
+    const elevesEnrichis = this._elevesEnrichis();   // N2
+    const paiementsParFam = this._paiementsParFamille(); // N1
 
-  getFamilles(): Famille[] | null {
-    return this.get(this._familles(), TTL_24H);
-  }
-  getClasses(): Classe[] | null {
-    return this.get(this._classes(), TTL_24H);
-  }
-  getFrais(): FraisConfig[] | null {
-    return this.get(this._frais(), TTL_24H);
-  }
-  getEnseignants(): Enseignant[] | null {
-    return this.get(this._enseignants(), TTL_24H);
-  }
-  getMatieres(): MatiereConfig[] | null {
-    return this.get(this._matieres(), TTL_24H);
-  }
-  getEleves(): Eleve[] | null {
-    return this.get(this._eleves(), TTL_SESSION);
-  }
-  getSoldes(): SoldeSnap[] | null {
-    return this.get(this._soldes(), TTL_SESSION);
-  }
-  getBulletins(): BulletinSnap[] | null {
-    return this.get(this._bulletins(), TTL_SESSION);
-  }
-  getNotes(): Note[] | null {
-    return this.get(this._notes(), TTL_24H);
-  }
+    return this._familles().map(f => ({
+      ...f,                                               // copie tous les champs bruts
+      eleves: elevesEnrichis.filter(e => e.id_famille === f.id_famille),
+      paiements: paiementsParFam.get(f.id_famille) ?? [], // ← enrichissement paiements
+    }));
+  });
 
-  // ── Setters (appelés après chaque fetch API) ────
+  // ── Niveau 3 : matières enrichies ─────────────────────────────
+  private _matieresEnrichies = computed<MatiereConfig[]>(() => {
+    const ensMap = new Map(this._enseignants().map(e => [e.id_enseignant, e]));
+    const clsMap = new Map(this._classes().map(c => [c.id_classe, c]));
+    return this._matieres().map(m => ({
+      ...m,
+      enseignant: ensMap.get(m.id_enseignant),
+      classe: clsMap.get(m.id_classe),
+    }));
+  });
 
-  setFamilles(data: Famille[]) { this._familles.set(this.wrap(data)); }
-  setClasses(data: Classe[]) { this._classes.set(this.wrap(data)); }
-  setFrais(data: FraisConfig[]) { this._frais.set(this.wrap(data)); }
-  setEnseignants(data: Enseignant[]) { this._enseignants.set(this.wrap(data)); }
-  setMatieres(data: MatiereConfig[]) { this._matieres.set(this.wrap(data)); }
-  setEleves(data: Eleve[]) { this._eleves.set(this.wrap(data)); }
-  setSoldes(data: SoldeSnap[]) { this._soldes.set(this.wrap(data)); }
-  setBulletins(data: BulletinSnap[]) { this._bulletins.set(this.wrap(data)); }
-  setNotes(data: Note[]) { this._notes.set(this.wrap(data)); }
-  // ── Mises à jour locales (patch sans re-fetch) ──
+  // ── Niveau 4 : classes enrichies ──────────────────────────────
+  private _classesEnrichies = computed<Classe[]>(() => {
+    const mats = this._matieresEnrichies();  // N3
+    const elevs = this._elevesEnrichis();     // N2
+    return this._classes().map(c => ({
+      ...c,
+      eleves: elevs.filter(e => e.id_classe === c.id_classe),
+      matieres: mats.filter(m => m.id_classe === c.id_classe),
+    }));
+  });
 
-  /** Ajoute ou remplace une famille dans le cache local */
-  upsertFamille(f: Famille): void {
-    this.upsert(this._familles, f, 'id_famille');
-  }
-  upsertEleve(e: Eleve): void {
-    this.upsert(this._eleves, e, 'id_eleve');
-  }
-  upsertClasse(c: Classe): void {
-    this.upsert(this._classes, c, 'id_classe');
-  }
-  upsertSolde(s: SoldeSnap): void {
-    this.upsert(this._soldes, s, 'id_eleve');
-  }
+  // ── Maps O(1) publiques ───────────────────────────────────────
+  readonly famillesMap = computed(() =>
+    new Map(this._famillesEnrichies().map(f => [f.id_famille, f]))
+  );
+  readonly classesMap = computed(() =>
+    new Map(this._classesEnrichies().map(c => [c.id_classe, c]))
+  );
+  readonly matieresMap = computed(() =>
+    new Map(this._matieresEnrichies().map(m => [m.id_matiere, m]))
+  );
+
+  // ── Getters publics ────────────────────────────────────────────
+  getFamilles(): Famille[] { return this._famillesEnrichies(); }
+  getClasses(): Classe[] { return this._classesEnrichies(); }
+  getEleves(): Eleve[] { return this._elevesEnrichis(); }
+  getMatieres(): MatiereConfig[] { return this._matieresEnrichies(); }
+  getFrais(): FraisConfig[] { return this._frais(); }
+  getEnseignants(): Enseignant[] { return this._enseignants(); }
+  getSoldes(): SoldeSnap[] { return this._soldes(); }
+  getBulletins(): BulletinSnap[] { return this._bulletins(); }
+  getNotes(): Note[] { return this._notes(); }
+  getPaiements(): Paiement[] { return this._paiements(); }
+  getTemplates(): MsgTemplate[] { return this._templates(); }
+  getLogs(): LogAlerte[] { return this._logs(); }
+
+  // ── Setters ───────────────────────────────────────────────────
+  setFamilles(d: Famille[]) { this._familles.set(d); }
+  setClasses(d: Classe[]) { this._classes.set(d); }
+  setFrais(d: FraisConfig[]) { this._frais.set(d); }
+  setEnseignants(d: Enseignant[]) { this._enseignants.set(d); }
+  setMatieres(d: MatiereConfig[]) { this._matieres.set(d); }
+  setEleves(d: Eleve[]) { this._eleves.set(d); }
+  setSoldes(d: SoldeSnap[]) { this._soldes.set(d); }
+  setBulletins(d: BulletinSnap[]) { this._bulletins.set(d); }
+  setNotes(d: Note[]) { this._notes.set(d); }
+  setPaiements(d: Paiement[]) { this._paiements.set(d); }
+  setTemplates(d: MsgTemplate[]) { this._templates.set(d); }
+  setLogs(d: LogAlerte[]) { this._logs.set(d); }
+
+  // ── Upsert / remove ───────────────────────────────────────────
+  upsertFamille(f: Famille) { this._familles.update(l => upsert(l, f, 'id_famille')); }
+  removeFamille(id: string) { this._familles.update(l => l.filter(x => x.id_famille !== id)); }
+
+  upsertEleve(e: Eleve) { this._eleves.update(l => upsert(l, e, 'id_eleve')); }
+  removeEleve(id: string) { this._eleves.update(l => l.filter(x => x.id_eleve !== id)); }
+
+  upsertClasse(c: Classe) { this._classes.update(l => upsert(l, c, 'id_classe')); }
+
+  upsertPaiement(p: Paiement) { this._paiements.update(l => upsert(l, p, 'id_paiement')); }
+
+  upsertSolde(s: SoldeSnap) { this._soldes.update(l => upsert(l, s, 'id_eleve')); }
+
+  upsertTemplate(t: MsgTemplate) { this._templates.update(l => upsert(l, t, 'id_template')); }
+
+  upsertLog(l: LogAlerte) { this._logs.update(lis => upsert(lis, l, 'id_log')); }
+
 
   setNotesBatch(notes: Note[]): void {
-    const existing = untracked(() => this._notes());
-    if (!existing) return;
-    const byId = new Map(existing.data.map(n => [n.id_note, n]));
-    notes.forEach(n => byId.set(n.id_note, n));
-    this.setNotes(Array.from(byId.values()));
+    this._notes.update(list => {
+      const map = new Map(list.map(n => [n.id_note, n]));
+      notes.forEach(n => map.set(n.id_note, n));
+      return Array.from(map.values());
+    });
   }
 
-  deleteNotesBatch(noteIds: string[]): void {
-    const existing = untracked(() => this._notes());
-    if (!existing) return;
-    const byId = new Map(existing.data.map(n => [n.id_note, n]));
-    noteIds.forEach(id => byId.delete(id));
-    this.setNotes(Array.from(byId.values()));
+  deleteNotesBatch(ids: string[]): void {
+    const set = new Set(ids);
+    this._notes.update(list => list.filter(n => !set.has(n.id_note)));
   }
 
-  /** Supprime un élément du cache par id */
-  removeFamille(id: string): void {
-    this.remove(this._familles, 'id_famille', id);
+  // ── Invalidation complète ─────────────────────────────────────
+  invalidateAll(): void {
+    this._familles.set([]); this._classes.set([]);
+    this._frais.set([]); this._enseignants.set([]);
+    this._matieres.set([]); this._eleves.set([]);
+    this._soldes.set([]); this._bulletins.set([]);
+    this._notes.set([]); this._paiements.set([]);
   }
-  removeEleve(id: string): void {
-    this.remove(this._eleves, 'id_eleve', id);
-  }
+}
 
-  // ── Invalidations ───────────────────────────────
-
-  invalidateEleves() { this._eleves.set(null); }
-  invalidateSoldes() { this._soldes.set(null); }
-  invalidateBulletins() { this._bulletins.set(null); }
-  invalidateAll() {
-    this._familles.set(null); this._classes.set(null);
-    this._frais.set(null); this._enseignants.set(null);
-    this._matieres.set(null); this._eleves.set(null);
-    this._soldes.set(null); this._bulletins.set(null);
-  }
-
-  // ── Helpers privés ───────────────────────────────
-
-  private wrap<T>(data: T): CacheEntry<T> {
-    return { data, loadedAt: Date.now() };
-  }
-
-  private get<T>(entry: CacheEntry<T> | null, ttl: number): T | null {
-    if (!entry) return null;
-    if (Date.now() - entry.loadedAt > ttl) return null;
-    return entry.data;
-  }
-
-  /** Upsert générique sur un signal de tableau */
-  private upsert<T>(
-    sig: ReturnType<typeof signal<CacheEntry<T[]> | null>>,
-    item: T,
-    key: keyof T
-  ): void {
-    const entry = sig();
-    if (!entry) return;
-    const list = entry.data;
-    const idx = list.findIndex(x => x[key] === (item as any)[key]);
-    const next = idx === -1 ? [...list, item] : list.map((x, i) => i === idx ? item : x);
-    sig.set(this.wrap(next));
-  }
-
-  private remove<T>(
-    sig: ReturnType<typeof signal<CacheEntry<T[]> | null>>,
-    key: keyof T,
-    id: string
-  ): void {
-    const entry = sig();
-    if (!entry) return;
-    sig.set(this.wrap(entry.data.filter(x => (x as any)[key] !== id)));
-  }
+// Helper générique — hors classe, fonction pure
+function upsert<T>(list: T[], item: T, key: keyof T): T[] {
+  const idx = list.findIndex(x => x[key] === (item as any)[key]);
+  return idx === -1 ? [...list, item] : list.map((x, i) => i === idx ? item : x);
 }

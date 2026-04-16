@@ -1,55 +1,50 @@
-// data.service.ts — service de données principal
-// Stratégie rowIndex : chaque entrée du cache conserve son numéro de ligne Sheets
-// (ligne 1 = en-têtes ignorée, ligne 2 = index 2, etc.)
-// Ainsi updateCell et deleteRow connaissent toujours le bon index sans appel réseau
+// ─────────────────────────────────────────────────────────────────
+// data.service.ts — modèle Famille unifié (frais intégrés)
+// ─────────────────────────────────────────────────────────────────
 import { Injectable, inject } from '@angular/core';
 import { CacheService } from './cache.service';
 import { SheetsQueueServiceService } from './sheets-queue.service';
+import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
-  MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note
+  MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note, MsgTemplate,
+  LogAlerte
 } from '../models';
-import { environment } from '../../../environments/environment';
-import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 
-const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
-const YEAR = new Date().getFullYear();
-
-// ── Noms des feuilles ──────────────────────────────────────────────────
-const SHEETS = {
+const SHEET = {
   familles: 'F1_FAMILLES',
   eleves: 'F2_ELEVES',
   classes: 'F3_CLASSES',
   paiements: 'F4_PAIEMENTS',
   frais: 'F5_FRAIS_CONFIG',
-  notes: `F6_${YEAR}`,
-  msgTemplates: 'F7_MSG_TEMPLATES',
-  logAlertes: 'F8_LOG_ALERTES',
-  soldesSnap: 'F9_SNAP',
+  notes: `F6_${new Date().getFullYear()}`,
+  templates: 'F7_MSG_TEMPLATES',
+  logs: 'F8_LOG_ALERTES',
+  soldes: 'F9_SNAP',
   enseignants: 'F10_ENSEIGNANTS',
-  bulletinsSnap: 'F11_SNAP',
+  bulletins: 'F11_SNAP',
   matieres: 'F12_MATIERES_CONFIG',
 } as const;
 
-// ── En-têtes de colonnes (ordre = colonnes A, B, C…) ──────────────────
-const HEADERS = {
-  familles: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre', 'latitude', 'longitude', 'adresse_texte'],
-  eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance', 'date_inscription', 'statut','lieu_naissance','sexe','matricule'],
+// Famille inclut maintenant les champs pension directement
+const H = {
+  familles: [
+    'id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre',
+    'latitude', 'longitude', 'adresse_texte',
+    'montant_total_attendu', 'annee_scolaire', 'montant_reduction', 'commentaire'
+  ],
+  eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance', 'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule'],
   classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire', 'effectif_max', 'enseignant_principal'],
-  paiements: ['id_paiement', 'id_eleve', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement', 'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier', 'statut_alerte_whatsapp'],
-  frais: ['id_frais', 'id_classe', 'type_frais', 'montant_total_attendu', 'seuil_insolvable', 'echeance_1', 'echeance_2', 'echeance_3', 'annee_scolaire'],
+  paiements: ['id_paiement', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement', 'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier', 'statut_alerte_whatsapp'],
+  frais: ['id_frais', 'id_famille', 'id_classe', 'type_frais', 'montant_total_attendu', 'montant_reduction', 'seuil_insolvable', 'annee_scolaire', 'commentaire'],
   notes: ['id_note', 'id_eleve', 'id_classe', 'matiere', 'id_enseignant', 'sequence', 'note_obtenue', 'note_sur', 'annee_scolaire'],
-  enseignants: ['id_enseignant', 'nom', 'prenom','tel', 'email', 'classes_assignees'],
-  matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire', 'groupe', 'niveau','id_enseignant'],
-  soldesSnap: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer', 'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
-  bulletinsSnap: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier', 'dernier', 'mention', 'moy_classe'],
-  msgTemplates: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif', 'langue', 'destinataire'],
-  logAlertes: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest', 'date_envoi', 'statut', 'hash_dedup'],
-};
-
-// ── Index de lignes stocké en mémoire : sheetName → id → rowIndex ────
-// Évite un appel réseau findRowById avant chaque update
-type RowIndexMap = Map<string, Map<string, number>>;
+  enseignants: ['id_enseignant', 'nom', 'prenom', 'tel', 'email', 'classes_assignees'],
+  matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire', 'groupe', 'niveau', 'id_enseignant'],
+  soldes: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer', 'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
+  bulletins: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier', 'dernier', 'mention', 'moy_classe'],
+  templates: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif', 'langue', 'destinataire'],
+  logs: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest', 'date_envoi', 'statut', 'hash_dedup'],
+} as const;
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -58,345 +53,306 @@ export class DataService {
   private queue = inject(SheetsQueueServiceService);
   private sheets = inject(GoogleSheetsService);
 
-  // Dictionnaire sheetName → (id → numéro de ligne dans Sheets)
-  private rowIndex: RowIndexMap = new Map();
-
-  // ─────────────────────────────────────────────────
-  // DÉMARRAGE : batchGet (Groupe A + B + D en 2 appels)
-  // ─────────────────────────────────────────────────
+  // ── Démarrage ──────────────────────────────────────────────────
 
   async initAppData(): Promise<void> {
+    await this.ensureSheets();
 
-    this.createSheets(); // Création des feuilles si elles n'existent pas (idempotent)
-    // Appel 1 : Groupe A — référentiels stables (cache 24h)
-    const groupeA = await this.sheets.batchGet([
-      `${SHEETS.familles}!A:H`,
-      `${SHEETS.classes}!A:G`,
-      `${SHEETS.frais}!A:I`,
-      `${SHEETS.enseignants}!A:F`,
-      `${SHEETS.matieres}!A:H`,
+    const [rawFam, rawCls, rawFrais, rawEns, rawMat] = await this.batchFetch([
+      `${SHEET.familles}!A:L`,   // 12 colonnes avec les frais intégrés
+      `${SHEET.classes}!A:G`,
+      `${SHEET.frais}!A:I`,
+      `${SHEET.enseignants}!A:F`,
+      `${SHEET.matieres}!A:H`,
     ]);
+    this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
+    this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
+    this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
+    this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
+    this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
 
-    const familles = this.parseWithIndex(groupeA[0], HEADERS.familles, SHEETS.familles, 'id_famille') as Famille[];
-    const classes = this.parseWithIndex(groupeA[2], HEADERS.classes, SHEETS.classes, 'id_classe') as Classe[];
-    const frais = this.parseWithIndex(groupeA[4], HEADERS.frais, SHEETS.frais, 'id_frais') as FraisConfig[];
-    const enseignants = this.parseWithIndex(groupeA[6], HEADERS.enseignants, SHEETS.enseignants, 'id_enseignant') as Enseignant[];
-    const matieres = this.parseWithIndex(groupeA[8], HEADERS.matieres, SHEETS.matieres, 'id_matiere') as MatiereConfig[];
-
-
-    this.cache.setFamilles(familles);
-    this.cache.setClasses(classes);
-    this.cache.setFrais(frais);
-    this.cache.setEnseignants(enseignants);
-    this.cache.setMatieres(matieres);
-
-    // Appel 2 : Groupe B + D — élèves + snapshots
-    const groupeBD = await this.sheets.batchGet([
-      `${SHEETS.eleves}!A:H`,
-      `${SHEETS.soldesSnap}!A:H`,
+    const [rawElv, rawSol] = await this.batchFetch([
+      `${SHEET.eleves}!A:K`,
+      `${SHEET.soldes}!A:H`,
     ]);
+    this.cache.setEleves(this.parse<Eleve>(rawElv, H.eleves));
+    this.cache.setSoldes(this.parse<SoldeSnap>(rawSol, H.soldes));
 
-    const eleves = this.parseWithIndex(groupeBD[0], HEADERS.eleves, SHEETS.eleves, 'id_eleve') as Eleve[];
-    const soldes = this.parseWithIndex(groupeBD[2], HEADERS.soldesSnap, SHEETS.soldesSnap, 'id_eleve') as SoldeSnap[];
+    this.sheets.fetchRaw(SHEET.notes).then(r =>
+      this.cache.setNotes(this.parse<Note>(r, H.notes))
+    );
+    this.sheets.fetchRaw(SHEET.paiements).then(r =>
+      this.cache.setPaiements(this.parse<Paiement>(r, H.paiements))
+    );
 
-    this.cache.setEleves(eleves);
-    this.cache.setSoldes(soldes);
-
-    // Appel 3 : Groupe C — notes (plus volumineux, cache 24h)
-    const notesRaw = await this.sheets.batchGet([`${SHEETS.notes}!A:I`]);
-
-    const notes = this.parseWithIndex(notesRaw[0], HEADERS.notes, SHEETS.notes, 'id_note') as Note[];
-    this.cache.setNotes(notes);
+    await this.loadTemplates();
   }
 
+  // ── Getters ────────────────────────────────────────────────────
 
-  // Matieres
+  getClasses(): Classe[] { return this.cache.getClasses(); }
+  getFamilles(): Famille[] { return this.cache.getFamilles(); }
+  getEleves(): Eleve[] { return this.cache.getEleves(); }
+  getMatieres(): MatiereConfig[] { return this.cache.getMatieres(); }
+  getFrais(): FraisConfig[] { return this.cache.getFrais(); }
+  getEnseignants(): Enseignant[] { return this.cache.getEnseignants(); }
+  getSoldes(): SoldeSnap[] { return this.cache.getSoldes(); }
+  getPaiements(): Paiement[] { return this.cache.getPaiements(); }
 
-  getMatieres(): MatiereConfig[] {
-    return this.cache.getMatieres() ?? [];
-  }
-
-  // ─────────────────────────────────────────────────
-  // FAMILLES
-  // ─────────────────────────────────────────────────
-
-  getFamilles(): Famille[] {
-    return this.cache.getFamilles() ?? [];
-  }
+  // ── Familles ───────────────────────────────────────────────────
 
   async addFamille(f: Famille): Promise<void> {
-    // 1. Cache local immédiat
     this.cache.upsertFamille(f);
-    // 2. Calcul du futur rowIndex (taille actuelle + 2 car ligne 1 = en-tête)
-    const nextRow = (this.getFamilles().length) + 1;
-    this.setRowIndex(SHEETS.familles, f.id_famille, nextRow);
-    // 3. Envoi en file
-    const row = HEADERS.familles.map(k => (f as any)[k] ?? '');
-    this.queue.enqueue({ sheetName: SHEETS.familles, rowData: row }, 'addRow');
+    this.queue.enqueue(
+      { sheetName: SHEET.familles, rowData: this.toRow(f, H.familles) },
+      'addRow'
+    );
   }
 
   async updateFamille(f: Famille): Promise<void> {
-    // Récupère le rowIndex depuis la map — jamais besoin d'appel réseau
-    const ri = this.getRowIndex(SHEETS.familles, f.id_famille);
-    if (!ri) {
-      console.warn(`rowIndex inconnu pour famille ${f.id_famille} — addRow utilisé`);
-      return this.addFamille(f);
-    }
     this.cache.upsertFamille(f);
-    // Enfile un updateCell par colonne modifiée
-    HEADERS.familles.forEach((key, colIdx) => {
-      this.queue.enqueue({
-        sheetName: SHEETS.familles,
-        row: ri,
-        col: colIdx + 1,
-        value: (f as any)[key] ?? '',
-      }, 'updateCell');
-    });
+    const row = await this.sheets.findRowById(SHEET.familles, f.id_famille);
+    if (row === -1) { return this.addFamille(f); }
+    this.queue.enqueue(
+      { sheetName: SHEET.familles, row, col: 1, values: this.toRow(f, H.familles) },
+      'updateRow'
+    );
   }
 
   async deleteFamille(id: string): Promise<void> {
-    const ri = this.getRowIndex(SHEETS.familles, id);
-    if (!ri) return;
     this.cache.removeFamille(id);
-    this.queue.enqueue({ sheetName: SHEETS.familles, rowIndex: ri - 1 }, 'deleteRow');
-    this.clearRowIndex(SHEETS.familles, id);
+    const row = await this.sheets.findRowById(SHEET.familles, id);
+    if (row === -1) return;
+    this.queue.enqueue({ sheetName: SHEET.familles, rowIndex: row - 1 }, 'deleteRow');
   }
 
-  // ─────────────────────────────────────────────────
-  // ÉLÈVES
-  // ─────────────────────────────────────────────────
-
-  getEleves(): Eleve[] {
-    return this.cache.getEleves() ?? [];
-  }
-
-  getElevesEnrichis() {
-    const fMap = this.cache.famillesMap();
-    const cMap = this.cache.classesMap();
-    return this.getEleves().map(e => ({
-      ...e,
-      famille: fMap.get(e.id_famille),
-      classe: cMap.get(e.id_classe),
-    }));
-  }
+  // ── Élèves ─────────────────────────────────────────────────────
 
   async addEleve(e: Eleve): Promise<void> {
     this.cache.upsertEleve(e);
-    const nextRow = this.getEleves().length + 1;
-    this.setRowIndex(SHEETS.eleves, e.id_eleve, nextRow);
-    const row = HEADERS.eleves.map(k => (e as any)[k] ?? '');
-    this.queue.enqueue({ sheetName: SHEETS.eleves, rowData: row }, 'addRow');
+    this.queue.enqueue(
+      { sheetName: SHEET.eleves, rowData: this.toRow(e, H.eleves) },
+      'addRow'
+    );
   }
 
   async updateEleve(e: Eleve): Promise<void> {
-    const ri = this.getRowIndex(SHEETS.eleves, e.id_eleve);
-    if (!ri) {
-      console.warn(`rowIndex inconnu pour élève ${e.id_eleve} — addRow utilisé`);
-      return this.addEleve(e);
-    }
     this.cache.upsertEleve(e);
-    HEADERS.eleves.forEach((key, colIdx) => {
-      this.queue.enqueue({
-        sheetName: SHEETS.eleves,
-        row: ri,
-        col: colIdx + 1,
-        value: (e as any)[key] ?? '',
-      }, 'updateCell');
-    });
+    const row = await this.sheets.findRowById(SHEET.eleves, e.id_eleve);
+    if (row === -1) { return this.addEleve(e); }
+    this.queue.enqueue(
+      { sheetName: SHEET.eleves, row, col: 1, values: this.toRow(e, H.eleves) },
+      'updateRow'
+    );
   }
 
   async deleteEleve(id: string): Promise<void> {
-    const ri = this.getRowIndex(SHEETS.eleves, id);
-    if (!ri) return;
-    // Archivage logique : on change le statut à 'archive' au lieu de supprimer
-    const eleve = this.getEleves().find(x => x.id_eleve === id);
-    if (eleve) await this.updateEleve({ ...eleve, statut: 'archive' });
+    const e = this.cache.getEleves().find(x => x.id_eleve === id);
+    if (e) await this.updateEleve({ ...e, statut: 'archive' });
   }
 
-  // ─────────────────────────────────────────────────
-  // CLASSES
-  // ─────────────────────────────────────────────────
-
-  getClasses(): Classe[] {
-    return this.cache.getClasses() ?? [];
-  }
+  // ── Classes ────────────────────────────────────────────────────
 
   async addClasse(c: Classe): Promise<void> {
     this.cache.upsertClasse(c);
-    const nextRow = (this.cache.getClasses()?.length ?? 0) + 1;
-    this.setRowIndex(SHEETS.classes, c.id_classe, nextRow);
-    const row = HEADERS.classes.map(k => (c as any)[k] ?? '');
-    this.queue.enqueue({ sheetName: SHEETS.classes, rowData: row }, 'addRow');
+    this.queue.enqueue(
+      { sheetName: SHEET.classes, rowData: this.toRow(c, H.classes) },
+      'addRow'
+    );
   }
 
   async updateClasse(c: Classe): Promise<void> {
-    const ri = this.getRowIndex(SHEETS.classes, c.id_classe);
-    if (!ri) return this.addClasse(c);
     this.cache.upsertClasse(c);
-    HEADERS.classes.forEach((key, colIdx) => {
-      this.queue.enqueue({
-        sheetName: SHEETS.classes,
-        row: ri, col: colIdx + 1,
-        value: (c as any)[key] ?? '',
-      }, 'updateCell');
-    });
+    const row = await this.sheets.findRowById(SHEET.classes, c.id_classe);
+    if (row === -1) { return this.addClasse(c); }
+    this.queue.enqueue(
+      { sheetName: SHEET.classes, row, col: 1, values: this.toRow(c, H.classes) },
+      'updateRow'
+    );
   }
 
-  // ─────────────────────────────────────────────────
-  // PAIEMENTS
-  // ─────────────────────────────────────────────────
-
-  async getPaiementsEleve(idEleve: string): Promise<Paiement[]> {
-    const all = await this.readSheet<Paiement>(SHEETS.paiements, HEADERS.paiements);
-    return all.filter(p => p.id_eleve === idEleve);
-  }
+  // ── Paiements ──────────────────────────────────────────────────
 
   async addPaiement(p: Paiement): Promise<void> {
-    // Patch solde local immédiat sans re-fetch
-    this.patchSoldeLocal(p);
-    const row = HEADERS.paiements.map(k => (p as any)[k] ?? '');
-    this.queue.enqueue({ sheetName: SHEETS.paiements, rowData: row }, 'addRow');
+    this.cache.upsertPaiement(p);
+    this.updateSoldeLocal(p);
+    this.queue.enqueue(
+      { sheetName: SHEET.paiements, rowData: this.toRow(p, H.paiements) },
+      'addRow'
+    );
   }
 
-  private patchSoldeLocal(p: Paiement): void {
-    const soldes = this.cache.getSoldes() ?? [];
-    const idx = soldes.findIndex(s => s.id_eleve === p.id_eleve);
-    if (idx === -1) return;
-    const old = soldes[idx];
-    const fraisConfig = (this.cache.getFrais() ?? []).find(f => {
-      const classe = this.cache.classesMap().get(
-        this.getEleves().find(e => e.id_eleve === p.id_eleve)?.id_classe ?? ''
+  async getPaiementsEleve(idFamille: string): Promise<Paiement[]> {
+    const cached = this.cache.getPaiements();
+    if (cached.length) return cached.filter(p => p.id_famille === idFamille);
+    const raw = await this.sheets.fetchRaw(SHEET.paiements);
+    const all = this.parse<Paiement>(raw, H.paiements);
+    this.cache.setPaiements(all);
+    return all.filter(p => p.id_famille === idFamille);
+  }
+
+  // ── Frais config (par classe) ──────────────────────────────────
+
+  async addFrais(f: FraisConfig): Promise<void> {
+    this.queue.enqueue(
+      { sheetName: SHEET.frais, rowData: this.toRow(f, H.frais) },
+      'addRow'
+    );
+  }
+
+  async updateFrais(f: FraisConfig): Promise<void> {
+    const row = await this.sheets.findRowById(SHEET.frais, f.id_frais);
+    if (row === -1) { return this.addFrais(f); }
+    this.queue.enqueue(
+      { sheetName: SHEET.frais, row, col: 1, values: this.toRow(f, H.frais) },
+      'updateRow'
+    );
+  }
+
+  // ── Notes ──────────────────────────────────────────────────────
+
+  async saveNotesBatch(notes: Note[]): Promise<void> {
+    this.cache.setNotesBatch(notes);
+    notes.forEach(n => this.queue.enqueue(
+      { sheetName: SHEET.notes, rowData: this.toRow(n, H.notes) },
+      'addRow'
+    ));
+  }
+
+  async deleteNotesBatch(noteIds: string[]): Promise<void> {
+    this.cache.deleteNotesBatch(noteIds);
+    const rows = await Promise.all(
+      noteIds.map(id => this.sheets.findRowById(SHEET.notes, id))
+    );
+    noteIds
+      .map((id, i) => ({ id, row: rows[i] }))
+      .filter(x => x.row !== -1)
+      .sort((a, b) => b.row - a.row)
+      .forEach(x => this.queue.enqueue(
+        { sheetName: SHEET.notes, rowIndex: x.row - 1 },
+        'deleteRow'
+      ));
+  }
+
+  // ── Snapshots ──────────────────────────────────────────────────
+
+  async refreshSoldes(): Promise<void> {
+    this.cache.setSoldes(this.parse<SoldeSnap>(
+      await this.sheets.fetchRaw(SHEET.soldes), H.soldes
+    ));
+  }
+
+  async refreshBulletins(): Promise<void> {
+    this.cache.setBulletins(this.parse<BulletinSnap>(
+      await this.sheets.fetchRaw(SHEET.bulletins), H.bulletins
+    ));
+  }
+
+  // ── Lecture générique ──────────────────────────────────────────
+
+  // Cache local templates (non persisté entre sessions — rechargé au besoin)
+
+  /** Charge les templates WhatsApp depuis Sheets et les met en cache local */
+  async loadTemplates(): Promise<void> {
+    const raw = await this.sheets.fetchRaw(SHEET.templates);
+    this.cache.setTemplates(this.parse<MsgTemplate>(raw, H.templates));
+  }
+
+  /** Retourne les templates actifs depuis le cache local */
+  getTemplates(): MsgTemplate[] {
+    return this.cache.getTemplates().filter(t => t.actif);
+  }
+
+  addTemplate(t: MsgTemplate): void {
+    this.cache.upsertTemplate(t);
+    this.queue.enqueue(
+      { sheetName: SHEET.templates, rowData: this.toRow(t, H.templates) },
+      'addRow'
+    );
+  }
+
+
+  updateTemplate(t: MsgTemplate): void {
+    this.cache.upsertTemplate(t);
+    this.sheets.findRowById(SHEET.templates, t.id_template).then(row => {
+      if (row === -1) { return this.addTemplate(t); }
+      this.queue.enqueue(
+        { sheetName: SHEET.templates, row, col: 1, values: this.toRow(t, H.templates) },
+        'updateRow'
       );
-      return classe && f.id_classe === classe.id_classe;
     });
-    const reste = Math.max(0, old.reste_a_payer - p.montant_verse);
+  }
+
+  loadLogs(): LogAlerte[] {
+    this.sheets.fetchRaw(SHEET.logs).then(raw => {
+      this.cache.setLogs(this.parse<LogAlerte>(raw, H.logs));
+    });
+    return this.cache.getLogs();
+  }
+
+  getLogs(): LogAlerte[] {
+    return this.cache.getLogs();
+  }
+
+  addLogs(l: LogAlerte): void {
+    this.cache.upsertLog(l);
+    this.queue.enqueue(
+      { sheetName: SHEET.logs, rowData: this.toRow(l, H.logs) },
+      'addRow'
+    );
+  }
+
+  async readSheetPublic<T>(sheetName: string): Promise<T[]> {
+    const map: Partial<Record<string, readonly string[]>> = {
+      [SHEET.templates]: H.templates,
+      [SHEET.logs]: H.logs,
+    };
+    const headers = map[sheetName];
+    if (!headers) { console.warn(`readSheetPublic : feuille inconnue "${sheetName}"`); return []; }
+    return this.parse<T>(await this.sheets.fetchRaw(sheetName), headers);
+  }
+
+  // ── Helpers privés ─────────────────────────────────────────────
+
+  private toRow(obj: any, headers: readonly string[]): any[] {
+    return headers.map(k => obj[k] ?? '');
+  }
+
+  private parse<T>(rows: any[][], headers: readonly string[]): T[] {
+    if (!rows?.length) return [];
+    return rows.slice(1).filter(r => r.length && r[0]).map(row => {
+      const obj: any = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      return obj as T;
+    });
+  }
+
+  private async batchFetch(ranges: string[]): Promise<any[][][]> {
+    return (await this.sheets.batchGet(ranges)).filter((_, i) => i % 2 === 0);
+  }
+
+  private updateSoldeLocal(p: Paiement): void {
+    const s = this.cache.getSoldes().find(x => x.id_famille === p.id_famille);
+    if (!s) return;
+    const reste = Math.max(0, +s.reste_a_payer - +p.montant_verse);
     this.cache.upsertSolde({
-      ...old,
-      total_verse: old.total_verse + p.montant_verse,
+      ...s,
+      total_verse: +s.total_verse + +p.montant_verse,
       reste_a_payer: reste,
-      statut_insolvable: reste > (fraisConfig?.seuil_insolvable ?? 0),
+      statut_insolvable: String(reste > 0),
       dernier_paiement: p.date_paiement,
     });
   }
 
-  // ─────────────────────────────────────────────────
-  // NOTES
-  // ─────────────────────────────────────────────────
-
-
-  async saveNotesBatch(notes: Note[]): Promise<void> {
-    notes.forEach(note => {
-      const row = HEADERS.notes.map(k => (note as any)[k] ?? '');
-      this.queue.enqueue({ sheetName: SHEETS.notes, rowData: row }, 'addRow');
-    });
-    this.cache.setNotesBatch(notes);
-  }
-
-  async deleteNotesBatch(noteIds: string[]): Promise<void> {
-    noteIds.forEach(id => {
-      const ri = this.getRowIndex(SHEETS.notes, id);
-      if (ri) {
-        this.queue.enqueue({ sheetName: SHEETS.notes, rowIndex: ri - 1 }, 'deleteRow');
-        this.clearRowIndex(SHEETS.notes, id);
-      }
-    });
-    this.cache.deleteNotesBatch(noteIds);
-  }
-  // ─────────────────────────────────────────────────
-  // SNAPSHOTS — rechargés manuellement ou après regénération
-  // ─────────────────────────────────────────────────
-
-  async refreshSoldesSnap(): Promise<void> {
-    const rows = await this.sheets.fetchRaw(SHEETS.soldesSnap);
-    const data = this.parseWithIndex(rows, HEADERS.soldesSnap, SHEETS.soldesSnap, 'id_eleve') as SoldeSnap[];
-    this.cache.setSoldes(data);
-  }
-
-  async refreshBulletinsSnap(): Promise<void> {
-    const rows = await this.sheets.fetchRaw(SHEETS.bulletinsSnap);
-    const data = this.parseWithIndex(rows, HEADERS.bulletinsSnap, SHEETS.bulletinsSnap, 'id_eleve') as BulletinSnap[];
-    this.cache.setBulletins(data);
-  }
-
-  // ─────────────────────────────────────────────────
-  // LECTURE PUBLIQUE (templates, logs, etc.)
-  // ─────────────────────────────────────────────────
-
-  async readSheetPublic<T>(sheetName: string): Promise<T[]> {
-    const headersMap: Record<string, string[]> = {
-      [SHEETS.msgTemplates]: HEADERS.msgTemplates,
-      [SHEETS.logAlertes]: HEADERS.logAlertes,
-    };
-    const hdrs = headersMap[sheetName] ?? [];
-    if (!hdrs.length) return [];
-    return this.readSheet<T>(sheetName, hdrs);
-  }
-
-  // ─────────────────────────────────────────────────
-  // GESTION DES rowIndex (dictionnaire en mémoire)
-  // ─────────────────────────────────────────────────
-
-  private setRowIndex(sheet: string, id: string, row: number): void {
-    if (!this.rowIndex.has(sheet)) this.rowIndex.set(sheet, new Map());
-    this.rowIndex.get(sheet)!.set(id, row);
-  }
-
-  private getRowIndex(sheet: string, id: string): number | undefined {
-    return this.rowIndex.get(sheet)?.get(id);
-  }
-
-  private clearRowIndex(sheet: string, id: string): void {
-    this.rowIndex.get(sheet)?.delete(id);
-  }
-
-
-  /** Lit une feuille et retourne un tableau d'objets typés */
-  private async readSheet<T>(sheetName: string, headers: string[]): Promise<T[]> {
-    const rows = await this.sheets.fetchRaw(sheetName);
-    return this.parse(rows, headers) as T[];
-  }
-
-  /**
-   * Parse + stocke les rowIndex en même temps
-   * Ligne 2 de Sheets = index 2 (ligne 1 = en-tête)
-   */
-  private parseWithIndex(
-    rows: any[][],
-    headers: string[],
-    sheetName: string,
-    idKey: string
-  ): Record<string, any>[] {
-    if (!rows?.length) return [];
-    return rows
-      .filter((r, i) => r.length > 0 && r[0] !== '' && i !== 0)
-      .map((row, i) => {
-        const obj: Record<string, any> = {};
-        headers.forEach((h, j) => { obj[h] = row[j] ?? ''; });
-        // rowIndex Sheets = i + 2 (ligne 1 = en-tête, données commencent à 2)
-        const id = obj[idKey];
-        if (id) this.setRowIndex(sheetName, String(id), i + 2);
-        return obj;
-      });
-  }
-
-  /** Parse sans stocker rowIndex (pour lectures à la demande) */
-  private parse(rows: any[][], headers: string[]): Record<string, any>[] {
-    if (!rows?.length) return [];
-    return rows
-      .filter(r => r.length > 0 && r[0] !== '')
-      .map(row => {
-        const obj: Record<string, any> = {};
-        headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
-        return obj;
-      });
-  }
-
-  private createSheets() {
-    Object.entries(SHEETS).forEach(([key, sheetName]) => {
-      this.sheets.createSheet({
-        sheetName: sheetName,
-        headers: HEADERS[key as keyof typeof HEADERS],
-      });
-    });
+  private async ensureSheets(): Promise<void> {
+    const entries = Object.entries(SHEET) as [keyof typeof SHEET, string][];
+    await Promise.all(
+      entries
+        .filter(([key]) => key in H)
+        .map(([key, name]) => this.sheets.createSheet({
+          sheetName: name,
+          headers: H[key as keyof typeof H] as unknown as string[],
+        }))
+    );
   }
 }

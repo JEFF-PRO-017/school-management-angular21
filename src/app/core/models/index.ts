@@ -22,6 +22,21 @@ export interface Famille {
   latitude?: number;
   longitude?: number;
   adresse_texte?: string;
+  eleves?: Eleve[];  // construit côté app depuis le cache
+  montant_total_attendu?: number;
+  annee_scolaire?: string;
+  montant_reduction?: number;
+  commentaire?: string;
+  paiements?: Paiement[];  // construit côté app depuis le cache
+}
+
+export interface FraisPension {
+  id_frais: string;
+  montant_total_attendu: number;
+  id_famille: string;
+  annee_scolaire: string;
+  montant_reduction: number;
+  commentaire: string;
 }
 
 // ── Élève (F2) ────────────────────────────────
@@ -73,6 +88,7 @@ export interface Classe {
 
 // ── Configuration frais (F5) ──────────────────
 export interface FraisConfig {
+
   id_frais: string;
   id_classe: string;
   type_frais: string;
@@ -82,6 +98,7 @@ export interface FraisConfig {
   echeance_2?: string;
   echeance_3?: string;
   annee_scolaire: string;
+  id_famille?: string;
 }
 
 // ── Paiement (F4) ─────────────────────────────
@@ -89,7 +106,7 @@ export type ModePaiement = 'cash' | 'mobile' | 'virement';
 
 export interface Paiement {
   id_paiement: string;
-  id_eleve: string;
+  id_eleve?: string;
   id_famille: string;
   montant_verse: number;
   date_paiement: string;
@@ -108,7 +125,7 @@ export interface SoldeSnap {
   total_verse: number;
   montant_attendu: number;
   reste_a_payer: number;
-  statut_insolvable: boolean;
+  statut_insolvable: any;
   dernier_paiement?: string;
   nb_enfants_famille: number;
 }
@@ -179,13 +196,14 @@ export interface MsgTemplate {
   destinataire: Destinataire;
   actif: boolean;
   langue: string;
+  variables_dynamiques:any;
 }
 
 // ── Log alerte (F8) ──────────────────────────
 export interface LogAlerte {
   id_log: string;
   id_eleve: string;
-  id_famille?: string;
+  id_famille: string;
   id_template: string;
   numero_dest: string;
   date_envoi: string;

@@ -5,7 +5,7 @@ export const WHATSAPP_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./templates-list/templates-list.component').then(m => m.TemplatesListComponent),
+      import('./templates-list/app-templates-list').then(m => m.TemplatesListComponent),
   },
   {
     path: 'templates/nouveau',

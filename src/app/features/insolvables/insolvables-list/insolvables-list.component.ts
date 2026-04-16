@@ -1,390 +1,542 @@
-// insolvables-list.component.ts
-// Liste des élèves insolvables avec :
-// - Filtre par classe + seuil personnalisable
-// - Export PDF de la liste
-// - Déclenchement d'alerte WhatsApp par élève ou en masse
-import { Component, inject, signal, computed } from '@angular/core';
+// insolvables-list.component.ts — v2
+// Corrections :
+//  - Filtres seuil + dateRef convertis en signal() via toSignal() → computed() réactif
+//  - Checkbox sélection individuelle + tout sélectionner / désélectionner
+//  - Choix du template WhatsApp depuis les templates en cache
+//  - debugger supprimé
+import {
+  Component, inject, signal, computed,
+  ChangeDetectionStrategy, ChangeDetectorRef, OnInit,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { CacheService } from '../../../core/services/cache.service';
-import { DataService } from '../../../core/services/data.service';
-import { PdfService } from '../../../core/services/pdf.service';
-import { WhatsappService } from '../../../core/services/whatsapp.service';
-import { EleveEnrichi, SoldeSnap } from '../../../core/models';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { toSignal } from '@angular/core/rxjs-interop';
 
-type InsolvableRow = EleveEnrichi & { solde: SoldeSnap };
+import { CacheService }          from '../../../core/services/cache.service';
+import { DataService }            from '../../../core/services/data.service';
+import { Famille, MsgTemplate }  from '../../../core/models';
+import { InsolvablesPdfService } from '../insolvables-pdf.service';
 
 @Component({
   selector: 'app-insolvables-list',
   standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    MatTableModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, MatProgressSpinnerModule, MatCheckboxModule,
-    EmptyStateComponent,
-  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ReactiveFormsModule],
   template: `
-    <div class="container-fluid px-0">
+<div class="bl-host">
 
-      <!-- Titre + actions globales -->
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div>
-          <h5 class="fw-bold text-primary mb-0">Élèves insolvables</h5>
-          <p class="text-muted small mb-0">
-            {{ insolvables().length }} élève(s) concerné(s)
-          </p>
-        </div>
+  <!-- ══ BARRE ══ -->
+  <div class="bl-bar">
+    <div class="bl-cfg-summary">
+      <span class="bl-cfg-titre">Suivi des impayés</span>
+      <span class="bl-cfg-seqs">{{ resumeSous() }}</span>
+    </div>
 
-        <div class="d-flex flex-wrap gap-2">
-          <!-- Alerte WhatsApp en masse pour les sélectionnés -->
-          @if (selection().length > 0) {
-            <button mat-raised-button color="warn"
-                    (click)="envoyerAlerteMasse()"
-                    [disabled]="sending()">
-              @if (sending()) {
-                <mat-spinner diameter="18" class="d-inline-block me-1"></mat-spinner>
-              } @else {
-                <mat-icon>send</mat-icon>
-              }
-              Alerter {{ selection().length }} parent(s)
-            </button>
-          }
+    <span class="bl-sep"></span>
 
-          <!-- Export PDF -->
-          <button mat-stroked-button color="primary" (click)="exporterPdf()">
-            <mat-icon>picture_as_pdf</mat-icon> Exporter PDF
-          </button>
-        </div>
-      </div>
+    <!-- Seuil montant -->
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+      <span style="color:#888;white-space:nowrap">Versé inférieur à</span>
+      <input [formControl]="ctrlSeuil" type="number" min="0" step="1000"
+             style="width:110px;height:32px;padding:0 8px;font-size:13px;
+                    border:0.5px solid rgba(0,0,0,.18);border-radius:6px;
+                    background:white;outline:none"
+             placeholder="ex: 50000">
+      <span style="color:#888;font-size:11px">FCFA</span>
+    </div>
 
-      <!-- Filtres -->
-      <div class="row g-2 mb-3">
-        <div class="col-12 col-md-4">
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Filtrer par classe</mat-label>
-            <mat-select [formControl]="filterClasse">
-              <mat-option value="">Toutes les classes</mat-option>
-              @for (c of classes(); track c.id_classe) {
-                <mat-option [value]="c.id_classe">{{ c.nom_classe }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        </div>
+    <!-- Date RDV -->
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+      <span style="color:#888;white-space:nowrap">Exclure RDV après</span>
+      <input [formControl]="ctrlDateRef" type="date"
+             style="height:32px;padding:0 8px;font-size:12px;
+                    border:0.5px solid rgba(0,0,0,.18);border-radius:6px;
+                    background:white;outline:none">
+    </div>
 
-        <div class="col-12 col-md-4">
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Reste minimum (FCFA)</mat-label>
-            <input matInput type="number" [formControl]="filterMontantMin" min="0">
-            <mat-icon matSuffix>filter_alt</mat-icon>
-          </mat-form-field>
-        </div>
+    <span class="bl-sep"></span>
 
-        <div class="col-12 col-md-4">
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Date de référence</mat-label>
-            <input matInput type="date" [formControl]="dateRef">
-          </mat-form-field>
-        </div>
-      </div>
+    <!-- Export PDF -->
+    <button class="bl-btn" (click)="exportPdf()"
+            [disabled]="cibles().length === 0">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M3 1h7l3 3v11H3V1z" stroke="currentColor"
+              stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M10 1v3h3" stroke="currentColor"
+              stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M6 9h4M6 11.5h2" stroke="currentColor"
+              stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      PDF {{ labelSelection() }}
+    </button>
 
-      <!-- Tableau -->
-      @if (insolvables().length === 0) {
-        <app-empty-state
-          icon="check_circle"
-          title="Aucun insolvable"
-          subtitle="Tous les élèves sont à jour pour les critères sélectionnés">
-        </app-empty-state>
-      } @else {
+    <!-- WhatsApp masse -->
+    <button class="bl-btn bl-btn--ok" (click)="envoyerRappels()"
+            [disabled]="cibles().length === 0">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z"
+              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      WhatsApp {{ labelSelection() }}
+    </button>
+  </div>
 
-        <!-- Ligne de sélection globale -->
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <mat-checkbox
-            [checked]="allSelected()"
-            [indeterminate]="someSelected()"
-            (change)="toggleAll($event.checked)">
-            Tout sélectionner
-          </mat-checkbox>
-          <span class="text-muted small">
-            {{ selection().length }} / {{ insolvables().length }} sélectionné(s)
-          </span>
-        </div>
+  <!-- ══ FILTRE CLASSE + TEMPLATE ══ -->
+  <div class="bl-chips-bar">
+    <span class="bl-chips-lbl">Classe</span>
+    <button class="bl-chip" [class.bl-chip--on]="filtreClasse() === ''"
+            (click)="setClasse('')">Toutes</button>
+    @for (c of classes(); track c.id_classe) {
+      <button class="bl-chip" [class.bl-chip--on]="filtreClasse() === c.id_classe"
+              (click)="setClasse(c.id_classe)">{{ c.nom_classe }}</button>
+    }
 
-        <div class="table-responsive rounded shadow-sm">
-          <table mat-table [dataSource]="insolvables()" class="w-100 mat-elevation-z0">
+    <span class="bl-sep"></span>
 
-            <!-- Case à cocher -->
-            <ng-container matColumnDef="select">
-              <th mat-header-cell *matHeaderCellDef style="width:48px"></th>
-              <td mat-cell *matCellDef="let row">
-                <mat-checkbox
-                  [checked]="isSelected(row.id_eleve)"
-                  (change)="toggleSelect(row.id_eleve, $event.checked)">
-                </mat-checkbox>
+    <!-- Sélection du template WhatsApp -->
+    <span class="bl-chips-lbl">Message</span>
+    @if (templates().length === 0) {
+      <span style="font-size:11px;color:#bbb">Aucun template</span>
+    } @else {
+      @for (t of templates(); track t.id_template) {
+        <button class="bl-chip"
+                [class.bl-chip--on]="templateChoisi()?.id_template === t.id_template"
+                (click)="setTemplate(t)">
+          {{ t.objet }}
+        </button>
+      }
+    }
+  </div>
+
+  <!-- ══ TABLEAU ══ -->
+  @if (seuil() <= 0) {
+    <div class="bl-empty">Saisissez un montant seuil pour lancer la recherche</div>
+
+  } @else if (filtered().length === 0) {
+    <div class="bl-empty">Aucune famille sous ce seuil</div>
+
+  } @else {
+    <!-- Barre sélection globale -->
+    <div class="bl-sel-bar">
+      <!-- Checkbox tout sélectionner / désélectionner -->
+      <label class="bl-chk-wrap">
+        <input type="checkbox"
+               [checked]="toutSelectionne()"
+               [indeterminate]="selectionPartielle()"
+               (change)="toggleTout($event)"
+               class="bl-chk">
+        <span style="font-size:12px;color:#555">Tout sélectionner</span>
+      </label>
+
+      @if (selection().size > 0) {
+        <span class="bl-mention bl-mention--info">
+          {{ selection().size }} / {{ filtered().length }} sélectionné(s)
+        </span>
+        <button class="bl-btn" style="height:26px;font-size:11px;padding:0 10px"
+                (click)="viderSelection()">
+          Désélectionner
+        </button>
+      }
+    </div>
+
+    <div class="bl-table-wrap">
+      <table class="bl-table">
+        <thead>
+          <tr>
+            <th class="bl-th" style="width:32px"></th>
+            <th class="bl-th" style="text-align:left">Famille</th>
+            <th class="bl-th">Enfants · classe</th>
+            <th class="bl-th">Contact</th>
+            <th class="bl-th">Attendu</th>
+            <th class="bl-th bl-th--trim">Versé</th>
+            <th class="bl-th bl-th--trim">Restant</th>
+            <th class="bl-th">Prochain RDV</th>
+            <th class="bl-th">WA</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of filtered(); track f.id_famille) {
+            <tr class="bl-tr" [class.bl-tr--sel]="estSelectionne(f.id_famille)">
+
+              <!-- Checkbox ligne -->
+              <td class="bl-td bl-td--center" style="width:32px">
+                <input type="checkbox"
+                       [checked]="estSelectionne(f.id_famille)"
+                       (change)="toggleLigne(f.id_famille, $event)"
+                       class="bl-chk">
               </td>
-            </ng-container>
 
-            <!-- Élève -->
-            <ng-container matColumnDef="eleve">
-              <th mat-header-cell *matHeaderCellDef>Élève</th>
-              <td mat-cell *matCellDef="let row">
-                <div class="fw-semibold">{{ row.nom }} {{ row.prenom }}</div>
-                <div class="text-muted small">{{ row.famille?.nom_famille }}</div>
+              <!-- Famille -->
+              <td class="bl-td bl-td--name">
+                <div>{{ f.nom_famille }}</div>
+                <div style="font-size:10px;color:#aaa">{{ f.id_famille }}</div>
               </td>
-            </ng-container>
 
-            <!-- Classe -->
-            <ng-container matColumnDef="classe">
-              <th mat-header-cell *matHeaderCellDef>Classe</th>
-              <td mat-cell *matCellDef="let row">
-                <span class="badge bg-primary-subtle text-primary">
-                  {{ row.classe?.nom_classe ?? '—' }}
-                </span>
+              <!-- Enfants -->
+              <td class="bl-td bl-td--center" style="font-size:11px">
+                <div>{{ nbEnfants(f) }} enfant(s)</div>
+                <div style="color:#aaa">{{ nomsClasses(f) }}</div>
               </td>
-            </ng-container>
 
-            <!-- Contacts -->
-            <ng-container matColumnDef="contacts">
-              <th mat-header-cell *matHeaderCellDef class="d-none d-md-table-cell">
-                Contacts
-              </th>
-              <td mat-cell *matCellDef="let row" class="d-none d-md-table-cell">
-                <div class="small">
-                  <mat-icon style="font-size:13px;vertical-align:middle">phone</mat-icon>
-                  Père : {{ row.famille?.tel_pere || '—' }}
-                </div>
-                <div class="small text-muted">
-                  Mère : {{ row.famille?.tel_mere || '—' }}
-                </div>
-              </td>
-            </ng-container>
-
-            <!-- Montants -->
-            <ng-container matColumnDef="montants">
-              <th mat-header-cell *matHeaderCellDef>Situation</th>
-              <td mat-cell *matCellDef="let row">
-                <div class="small text-muted">
-                  Versé : {{ row.solde.total_verse.toLocaleString() }} FCFA
-                </div>
-                <div class="fw-semibold text-danger">
-                  Reste : {{ row.solde.reste_a_payer.toLocaleString() }} FCFA
-                </div>
-                @if (row.solde.dernier_paiement) {
-                  <div class="small text-muted">
-                    Dernier : {{ row.solde.dernier_paiement }}
-                  </div>
+              <!-- Contact -->
+              <td class="bl-td bl-td--center" style="font-size:11px">
+                <div>{{ f.tel_pere || '—' }}</div>
+                @if (f.tel_mere) {
+                  <div style="color:#aaa">{{ f.tel_mere }}</div>
                 }
               </td>
-            </ng-container>
 
-            <!-- Actions par ligne -->
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let row">
-                <div class="d-flex flex-column flex-md-row gap-1 justify-content-end">
-                  <!-- WhatsApp père -->
-                  @if (row.famille?.tel_pere) {
-                    <button mat-icon-button color="primary"
-                            matTooltip="Alerter le père"
-                            (click)="envoyerAlerte(row, 'pere')">
-                      <mat-icon>send</mat-icon>
-                    </button>
-                  }
-                  <!-- WhatsApp mère -->
-                  @if (row.famille?.tel_mere) {
-                    <button mat-icon-button color="accent"
-                            matTooltip="Alerter la mère"
-                            (click)="envoyerAlerte(row, 'mere')">
-                      <mat-icon>send</mat-icon>
-                    </button>
-                  }
-                  <!-- PDF individuel -->
-                  <button mat-icon-button
-                          matTooltip="Exporter fiche PDF"
-                          (click)="exporterPdfIndividuel(row)">
-                    <mat-icon>picture_as_pdf</mat-icon>
-                  </button>
-                </div>
+              <!-- Attendu -->
+              <td class="bl-td bl-td--center" style="font-size:11px;color:#888">
+                {{ fmt(montantAttendu(f)) }}
               </td>
-            </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="cols"></tr>
-            <tr mat-row *matRowDef="let row; columns: cols"
-                [class.table-warning]="row.solde.reste_a_payer > 50000">
+              <!-- Versé -->
+              <td class="bl-td bl-td--center bl-td--trim">
+                <span class="bl-mention bl-mention--warn">{{ fmt(totalVerse(f)) }}</span>
+              </td>
+
+              <!-- Restant -->
+              <td class="bl-td bl-td--center bl-td--trim">
+                <span class="bl-mention bl-mention--bad">{{ fmt(restant(f)) }} FCFA</span>
+              </td>
+
+              <!-- RDV -->
+              <td class="bl-td bl-td--center" style="font-size:11px">
+                @if (prochainRdv(f)) {
+                  <span class="bl-mention bl-mention--info">{{ prochainRdv(f) }}</span>
+                } @else {
+                  <span style="color:#bbb">—</span>
+                }
+              </td>
+
+              <!-- WhatsApp individuel -->
+              <td class="bl-td bl-td--center">
+                <button class="bl-icon-btn" title="Envoyer rappel"
+                        (click)="ouvrirWhatsapp(f)">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z"
+                          stroke="currentColor" stroke-width="1.3"
+                          stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </td>
+
             </tr>
-          </table>
-        </div>
+          }
+        </tbody>
+      </table>
+    </div>
 
-        <!-- Totaux récapitulatifs -->
-        <div class="card border-0 shadow-sm mt-3">
-          <div class="card-body d-flex flex-wrap gap-4">
-            <div>
-              <div class="text-muted small">Total attendu</div>
-              <div class="fw-bold fs-6">
-                {{ totalAttendu().toLocaleString() }} FCFA
-              </div>
-            </div>
-            <div>
-              <div class="text-muted small">Total versé</div>
-              <div class="fw-bold fs-6 text-success">
-                {{ totalVerse().toLocaleString() }} FCFA
-              </div>
-            </div>
-            <div>
-              <div class="text-muted small">Total restant</div>
-              <div class="fw-bold fs-6 text-danger">
-                {{ totalRestant().toLocaleString() }} FCFA
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- Pied -->
+    <div class="bl-foot">
+      <span class="bl-foot-info">
+        {{ filtered().length }} famille(s) en retard
+        · Total restant : {{ fmt(totalRestantGlobal()) }} FCFA
+      </span>
+      <span class="bl-foot-info">
+        Seuil : {{ fmt(seuil()) }} FCFA
+        @if (dateRefSignal()) {
+          · RDV exclus après {{ fmtDate(dateRefSignal()) }}
+        }
+      </span>
+    </div>
+  }
+
+</div>
+  `,
+  styles: [`
+    .bl-host       { display:flex; flex-direction:column; gap:12px; font-size:13px; }
+    .bl-bar        { display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+                     padding-bottom:12px; border-bottom:0.5px solid rgba(0,0,0,.09); }
+    .bl-sep        { width:0.5px; height:20px; background:rgba(0,0,0,.1); }
+    .bl-cfg-summary{ display:flex; flex-direction:column; gap:1px; }
+    .bl-cfg-titre  { font-size:12px; font-weight:500; }
+    .bl-cfg-seqs   { font-size:10px; color:#185FA5; }
+
+    .bl-btn { height:32px; padding:0 14px; border-radius:6px; font-size:13px;
+              cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+              border:0.5px solid rgba(0,0,0,.18); background:white; color:#333; }
+    .bl-btn:disabled { opacity:.35; cursor:default; }
+    .bl-btn:not(:disabled):hover { background:#f5f5f5; }
+    .bl-btn--ok { background:#0F6E56; color:#fff; border:none; }
+    .bl-btn--ok:not(:disabled):hover { opacity:.88; }
+
+    .bl-chips-bar { display:flex; align-items:center; flex-wrap:wrap; gap:6px;
+                    padding-bottom:10px;
+                    border-bottom:0.5px solid rgba(0,0,0,.06); }
+    .bl-chips-lbl { font-size:11px; color:#aaa; }
+    .bl-chip      { height:26px; padding:0 10px; border-radius:6px; font-size:11px;
+                    cursor:pointer; border:0.5px solid rgba(0,0,0,.18);
+                    background:white; color:#555; transition:all .12s; }
+    .bl-chip--on  { background:#EBF3FC; color:#185FA5;
+                    border-color:#B5D4F4; font-weight:500; }
+
+    /* Barre sélection */
+    .bl-sel-bar   { display:flex; align-items:center; gap:10px;
+                    padding:6px 2px; font-size:12px; }
+    .bl-chk-wrap  { display:flex; align-items:center; gap:6px; cursor:pointer; }
+    .bl-chk       { width:14px; height:14px; cursor:pointer; accent-color:#185FA5; }
+
+    .bl-table-wrap { overflow-x:auto;
+                     border:0.5px solid rgba(0,0,0,.09); border-radius:8px; }
+    .bl-table      { border-collapse:collapse; font-size:12px; min-width:100%; }
+    .bl-th         { padding:7px 10px; font-weight:500; font-size:11px;
+                     background:#f8f8f8; color:#666;
+                     border-bottom:0.5px solid rgba(0,0,0,.08);
+                     text-align:center; white-space:nowrap; }
+    .bl-th--trim   { background:#EBF3FC; color:#0C447C; }
+    .bl-td         { padding:6px 10px; border-bottom:0.5px solid rgba(0,0,0,.05);
+                     vertical-align:middle; }
+    .bl-td--name   { font-weight:500; }
+    .bl-td--center { text-align:center; }
+    .bl-td--trim   { background:#EBF3FC; }
+    .bl-tr:last-child .bl-td { border-bottom:none; }
+    .bl-tr:hover   .bl-td    { background:rgba(0,0,0,.015); }
+    .bl-tr--sel    .bl-td    { background:#EBF3FC !important; }
+
+    .bl-mention       { font-size:11px; padding:2px 7px; border-radius:99px; display:inline-block; }
+    .bl-mention--warn { background:#FAEEDA; color:#633806; }
+    .bl-mention--bad  { background:#FCEBEB; color:#791F1F; }
+    .bl-mention--info { background:#EBF3FC; color:#0C447C; }
+
+    .bl-icon-btn { width:28px; height:28px; padding:0;
+                   border:0.5px solid rgba(0,0,0,.12); background:white;
+                   cursor:pointer; border-radius:5px;
+                   display:inline-flex; align-items:center;
+                   justify-content:center; color:#555; }
+    .bl-icon-btn:hover { background:#EBF3FC; color:#185FA5; border-color:#B5D4F4; }
+
+    .bl-foot      { display:flex; justify-content:space-between;
+                    align-items:center; flex-wrap:wrap; gap:8px; }
+    .bl-foot-info { font-size:11px; color:#aaa; }
+    .bl-empty     { text-align:center; padding:40px; color:#ccc; font-size:13px; }
+  `],
+})
+export class InsolvablesListComponent implements OnInit {
+
+  private cache  = inject(CacheService);
+  private data   = inject(DataService);
+  private pdf    = inject(InsolvablesPdfService);
+  private snack  = inject(MatSnackBar);
+  private cdr    = inject(ChangeDetectorRef);
+
+  // ── Contrôles formulaire → convertis en Signal via toSignal()
+  // pour que computed() soit réactif aux frappes
+  ctrlSeuil   = new FormControl<number | null>(null);
+  ctrlDateRef = new FormControl<string>('');
+
+  private seuilSignal$  = toSignal(this.ctrlSeuil.valueChanges,
+    { initialValue: this.ctrlSeuil.value });
+  private dateRef$      = toSignal(this.ctrlDateRef.valueChanges,
+    { initialValue: this.ctrlDateRef.value ?? '' });
+
+  // Accesseurs propres utilisés dans computed()
+  seuil        = computed<number>(() => +(this.seuilSignal$ () ?? 0));
+  dateRefSignal = computed<string>(() => this.dateRef$() ?? '');
+
+  // ── Filtres signal purs
+  filtreClasse    = signal('');
+  templateChoisi  = signal<MsgTemplate | null>(null);
+  selection       = signal<Set<string>>(new Set());
+
+  // ── Données
+  classes   = computed(() => this.cache.getClasses());
+  templates = computed(() =>
+    this.data.getPaiements()
+      ? (this.data.getTemplates?.() ?? [])
+      : []
+  );
+
+  ngOnInit(): void {
+    this.data.loadTemplates().then(() => {
+      // Pré-sélectionne le premier template de type rappel s'il existe
+      const tpls = this.data.getTemplates?.() ?? [];
+      const rappel = tpls.find(t => t.type === 'rappel' || t.type === 'relance');
+      if (rappel) this.templateChoisi.set(rappel);
+      this.cdr.markForCheck();
+    });
+  }
+
+  // ── Filtres
+
+  setClasse(v: string)          { this.filtreClasse.set(v); }
+  setTemplate(t: MsgTemplate)   { this.templateChoisi.set(t); }
+
+  // ── Liste filtrée — computed() lit uniquement des Signals
+  filtered = computed<Famille[]>(() => {
+    const seuil   = this.seuil();
+    const dateRef = this.dateRefSignal();
+    const classe  = this.filtreClasse();
+
+    if (seuil <= 0) return [];
+
+    return this.cache.getFamilles().filter(f => {
+      if (this.totalVerse(f) >= seuil) return false;
+
+      if (dateRef) {
+        const rdv = this.dernierRdv(f);
+        if (rdv && rdv > dateRef) return false;
       }
 
-    </div>
-  `
-})
-export class InsolvablesListComponent {
+      if (classe) {
+        const ok = (f.eleves ?? []).some(e => e.id_classe === classe && e.statut === 'actif');
+        if (!ok) return false;
+      }
 
-  private cache    = inject(CacheService);
-  private pdf      = inject(PdfService);
-  private whatsapp = inject(WhatsappService);
-  private snack    = inject(MatSnackBar);
-
-  cols = ['select', 'eleve', 'classe', 'contacts', 'montants', 'actions'];
-
-  // Filtres
-  filterClasse    = new FormControl('');
-  filterMontantMin= new FormControl(0);
-  dateRef         = new FormControl(new Date().toISOString().split('T')[0]);
-
-  sending   = signal(false);
-  // IDs des élèves sélectionnés pour alerte en masse
-  selection = signal<string[]>([]);
-
-  classes = computed(() => this.cache.getClasses() ?? []);
-
-  // Liste insolvables filtrée
-  insolvables = computed<InsolvableRow[]>(() => {
-    const classeId  = this.filterClasse.value ?? '';
-    const montMin   = +(this.filterMontantMin.value ?? 0);
-    const fMap      = this.cache.famillesMap();
-    const cMap      = this.cache.classesMap();
-    const soldes    = this.cache.getSoldes() ?? [];
-
-    return (this.cache.getEleves() ?? [])
-      .filter(e => e.statut === 'actif')
-      .filter(e => !classeId || e.id_classe === classeId)
-      .map(e => {
-        const solde = soldes.find(s => s.id_eleve === e.id_eleve);
-        return solde ? {
-          ...e,
-          famille: fMap.get(e.id_famille),
-          classe:  cMap.get(e.id_classe),
-          solde,
-        } as InsolvableRow : null;
-      })
-      .filter((r): r is InsolvableRow =>
-        r !== null &&
-        r.solde.statut_insolvable &&
-        r.solde.reste_a_payer >= montMin
-      )
-      // Tri : plus gros restant en premier
-      .sort((a, b) => b.solde.reste_a_payer - a.solde.reste_a_payer);
+      return true;
+    });
   });
 
-  // Totaux
-  totalAttendu = computed(() =>
-    this.insolvables().reduce((s, r) => s + r.solde.montant_attendu, 0));
-  totalVerse   = computed(() =>
-    this.insolvables().reduce((s, r) => s + r.solde.total_verse, 0));
-  totalRestant = computed(() =>
-    this.insolvables().reduce((s, r) => s + r.solde.reste_a_payer, 0));
+  // ── Sélection
 
-  // ── Sélection ────────────────────────────────
+  estSelectionne(id: string): boolean  { return this.selection().has(id); }
+  toutSelectionne  = computed(() =>
+    this.filtered().length > 0 &&
+    this.filtered().every(f => this.selection().has(f.id_famille))
+  );
+  selectionPartielle = computed(() =>
+    this.selection().size > 0 && !this.toutSelectionne()
+  );
 
-  isSelected(id: string):  boolean { return this.selection().includes(id); }
-  allSelected():  boolean  { return this.insolvables().length > 0 && this.selection().length === this.insolvables().length; }
-  someSelected(): boolean  { return this.selection().length > 0 && !this.allSelected(); }
+  // Les "cibles" = sélectionnées si sélection active, sinon toute la liste
+  cibles = computed<Famille[]>(() =>
+    this.selection().size > 0
+      ? this.filtered().filter(f => this.selection().has(f.id_famille))
+      : this.filtered()
+  );
 
-  toggleSelect(id: string, checked: boolean): void {
-    this.selection.update(s =>
-      checked ? [...s, id] : s.filter(x => x !== id)
+  labelSelection(): string {
+    const n = this.cibles().length;
+    if (this.selection().size > 0) return `(${n} sél.)`;
+    return `(${n})`;
+  }
+
+  toggleLigne(id: string, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.selection.update(s => {
+      const next = new Set(s);
+      checked ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }
+
+  toggleTout(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.selection.set(
+      checked ? new Set(this.filtered().map(f => f.id_famille)) : new Set()
     );
   }
 
-  toggleAll(checked: boolean): void {
-    this.selection.set(checked ? this.insolvables().map(r => r.id_eleve) : []);
-  }
+  viderSelection(): void { this.selection.set(new Set()); }
 
-  // ── Export PDF ───────────────────────────────
+  // ── Computed stats
 
-  exporterPdf(): void {
-    const nomClasse = this.classes().find(
-      c => c.id_classe === this.filterClasse.value
-    )?.nom_classe ?? 'Toutes';
+  resumeSous = computed(() => {
+    const n = this.filtered().length;
+    const s = this.seuil();
+    if (s <= 0) return 'Saisissez un seuil pour filtrer';
+    const sel = this.selection().size;
+    return sel > 0
+      ? `${n} famille(s) · ${sel} sélectionné(s)`
+      : `${n} famille(s) sous ${this.fmt(s)} FCFA`;
+  });
 
-    this.pdf.genererInsolvables(
-      this.insolvables(),
-      nomClasse,
-      this.dateRef.value ?? new Date().toISOString().split('T')[0]
+  totalRestantGlobal = computed(() =>
+    this.filtered().reduce((s, f) => s + this.restant(f), 0)
+  );
+
+  // ── Actions
+
+  exportPdf(): void {
+    const annee = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
+    this.pdf.genererListeInsolvables(
+      this.cibles(),
+      this.seuil(),
+      annee,
+      this.dateRefSignal() || undefined,
     );
   }
 
-  exporterPdfIndividuel(row: InsolvableRow): void {
-    // Génère un PDF d'une seule ligne (réutilise le même service)
-    this.pdf.genererInsolvables(
-      [row],
-      row.classe?.nom_classe ?? '',
-      this.dateRef.value ?? ''
-    );
+  envoyerRappels(): void {
+    const cibles = this.cibles();
+    let ouverts = 0;
+    cibles.forEach(f => {
+      if (f.tel_pere || f.tel_mere) {
+        this.ouvrirWhatsapp(f);
+        ouverts++;
+      }
+    });
+    this.snack.open(`${ouverts} rappel(s) ouvert(s) dans WhatsApp`, 'OK', { duration: 4000 });
   }
 
-  // ── Alertes WhatsApp ─────────────────────────
-
-  /** Envoie une alerte à un parent d'un élève spécifique */
-  async envoyerAlerte(row: InsolvableRow, dest: 'pere' | 'mere'): Promise<void> {
-    const tel = dest === 'pere'
-      ? row.famille?.tel_pere
-      : row.famille?.tel_mere;
-
+  ouvrirWhatsapp(f: Famille): void {
+    const tel = (f.tel_pere || f.tel_mere || '').replace(/\s+/g, '');
     if (!tel) {
-      this.snack.open('Numéro non disponible', '', { duration: 2000 });
+      this.snack.open('Aucun numéro pour cette famille', 'OK', { duration: 3000 });
       return;
     }
 
-    await this.whatsapp.envoyerRappelInsolvable(row, tel);
-    this.snack.open('Alerte envoyée à ' + tel, 'OK', { duration: 3000 });
+    const tpl     = this.templateChoisi();
+    const annee   = f.annee_scolaire ?? `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
+    const rdv     = this.prochainRdv(f) ?? 'à définir';
+    const restant = this.fmt(this.restant(f));
+
+    // Si un template est choisi, interpoler ses variables
+    // Sinon utiliser un message par défaut
+    const contenu = tpl?.contenu
+      ?? 'Bonjour {nom_famille}, un solde de {restant} FCFA reste à régler ({annee}). RDV : {rdv}.';
+
+    const message = contenu
+      .replace(/\{nom_famille\}/g, f.nom_famille)
+      .replace(/\{restant\}/g,     restant)
+      .replace(/\{annee\}/g,       annee)
+      .replace(/\{rdv\}/g,         rdv)
+      .replace(/\{montant\}/g,     this.fmt(this.montantAttendu(f)))
+      .replace(/\{classe\}/g,      this.nomsClasses(f))
+      .replace(/\{nom_eleve\}/g,   (f.eleves?.[0]
+        ? `${f.eleves[0].nom} ${f.eleves[0].prenom}` : f.nom_famille));
+
+    const telF = tel.startsWith('+') ? tel : `+237${tel}`;
+    window.open(`https://wa.me/${telF}?text=${encodeURIComponent(message)}`, '_blank');
   }
 
-  /** Envoie une alerte en masse pour tous les sélectionnés */
-  async envoyerAlerteMasse(): Promise<void> {
-    const ids     = this.selection();
-    const cibles  = this.insolvables().filter(r => ids.includes(r.id_eleve));
-    if (!cibles.length) return;
+  // ── Helpers données
 
-    this.sending.set(true);
-    let ok = 0;
-
-    for (const row of cibles) {
-      const tel = row.famille?.tel_pere ?? row.famille?.tel_mere ?? '';
-      if (tel) {
-        await this.whatsapp.envoyerRappelInsolvable(row, tel);
-        ok++;
-      }
-    }
-
-    this.sending.set(false);
-    this.selection.set([]);
-    this.snack.open(`${ok} alerte(s) envoyée(s)`, 'OK', { duration: 3000 });
+  montantAttendu(f: Famille): number {
+    return +(f.montant_total_attendu ?? 0) - +(f.montant_reduction ?? 0);
+  }
+  totalVerse(f: Famille): number {
+    return (f.paiements ?? []).reduce((s, p) => s + +(p.montant_verse ?? 0), 0);
+  }
+  restant(f: Famille): number {
+    return Math.max(0, this.montantAttendu(f) - this.totalVerse(f));
+  }
+  nbEnfants(f: Famille): number {
+    return (f.eleves ?? []).filter(e => e.statut === 'actif').length;
+  }
+  nomsClasses(f: Famille): string {
+    const ids = [...new Set((f.eleves ?? [])
+      .filter(e => e.statut === 'actif').map(e => e.id_classe))];
+    return ids.map(id => this.cache.classesMap().get(id)?.nom_classe ?? id).join(', ');
+  }
+  private dernierRdv(f: Famille): string | null {
+    const rdvs = (f.paiements ?? [])
+      .map(p => p.date_prochain_rdv).filter(Boolean) as string[];
+    return rdvs.length ? rdvs.sort().at(-1)! : null;
+  }
+  prochainRdv(f: Famille): string | null {
+    const rdv = this.dernierRdv(f);
+    return rdv ? this.fmtDate(rdv) : null;
+  }
+  fmt(n: number): string {
+    return new Intl.NumberFormat('fr-FR').format(Math.round(n));
+  }
+  fmtDate(iso: string): string {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString('fr-FR',
+        { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return iso; }
   }
 }

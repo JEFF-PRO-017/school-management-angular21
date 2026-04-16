@@ -17,7 +17,6 @@ import { BulletinConfigModal } from '../helper/bulletin-config.modal';
 import { BulletinConfig, GroupeMatiere, BulletinData, NiveauClasse, PVData, PVLigne, FicheSaisieData } from '../helper/bulletin.models';
 import { toFloat, toNote } from '../helper/pdf-helpers';
 import { BulletinPdfService } from '../services/bulletin-pdf.service';
-import { prechargerLogo } from './components/bulletin-sections';
 
 
 @Component({
@@ -272,7 +271,7 @@ export class BulletinsComponent implements OnInit {
       this.ctrlClasse.setValue(classes[0].id_classe);
       this.charger();
     };
-    prechargerLogo()
+    // prechargerLogo()
   }
 
   onChnageClasse(): void {

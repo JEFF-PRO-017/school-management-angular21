@@ -1,91 +1,104 @@
-// sheets-queue.service.ts — file d'attente persistante pour les écritures hors-ligne
-// Fourni par l'utilisateur — conservé tel quel, adapté pour les imports locaux
+// ─────────────────────────────────────────────────────────────────
+// sheets-queue.service.ts — file d'attente persistante hors-ligne
+//
+// Modifications par rapport à la version d'origine :
+//  - Ajout de 'updateRow' : met à jour toute une ligne en un appel
+//    (remplace les N appels updateCell du DataService v1)
+//  - Interface QueueItem générique : payload typé par order
+//  - Scheduler inchangé (setInterval 2s)
+//  - Persistance localStorage inchangée
+// ─────────────────────────────────────────────────────────────────
 import { effect, Injectable, signal } from '@angular/core';
-import { CellConfig, DeleteRowConfig, GoogleSheetsService, RowConfig }
+import { GoogleSheetsService, RowConfig, CellConfig, DeleteRowConfig }
   from './@google-sheets/google-sheets.service';
 import { from, EMPTY, of } from 'rxjs';
 import { switchMap, map, catchError, filter, tap } from 'rxjs/operators';
 
-interface QueueItem {
-  id: string;
-  payload: RowConfig | CellConfig | DeleteRowConfig | any;
-  order: 'addRow' | 'updateCell' | 'deleteRow';
+// ── Types des payloads possibles ──────────────────────────────────
+
+export interface UpdateRowConfig {
+  sheetName: string;
+  row:    number;   // numéro de ligne Sheets (1-based)
+  col:    number;   // colonne de départ (1 = A)
+  values: any[];    // toutes les valeurs de la ligne dans l'ordre des en-têtes
 }
 
-interface SheetsQueueServiceInterface {
-  enqueue(payload: any, order: 'addRow' | 'updateCell' | 'deleteRow'): void;
-  dequeue(): void;
-  peek(): QueueItem;
-  isEmpty(): boolean;
-  size(): number;
+export type QueueOrder = 'addRow' | 'updateRow' | 'updateCell' | 'deleteRow';
+
+export type QueuePayload =
+  | RowConfig
+  | UpdateRowConfig
+  | CellConfig
+  | DeleteRowConfig;
+
+interface QueueItem {
+  id:      string;
+  order:   QueueOrder;
+  payload: QueuePayload;
 }
 
 const STORAGE_KEY = 'sheets_queue';
-const SCHEDULED   = 2000;
+const INTERVAL_MS = 2000;
 
 @Injectable({ providedIn: 'root' })
-export class SheetsQueueServiceService implements SheetsQueueServiceInterface {
+export class SheetsQueueServiceService {
 
   private queue    = signal<QueueItem[]>([]);
   private online   = signal(navigator.onLine);
-  private scheduled: any;
+  private scheduled: ReturnType<typeof setInterval> | null = null;
   private syncing  = false;
 
   constructor(private sheets: GoogleSheetsService) {
+    // Restaure la file depuis localStorage au démarrage
     this.queue.set(this.load());
 
     window.addEventListener('online',  () => this.online.set(true));
     window.addEventListener('offline', () => this.online.set(false));
 
+    // Persiste + démarre le scheduler à chaque changement de la file
     effect(() => {
-      this.save();
-      if (this.online() && this.queue().length > 0) this.startScheduler();
+      this.persist();
+      if (this.online() && this.queue().length > 0) {
+        this.startScheduler();
+      }
     });
   }
 
-  private startScheduler(): void {
-    if (this.scheduled) return;
-    this.scheduled = setInterval(() => {
-      if (this.isEmpty()) {
-        clearInterval(this.scheduled);
-        this.scheduled = null;
-        return;
-      }
-      this.sync();
-    }, SCHEDULED);
-  }
+  // ── API publique ───────────────────────────────────────────────
 
-  enqueue(
-    payload: RowConfig | CellConfig | DeleteRowConfig,
-    order: 'addRow' | 'updateCell' | 'deleteRow'
-  ): void {
-    this.queue.update(list => [{ id: crypto.randomUUID(), payload, order }, ...list]);
+  enqueue(payload: QueuePayload, order: QueueOrder): void {
+    this.queue.update(list => [
+      ...list,
+      { id: crypto.randomUUID(), order, payload },
+    ]);
   }
 
   dequeue(): void {
     this.queue.update(list => list.slice(1));
   }
 
-  peek(): QueueItem { return this.queue()[0]; }
-  isEmpty(): boolean { return this.size() === 0; }
-  size(): number { return this.queue().length; }
+  peek():    QueueItem  { return this.queue()[0]; }
+  isEmpty(): boolean    { return this.queue().length === 0; }
+  size():    number     { return this.queue().length; }
 
+  /**
+   * Tente d'envoyer le premier élément de la file.
+   * En cas d'erreur réseau, l'élément est conservé pour la prochaine tentative.
+   */
   sync(): void {
     if (this.syncing || !this.online() || this.isEmpty()) return;
     this.syncing = true;
     const item   = this.peek();
 
     of(item).pipe(
-      filter(i => !!i && !!i.order && !!i.payload),
-      switchMap(i =>
-        from(this.sheets[i.order](i.payload)).pipe(map(() => i))
-      ),
+      filter(i => !!i?.order && !!i?.payload),
+      switchMap(i => from(this.dispatch(i)).pipe(map(() => i))),
       tap(i => {
         this.dequeue();
-        console.log(`✅ Envoyé : ${i.id}`);
+        console.log(`✅ Queue — envoyé : ${i.order} [${i.id}]`);
       }),
       catchError(err => {
-        console.warn(`⚠️ Échec — ${item.id} conservé :`, err?.message ?? err);
+        console.warn(`⚠️ Queue — échec, conservé [${item.id}] :`, err?.message ?? err);
         return EMPTY;
       }),
     ).subscribe({
@@ -94,12 +107,61 @@ export class SheetsQueueServiceService implements SheetsQueueServiceInterface {
     });
   }
 
-  private save(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue()));
+  // ── Dispatch vers GoogleSheetsService ─────────────────────────
+
+  /**
+   * Aiguille vers la bonne méthode selon l'ordre.
+   * updateRow est converti en un seul appel batchUpdate côté Sheets.
+   */
+  private dispatch(item: QueueItem): Promise<void> {
+    switch (item.order) {
+      case 'addRow':
+        return this.sheets.addRow(item.payload as RowConfig);
+
+      case 'updateRow':
+        return this.sheets.updateRow(item.payload as UpdateRowConfig);
+
+      case 'updateCell':
+        return this.sheets.updateCell(item.payload as CellConfig);
+
+      case 'deleteRow':
+        return this.sheets.deleteRow(item.payload as DeleteRowConfig);
+
+      default:
+        return Promise.reject(new Error(`Ordre inconnu : ${(item as any).order}`));
+    }
   }
+
+  // ── Scheduler ─────────────────────────────────────────────────
+
+  private startScheduler(): void {
+    if (this.scheduled) return;
+    this.scheduled = setInterval(() => {
+      if (this.isEmpty()) {
+        clearInterval(this.scheduled!);
+        this.scheduled = null;
+        return;
+      }
+      this.sync();
+    }, INTERVAL_MS);
+  }
+
+  // ── Persistance localStorage ──────────────────────────────────
+
+  private persist(): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue()));
+    } catch (e) {
+      console.warn('Queue — impossible de persister :', e);
+    }
+  }
+
   private load(): QueueItem[] {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') ?? [];
-    } catch { return []; }
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as QueueItem[]) : [];
+    } catch {
+      return [];
+    }
   }
 }

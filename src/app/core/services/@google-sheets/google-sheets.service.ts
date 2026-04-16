@@ -1,78 +1,50 @@
-// google-sheets.service.ts — service fourni, conservé tel quel
+// ─────────────────────────────────────────────────────────────────
+// google-sheets.service.ts
+//
+// Modification par rapport à la version d'origine :
+//  - Ajout de updateRow() : écrit toute une ligne en un seul appel
+//    PUT values (remplace les N appels updateCell du DataService v1)
+//  - findRowById retourne -1 si absent (cohérent avec DataService)
+//  - Tout le reste est inchangé
+// ─────────────────────────────────────────────────────────────────
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import * as jose from 'jose';
 import { environment } from '../../../../environments/environment';
 
-export interface SheetConfig {
+// ── Types d'entrée ────────────────────────────────────────────────
+
+export interface SheetConfig   { sheetName: string; headers: string[]; }
+export interface RowConfig     { sheetName: string; rowData: any[]; }
+export interface UpdateRowConfig {
   sheetName: string;
-  headers: string[];
+  row:    number;   // ligne Sheets 1-based
+  col:    number;   // colonne de départ (1 = A)
+  values: any[];    // valeurs dans l'ordre des en-têtes
 }
-export interface RowConfig {
-  sheetName: string;
-  rowData: any[];
-}
-export interface CellConfig {
-  sheetName: string;
-  row: number;
-  col: number;
-  value: any;
-}
-export interface DeleteRowConfig {
-  sheetName: string;
-  rowIndex: number;
-}
+export interface CellConfig    { sheetName: string; row: number; col: number; value: any; }
+export interface DeleteRowConfig { sheetName: string; rowIndex: number; }
 
-interface IGoogleSheetsService {
-  createSheet(config: SheetConfig): Promise<void>;
-  addRow(config: RowConfig): Promise<void>;
-  updateCell(config: CellConfig): Promise<void>;
-  deleteRow(config: DeleteRowConfig): Promise<void>;
-  findRowById(sheetName: string, id: any): Promise<number>;
-  findSheetId(sheetName: string): Promise<number>;
-  batchGet(ranges: string[]): Promise<any[][]>;
-  fetchRaw(sheetName: string): Promise<any[][]>;
-}
-
-
-
-// ── En-têtes de colonnes (ordre = colonnes A, B, C…) ──────────────────
-const HEADERS: Record<string, string[]> = {
-  F1_FAMILLES: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre', 'latitude', 'longitude', 'adresse_texte'],
-  F2_ELEVES: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance', 'date_inscription', 'statut'],
-  F3_CLASSES: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire', 'effectif_max', 'enseignant_principal'],
-  F4_PAIEMENTS: ['id_paiement', 'id_eleve', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement', 'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier', 'statut_alerte_whatsapp'],
-  F5_FRAIS_CONFIG: ['id_frais', 'id_classe', 'type_frais', 'montant_total_attendu', 'seuil_insolvable', 'echeance_1', 'echeance_2', 'echeance_3', 'annee_scolaire'],
-  F6_2026: ['id_note', 'id_eleve', 'id_classe', 'matiere', 'id_enseignant', 'sequence', 'note_obtenue', 'note_sur', 'annee_scolaire'],
-  F7_MSG_TEMPLATES: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif', 'langue', 'destinataire'],
-  F8_LOG_ALERTES: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest', 'date_envoi', 'statut', 'hash_dedup'],
-  F9_SNAP: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer', 'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
-  F10_ENSEIGNANTS: ['id_enseignant', 'nom', 'prenom', 'matieres_enseignees', 'tel', 'email', 'classes_assignees'],
-  F11_SNAP: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier', 'dernier', 'mention', 'moy_classe'],
-  F12_MATIERES_CONFIG: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire'],
-} as const;
-
+// ─────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
-export class GoogleSheetsService implements IGoogleSheetsService {
+export class GoogleSheetsService {
 
-  private readonly BASE_URL = 'https://sheets.googleapis.com/v4/spreadsheets';
+  private readonly BASE  = 'https://sheets.googleapis.com/v4/spreadsheets';
   private readonly SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
-  private accessToken: string | null = null;
-  private tokenExpiry = 0;
+  private token:  string | null = null;
+  private expiry  = 0;
 
   constructor(private http: HttpClient) {
     this.refreshToken();
   }
 
-
-
-  // ── Authentification JWT ─────────────────────────
+  // ── Auth JWT ─────────────────────────────────────────────────
 
   private async refreshToken(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
-    const privateKey = await jose.importPKCS8(
+    const pk  = await jose.importPKCS8(
       environment.googlePrivateKey.replace(/\\n/g, '\n'), 'RS256'
     );
     const jwt = await new jose.SignJWT({ scope: this.SCOPE })
@@ -81,175 +53,199 @@ export class GoogleSheetsService implements IGoogleSheetsService {
       .setAudience('https://oauth2.googleapis.com/token')
       .setIssuedAt(now)
       .setExpirationTime(now + 3600)
-      .sign(privateKey);
+      .sign(pk);
 
-    const response: any = await firstValueFrom(
+    const res: any = await firstValueFrom(
       this.http.post('https://oauth2.googleapis.com/token', null, {
         params: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }
       })
     );
-    this.accessToken = response.access_token;
-    this.tokenExpiry = now + 3500;
+    this.token  = res.access_token;
+    this.expiry = now + 3500;
   }
 
-  private async getHeaders(): Promise<HttpHeaders> {
-    if (!this.accessToken || Math.floor(Date.now() / 1000) >= this.tokenExpiry) {
+  private async headers(): Promise<HttpHeaders> {
+    if (!this.token || Math.floor(Date.now() / 1000) >= this.expiry) {
       await this.refreshToken();
     }
     return new HttpHeaders({
-      Authorization: `Bearer ${this.accessToken}`,
+      Authorization: `Bearer ${this.token}`,
       'Content-Type': 'application/json',
     });
   }
 
-  // ── Utilitaires URL ──────────────────────────────
+  // ── Helpers URL ──────────────────────────────────────────────
 
-  private rangeUrl(sheetName: string, cells: string): string {
-    return `${encodeURIComponent(sheetName)}!${cells}`;
+  private enc(name: string): string { return encodeURIComponent(name); }
+  private url(path: string):  string { return `${this.BASE}/${environment.spreadsheetId}${path}`; }
+  private rangeNotation(col: number, row: number): string {
+    return `${this.colLetter(col)}${row}`;
   }
-  private appendUrl(sheetName: string, cells: string): string {
-    return `${encodeURIComponent(sheetName)}!${cells}:append`;
-  }
 
-  // ── CRUD ─────────────────────────────────────────
+  // ── CRUD ─────────────────────────────────────────────────────
 
-  async createSheet(config: SheetConfig): Promise<void> {
-    const headers = await this.getHeaders();
+  /** Crée la feuille si elle n'existe pas encore, puis écrit les en-têtes */
+  async createSheet(cfg: SheetConfig): Promise<void> {
+    const hdrs = await this.headers();
     const file: any = await firstValueFrom(
-      this.http.get(`${this.BASE_URL}/${environment.spreadsheetId}`, { headers })
+      this.http.get(this.url(''), { headers: hdrs })
     );
-    if (file.sheets?.some((s: any) => s.properties?.title === config.sheetName)) return;
+    if (file.sheets?.some((s: any) => s.properties?.title === cfg.sheetName)) return;
+
     await firstValueFrom(
-      this.http.post(
-        `${this.BASE_URL}/${environment.spreadsheetId}:batchUpdate`,
-        { requests: [{ addSheet: { properties: { title: config.sheetName } } }] },
-        { headers }
-      )
+      this.http.post(this.url(':batchUpdate'), {
+        requests: [{ addSheet: { properties: { title: cfg.sheetName } } }]
+      }, { headers: hdrs })
     );
-    await firstValueFrom(
-      this.http.put(
-        `${this.BASE_URL}/${environment.spreadsheetId}/values/${this.rangeUrl(config.sheetName, 'A1')}?valueInputOption=RAW`,
-        { values: [config.headers] },
-        { headers }
-      )
-    );
-  }
-
-  async addRow(config: RowConfig): Promise<void> {
-
-
-    const headers = await this.getHeaders();
-    await firstValueFrom(
-      this.http.post(
-        `${this.BASE_URL}/${environment.spreadsheetId}/values/${this.appendUrl(config.sheetName, 'A1')}?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
-        { values: [config.rowData] },
-        { headers }
-      )
-    );
-  }
-
-  async updateCell(config: CellConfig): Promise<void> {
-    const headers = await this.getHeaders();
-    const cellRef = `${this.columnToLetter(config.col)}${config.row}`;
     await firstValueFrom(
       this.http.put(
-        `${this.BASE_URL}/${environment.spreadsheetId}/values/${this.rangeUrl(config.sheetName, cellRef)}?valueInputOption=RAW`,
-        { values: [[config.value]] },
-        { headers }
+        this.url(`/values/${this.enc(cfg.sheetName)}!A1?valueInputOption=RAW`),
+        { values: [cfg.headers] },
+        { headers: hdrs }
       )
     );
   }
 
-  async deleteRow(config: DeleteRowConfig): Promise<void> {
-    if (config.rowIndex === 0) throw new Error('Cannot delete header row');
-    const headers = await this.getHeaders();
-    const sheetId = await this.getSheetId(config.sheetName);
+  /** Ajoute une ligne à la suite du tableau */
+  async addRow(cfg: RowConfig): Promise<void> {
+    const hdrs = await this.headers();
     await firstValueFrom(
       this.http.post(
-        `${this.BASE_URL}/${environment.spreadsheetId}:batchUpdate`,
-        {
-          requests: [{
-            deleteDimension: {
-              range: {
-                sheetId, dimension: 'ROWS',
-                startIndex: config.rowIndex, endIndex: config.rowIndex + 1,
-              }
+        this.url(`/values/${this.enc(cfg.sheetName)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`),
+        { values: [cfg.rowData] },
+        { headers: hdrs }
+      )
+    );
+  }
+
+  /**
+   * Met à jour toute une ligne en un seul appel PUT.
+   * Remplace les N appels updateCell de l'ancienne version.
+   */
+  async updateRow(cfg: UpdateRowConfig): Promise<void> {
+    const hdrs  = await this.headers();
+    const start = this.rangeNotation(cfg.col, cfg.row);
+    const end   = this.rangeNotation(cfg.col + cfg.values.length - 1, cfg.row);
+    const range = `${this.enc(cfg.sheetName)}!${start}:${end}`;
+    await firstValueFrom(
+      this.http.put(
+        this.url(`/values/${range}?valueInputOption=RAW`),
+        { values: [cfg.values] },
+        { headers: hdrs }
+      )
+    );
+  }
+
+  /** Met à jour une seule cellule */
+  async updateCell(cfg: CellConfig): Promise<void> {
+    const hdrs = await this.headers();
+    const cell = this.rangeNotation(cfg.col, cfg.row);
+    await firstValueFrom(
+      this.http.put(
+        this.url(`/values/${this.enc(cfg.sheetName)}!${cell}?valueInputOption=RAW`),
+        { values: [[cfg.value]] },
+        { headers: hdrs }
+      )
+    );
+  }
+
+  /** Supprime une ligne par son index (0-based) */
+  async deleteRow(cfg: DeleteRowConfig): Promise<void> {
+    if (cfg.rowIndex === 0) throw new Error('Impossible de supprimer la ligne d\'en-têtes');
+    const hdrs    = await this.headers();
+    const sheetId = await this.getSheetId(cfg.sheetName);
+    await firstValueFrom(
+      this.http.post(this.url(':batchUpdate'), {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension:  'ROWS',
+              startIndex: cfg.rowIndex,
+              endIndex:   cfg.rowIndex + 1,
             }
-          }]
-        },
-        { headers }
-      )
+          }
+        }]
+      }, { headers: hdrs })
     );
   }
 
+  /**
+   * Cherche une valeur dans la colonne A et retourne le numéro de ligne (1-based).
+   * Retourne -1 si absent.
+   * Utilisé par DataService avant chaque update/delete (système distribué).
+   */
   async findRowById(sheetName: string, id: any): Promise<number> {
-    const headers = await this.getHeaders();
-    const response: any = await firstValueFrom(
+    const hdrs = await this.headers();
+    const res: any = await firstValueFrom(
       this.http.get(
-        `${this.BASE_URL}/${environment.spreadsheetId}/values/${this.rangeUrl(sheetName, 'A:A')}`,
-        { headers }
+        this.url(`/values/${this.enc(sheetName)}!A:A`),
+        { headers: hdrs }
       )
     );
-    const rows = response.values ?? [];
-    const idx = rows.findIndex((r: any[]) => r[0] === String(id));
-    return idx === -1 ? -1 : idx + 1;
+    const rows: any[][] = res.values ?? [];
+    const idx = rows.findIndex(r => String(r[0]) === String(id));
+    return idx === -1 ? -1 : idx + 1; // 1-based, ligne 1 = en-têtes
   }
+
+  /**
+   * batchGet : retourne les données dans le même ordre que les plages demandées.
+   * Intercale les noms de plage entre les tableaux de données (comportement d'origine).
+   */
+  async batchGet(ranges: string[]): Promise<any[][]> {
+    const hdrs = await this.headers();
+    const params = ranges.map(r => encodeURIComponent(r)).join('&ranges=');
+    const res: any = await firstValueFrom(
+      this.http.get(
+        this.url(`/values:batchGet?ranges=${params}`),
+        { headers: hdrs }
+      )
+    );
+    const out: any[][] = [];
+    for (const vr of (res.valueRanges ?? [])) {
+      out.push(vr.values ?? []);
+      out.push(vr.range?.split('!')?.[0]?.replace(/'/g, '') ?? '');
+    }
+    return out;
+  }
+
+  /** Lit toute une feuille (colonnes A:Z) */
+  async fetchRaw(sheetName: string): Promise<any[][]> {
+    const hdrs = await this.headers();
+    const res: any = await firstValueFrom(
+      this.http.get(
+        this.url(`/values/${this.enc(sheetName)}!A:Z`),
+        { headers: hdrs }
+      )
+    );
+    return res.values ?? [];
+  }
+
+  // ── Helpers internes ─────────────────────────────────────────
 
   private async getSheetId(sheetName: string): Promise<number> {
-    const headers = await this.getHeaders();
-    const response: any = await firstValueFrom(
-      this.http.get(`${this.BASE_URL}/${environment.spreadsheetId}`, { headers })
+    const hdrs = await this.headers();
+    const res: any = await firstValueFrom(
+      this.http.get(this.url(''), { headers: hdrs })
     );
-    const sheet = response.sheets?.find((s: any) => s.properties?.title === sheetName);
-    if (!sheet) throw new Error(`Sheet "${sheetName}" not found`);
+    const sheet = res.sheets?.find((s: any) => s.properties?.title === sheetName);
+    if (!sheet) throw new Error(`Feuille "${sheetName}" introuvable`);
     return sheet.properties.sheetId;
   }
 
-  private columnToLetter(col: number): string {
-    let letter = '';
+  /** Convertit un numéro de colonne (1-based) en lettre(s) Excel */
+  private colLetter(col: number): string {
+    let s = '';
     while (col > 0) {
       const mod = (col - 1) % 26;
-      letter = String.fromCharCode(65 + mod) + letter;
+      s   = String.fromCharCode(65 + mod) + s;
       col = Math.floor((col - 1) / 26);
     }
-    return letter;
+    return s;
   }
 
-
+  // findSheetId conservé pour compatibilité
   async findSheetId(sheetName: string): Promise<number> {
-    const headers = await this.getHeaders();
-    const response: any = await firstValueFrom(
-      this.http.get(`${this.BASE_URL}/${environment.spreadsheetId}`, { headers })
-    );
-    const sheet = response.sheets?.find((s: any) => s.properties?.title === sheetName);
-    if (!sheet) throw new Error(`Sheet "${sheetName}" not found`);
-    return sheet.properties.sheetId;
-  }
-
-  async batchGet(ranges: string[]): Promise<any[][]> {
-    const headers = await this.getHeaders();
-    const response: any = await firstValueFrom(
-      this.http.get(
-        `${this.BASE_URL}/${environment.spreadsheetId}/values:batchGet?ranges=${ranges.map(r => encodeURIComponent(r)).join('&ranges=')}`,
-        { headers }
-      )
-    );
-    const result: any[][] = [];
-    for (const valueRange of response.valueRanges) {
-      const range = valueRange.range.split('!')[0].replace(/'/g, '');
-      result.push(valueRange.values ?? [], range);
-    }
-    return result;
-  }
-
-  async fetchRaw(sheetName: string): Promise<any[][]> {
-    const headers = await this.getHeaders();
-    const response: any = await firstValueFrom(
-      this.http.get(
-        `${this.BASE_URL}/${environment.spreadsheetId}/values/${this.rangeUrl(sheetName, 'A:Z')}`,
-        { headers }
-      )
-    );
-    return response.values ?? [];
+    return this.getSheetId(sheetName);
   }
 }

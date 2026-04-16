@@ -22,4 +22,9 @@ export const FAMILLES_ROUTES: Routes = [
     loadComponent: () =>
       import('./famille-map/famille-map.component').then(m => m.FamilleMapComponent),
   },
+  {
+    path:':id',
+    loadComponent: () =>
+      import('./famille-detail/famille-detail.component').then(m => m.FamilleDetailComponent),
+  }
 ];

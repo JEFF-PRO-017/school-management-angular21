@@ -8,7 +8,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
 import { Classe } from '../../../core/models';
 
@@ -114,7 +113,6 @@ export class ClasseFormComponent implements OnInit {
 
   private route  = inject(ActivatedRoute);
   private router = inject(Router);
-  private cache  = inject(CacheService);
   private data   = inject(DataService);
   private snack  = inject(MatSnackBar);
 
@@ -122,7 +120,7 @@ export class ClasseFormComponent implements OnInit {
   saving  = signal(false);
   private classeId: string | null = null;
 
-  enseignants = () => this.cache.getEnseignants() ?? [];
+  enseignants = () => this.data.getEnseignants() ?? [];
 
   form = new FormGroup({
     nom_classe:           new FormControl('', Validators.required),
@@ -137,7 +135,7 @@ export class ClasseFormComponent implements OnInit {
     this.classeId = this.route.snapshot.paramMap.get('id');
     if (this.classeId) {
       this.isEdit = true;
-      const c = (this.cache.getClasses() ?? []).find(x => x.id_classe === this.classeId);
+      const c = (this.data.getClasses() ?? []).find(x => x.id_classe === this.classeId);
       if (c) this.form.patchValue(c);
     }
   }

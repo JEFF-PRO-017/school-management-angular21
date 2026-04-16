@@ -4,10 +4,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { CacheService } from './cache.service';
 import { SheetsQueueServiceService } from './sheets-queue.service';
 import { EleveEnrichi, SoldeSnap, LogAlerte } from '../models';
 import { environment } from '../../../environments/environment';
+import { DataService } from './data.service';
 
 const LOG_SHEET = 'F8_LOG_ALERTES';
 // Clé de stockage local pour le log anti-doublon
@@ -17,8 +17,8 @@ const DEDUP_KEY = 'wa_dedup_hashes';
 export class WhatsappService {
 
   private http   = inject(HttpClient);
-  private cache  = inject(CacheService);
   private queue  = inject(SheetsQueueServiceService);
+  private data   = inject(DataService);
 
   // ── Anti-doublon local ───────────────────────────
 
@@ -77,7 +77,7 @@ export class WhatsappService {
     }
 
     // Récupère le template actif de type "rappel"
-    const templates = this.cache.getFamilles(); // placeholder — à lire depuis F7
+    const templates = this.data.getFamilles(); // placeholder — à lire depuis F7
     const contenu   = environment.whatsappTemplate ?? 
       'Bonjour, le solde scolaire de {nom_eleve} est de {montant} FCFA restant. Merci.';
 
@@ -103,12 +103,7 @@ export class WhatsappService {
       hash_dedup:  hash,
     };
 
-    const logRow = [
-      log.id_log, log.id_eleve, log.id_famille ?? '',
-      log.id_template, log.numero_dest, log.date_envoi,
-      log.statut, log.hash_dedup,
-    ];
-    this.queue.enqueue({ sheetName: LOG_SHEET, rowData: logRow }, 'addRow');
+    this.data.addLogs(log); // ajoute dans cache + queue pour sheet
 
     if (ok) this.markSent(hash);
   }
@@ -135,6 +130,7 @@ export class WhatsappService {
       date_envoi:  new Date().toISOString(),
       statut:      ok ? 'envoye' : 'echec',
       hash_dedup:  hash,
+      id_famille:  '', // à remplir si disponible
     };
     this.queue.enqueue({
       sheetName: LOG_SHEET,
