@@ -3,8 +3,8 @@
 
 import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
-import { renderPV, renderFicheSaisie, renderBulletinSecondaire } from '../bulletins/components/renderer-secondaire';
-import { BulletinData, PVData, FicheSaisieData } from '../helper/bulletin.models';
+import { renderPV, renderFicheSaisie, renderBulletinSecondaire } from '../../features/notes/bulletins/components/renderer-secondaire';
+import { BulletinData, PVData, FicheSaisieData } from '../../features/notes/helper/bulletin.models';
 
 // import { renderBulletinPrimaire }   from './renderer-primaire';    // à créer
 // import { renderBulletinAnglophone } from './renderer-anglophone';  // à créer

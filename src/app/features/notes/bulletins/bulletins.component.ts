@@ -1,24 +1,24 @@
-// bulletins.component.ts — génération bulletins PDF + envoi moyennes WhatsApp
-// v2 : debugger supprimé, selection checkboxes, WhatsApp moyennes avec template
+// bulletins.component.ts — génération bulletins PDF + WhatsApp moyennes
+// Logique WhatsApp : 100% dans WhatsappService
 import {
   Component, inject, signal, computed,
-  ChangeDetectionStrategy, ChangeDetectorRef,
-  OnInit,
+  ChangeDetectionStrategy, ChangeDetectorRef, OnInit,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog }  from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { DataService }  from '../../../core/services/data.service';
-import { AuthService }  from '../../../core/services/auth.service';
-import { Eleve, MatiereConfig, Sequence } from '../../../core/models';
+import { DataService }     from '../../../core/services/data.service';
+import { AuthService }     from '../../../core/services/auth.service';
+import { WhatsappService } from '../../../core/services/whatsapp.service';
+import { Eleve, MatiereConfig, Sequence, EleveEnrichi } from '../../../core/models';
 import { BulletinConfigModal } from '../helper/bulletin-config.modal';
 import {
   BulletinConfig, GroupeMatiere, BulletinData,
   NiveauClasse, PVData, PVLigne, FicheSaisieData
 } from '../helper/bulletin.models';
 import { toFloat, toNote } from '../helper/pdf-helpers';
-import { BulletinPdfService } from '../services/bulletin-pdf.service';
+import { BulletinPdfService } from '../../../core/services/bulletin-pdf.service';
 
 @Component({
   selector: 'app-bulletins',
@@ -68,9 +68,7 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
     @if (rows().length > 0) {
       <span class="bl-sep"></span>
 
-      <!-- Bulletins classe -->
-      <button class="bl-btn bl-btn--primary"
-              [disabled]="genAll()"
+      <button class="bl-btn bl-btn--primary" [disabled]="genAll()"
               (click)="telechargerClasse()">
         @if (genAll()) { <span class="bl-spinner"></span> } @else {
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -81,9 +79,7 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
         Bulletins ({{ rows().length }})
       </button>
 
-      <!-- PV -->
-      <button class="bl-btn bl-btn--outline"
-              [disabled]="genPV()"
+      <button class="bl-btn bl-btn--outline" [disabled]="genPV()"
               (click)="telechargerPV()">
         @if (genPV()) {
           <span class="bl-spinner" style="border-top-color:#185FA5"></span>
@@ -98,7 +94,6 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
         PV
       </button>
 
-      <!-- Fiche saisie -->
       <button class="bl-btn bl-btn--outline" (click)="telechargerFicheSaisie()">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="currentColor"
@@ -107,20 +102,22 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
         Fiche saisie
       </button>
 
-      <!-- WhatsApp moyennes — agit sur la sélection -->
+      <!-- WA — agit sur la sélection ou tout si rien sélectionné -->
       <button class="bl-btn bl-btn--wa"
-              [disabled]="ciblesWA().length === 0"
+              [disabled]="ciblesWA().length === 0 || envoisWA()"
               (click)="envoyerMoyennesWA()">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z" stroke="currentColor"
-                stroke-width="1.3" stroke-linejoin="round"/>
-        </svg>
+        @if (envoisWA()) { <span class="bl-spinner"></span> } @else {
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+            <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z" stroke="currentColor"
+                  stroke-width="1.3" stroke-linejoin="round"/>
+          </svg>
+        }
         WA moyennes ({{ ciblesWA().length }})
       </button>
     }
   </div>
 
-  <!-- Squelette chargement -->
+  <!-- Squelette -->
   @if (loading()) {
     <div class="bl-skeleton">
       @for (_ of [1,2,3,4,5]; track $index) {
@@ -134,10 +131,9 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
     </div>
   }
 
-  <!-- Tableau élèves -->
+  <!-- Tableau -->
   @if (!loading() && rows().length > 0) {
 
-    <!-- Barre sélection -->
     <div class="bl-sel-bar">
       <label class="bl-chk-wrap">
         <input type="checkbox" class="bl-chk"
@@ -178,7 +174,6 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
           @for (row of rows(); track row.eleve.id_eleve) {
             <tr class="bl-tr" [class.bl-tr--sel]="selection().has(row.eleve.id_eleve)">
 
-              <!-- Checkbox WhatsApp -->
               <td class="bl-td bl-td--center">
                 <input type="checkbox" class="bl-chk"
                        [checked]="selection().has(row.eleve.id_eleve)"
@@ -277,14 +272,10 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
     .bl-btn--primary:not(:disabled):hover { opacity:.88; }
     .bl-btn--wa { background:#25D366; color:#fff; border:none; }
     .bl-btn--wa:not(:disabled):hover { opacity:.88; }
-
-    /* Sélection */
     .bl-sel-bar  { display:flex; align-items:center; gap:10px; padding:4px 0; }
     .bl-chk-wrap { display:flex; align-items:center; gap:6px; cursor:pointer;
                    font-size:12px; color:#555; }
     .bl-chk      { width:14px; height:14px; cursor:pointer; accent-color:#185FA5; }
-
-    /* Squelette */
     .bl-skeleton { display:flex; flex-direction:column; gap:5px; }
     .bl-sk-row   { display:flex; gap:5px; }
     .bl-sk-cell  { height:30px; min-width:68px; border-radius:4px;
@@ -293,8 +284,6 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
                    animation:shimmer 1.2s infinite; }
     .bl-sk-cell--wide { min-width:180px; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
-    /* Tableau */
     .bl-table-wrap { overflow-x:auto; border:0.5px solid rgba(0,0,0,.09);
                      border-radius:8px; }
     .bl-table { border-collapse:collapse; font-size:12px; min-width:100%; }
@@ -313,29 +302,25 @@ import { BulletinPdfService } from '../services/bulletin-pdf.service';
     .bl-tr:last-child .bl-td { border-bottom:none; }
     .bl-tr:hover     .bl-td  { background:rgba(0,0,0,.015); }
     .bl-tr--sel      .bl-td  { background:#EBF3FC !important; }
-
     .bl-ok  { color:#0F6E56; font-weight:500; }
     .bl-bad { color:#993C1D; font-weight:500; }
-
     .bl-mention { font-size:11px; padding:2px 7px; border-radius:99px; }
     .bl-mention--ok   { background:#EAF3DE; color:#27500A; }
     .bl-mention--warn { background:#FAEEDA; color:#633806; }
     .bl-mention--bad  { background:#FCEBEB; color:#791F1F; }
     .bl-mention--info { background:#EBF3FC; color:#0C447C; }
     .bl-mention--none { color:#bbb; }
-
     .bl-icon-btn { width:28px; height:28px; padding:0;
                    border:0.5px solid rgba(0,0,0,.12); background:white;
                    cursor:pointer; border-radius:5px;
                    display:inline-flex; align-items:center;
-                   justify-content:center; color:#555; transition:background .1s; }
+                   justify-content:center; color:#555; }
     .bl-icon-btn:hover { background:#EBF3FC; color:#185FA5; border-color:#B5D4F4; }
-
     .bl-spinner { width:13px; height:13px; border-radius:50%;
-                  border:2px solid rgba(0,0,0,.1); border-top-color:#fff;
+                  border:2px solid rgba(255,255,255,.3);
+                  border-top-color:#fff;
                   animation:spin .7s linear infinite; display:inline-block; }
     @keyframes spin { to { transform:rotate(360deg); } }
-
     .bl-foot      { display:flex; justify-content:space-between; }
     .bl-foot-info { font-size:11px; color:#aaa; }
     .bl-empty     { text-align:center; padding:40px; color:#ccc; font-size:13px; }
@@ -345,6 +330,7 @@ export class BulletinsComponent implements OnInit {
 
   private data   = inject(DataService);
   private auth   = inject(AuthService);
+  private wa     = inject(WhatsappService);  // ← toute la logique WA est ici
   private pdfSvc = inject(BulletinPdfService);
   private dialog = inject(MatDialog);
   private snack  = inject(MatSnackBar);
@@ -354,8 +340,8 @@ export class BulletinsComponent implements OnInit {
   loading    = signal(false);
   genAll     = signal(false);
   genPV      = signal(false);
+  envoisWA   = signal(false);   // spinner pendant les envois WA
 
-  // ── Sélection WhatsApp ─────────────────────────────────────────
   selection = signal<Set<string>>(new Set());
 
   config: BulletinConfig = {
@@ -376,8 +362,6 @@ export class BulletinsComponent implements OnInit {
       : all.filter(c => this.auth.getClassesAssignees().includes(c.id_classe));
   });
 
-  // ── Tableau résultats ──────────────────────────────────────────
-
   rows = computed(() => {
     const eleves   = this._eleves();
     const matieres = this._matieres();
@@ -389,8 +373,7 @@ export class BulletinsComponent implements OnInit {
       );
       const valides = moySeqs.filter((v): v is number => v !== null);
       const moyTrim = valides.length
-        ? valides.reduce((a, b) => a + b, 0) / valides.length
-        : null;
+        ? valides.reduce((a, b) => a + b, 0) / valides.length : null;
       return { eleve, moySeqs, moyTrim };
     });
 
@@ -406,7 +389,7 @@ export class BulletinsComponent implements OnInit {
     });
   });
 
-  // ── Sélection computed ─────────────────────────────────────────
+  // ── Sélection ────────────────────────────────────────────────
 
   toutSelectionne = computed(() =>
     this.rows().length > 0 &&
@@ -416,14 +399,11 @@ export class BulletinsComponent implements OnInit {
     this.selection().size > 0 && !this.toutSelectionne()
   );
 
-  // Élèves ciblés pour WhatsApp — sélectionnés ou tous si rien sélectionné
-  ciblesWA = computed(() => {
-    if (this.selection().size > 0)
-      return this.rows().filter(r => this.selection().has(r.eleve.id_eleve));
-    return this.rows();
-  });
-
-  // ── Init ──────────────────────────────────────────────────────
+  ciblesWA = computed(() =>
+    this.selection().size > 0
+      ? this.rows().filter(r => this.selection().has(r.eleve.id_eleve))
+      : this.rows()
+  );
 
   ngOnInit(): void {
     const classes = this.classesDisponibles();
@@ -435,8 +415,6 @@ export class BulletinsComponent implements OnInit {
 
   onChangerClasse(): void { this.charger(); }
 
-  // ── Config ────────────────────────────────────────────────────
-
   ouvrirConfig(): void {
     this.dialog.open(BulletinConfigModal, {
       data: this.config, width: '440px', maxWidth: '95vw',
@@ -444,8 +422,6 @@ export class BulletinsComponent implements OnInit {
       if (cfg) { this.config = cfg; this.cdr.markForCheck(); this.charger(); }
     });
   }
-
-  // ── Chargement ────────────────────────────────────────────────
 
   async charger(): Promise<void> {
     if (!this.ctrlClasse.value) return;
@@ -459,145 +435,79 @@ export class BulletinsComponent implements OnInit {
       (classe?.eleves ?? []).slice().sort((a, b) => a.nom.localeCompare(b.nom))
     );
     this._groupes.set(this._buildGroupes(matieres));
-    this.selection.set(new Set());  // réinitialise à chaque chargement
+    this.selection.set(new Set());
     this.loading.set(false);
     this.cdr.markForCheck();
   }
 
-  // ── Sélection ────────────────────────────────────────────────
-
   toggleLigne(idEleve: string, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.selection.update(s => {
-      const n = new Set(s);
-      checked ? n.add(idEleve) : n.delete(idEleve);
-      return n;
+      const n = new Set(s); checked ? n.add(idEleve) : n.delete(idEleve); return n;
     });
   }
-
   toggleTout(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.selection.set(
-      checked
-        ? new Set(this.rows().map(r => r.eleve.id_eleve))
-        : new Set()
+      checked ? new Set(this.rows().map(r => r.eleve.id_eleve)) : new Set()
     );
   }
-
   viderSelection(): void { this.selection.set(new Set()); }
 
-  // ── WhatsApp moyennes ─────────────────────────────────────────
+  // ── WhatsApp — 100% délégué à WhatsappService ───────────────
 
-  envoyerMoyennesWA(): void {
-    const cibles = this.ciblesWA();
-    let ouverts  = 0;
-
-    cibles.forEach(row => {
-      const f = row.eleve.famille;
-      const tel = (f?.tel_pere || f?.tel_mere || '').replace(/\s+/g, '');
-      if (!tel) return;
-
-      const moy = row.moyTrim ?? row.moySeqs[0];
-      const rang = row.rang;
-      const prenom = row.eleve.prenom;
-      const cls    = (this.data.getClasses() ?? [])
-        .find(c => c.id_classe === this.ctrlClasse.value)?.nom_classe ?? '';
-
-      const msg =
-        `Bonjour, voici les résultats de ${prenom} (${cls}) — ` +
-        `${this.config.titre} :\n` +
-        this.config.sequences
-          .map((s, i) => `  ${s} : ${row.moySeqs[i]?.toFixed(2) ?? '—'}/20`)
-          .join('\n') +
-        (row.moyTrim !== null
-          ? `\n  Moyenne trimestrielle : ${row.moyTrim.toFixed(2)}/20`
-          : '') +
-        (rang ? `\n  Rang : ${rang}/${this.rows().length}` : '') +
-        `\n\nMerci pour votre confiance. — CSB Berceau du Savoir`;
-
-      const telF = tel.startsWith('+') ? tel : `+237${tel}`;
-      window.open(`https://wa.me/${telF}?text=${encodeURIComponent(msg)}`, '_blank');
-      ouverts++;
-    });
-
-    this.snack.open(
-      `${ouverts} message(s) ouvert(s) dans WhatsApp`,
-      'OK',
-      { duration: 4000 }
-    );
-  }
-
-  // ── Helpers privés ────────────────────────────────────────────
-
-  private _buildGroupes(matieres: MatiereConfig[]): GroupeMatiere[] {
-    const map = new Map<string, MatiereConfig[]>();
-    matieres.forEach(m => {
-      const key = (m as any).groupe ?? 'Matières';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(m);
-    });
-    return Array.from(map.entries()).map(([nom, mats]) => ({ nom, matieres: mats }));
-  }
-
-  private _moySeq(eleve: Eleve, seq: Sequence, matieres: MatiereConfig[]): number | null {
-    const notes = eleve.sequences?.find(s => s.sequence === seq)?.notes_eleve ?? [];
-    let pts = 0, coeff = 0, has = false;
-    matieres.forEach(m => {
-      const c = toFloat(m.coefficient);
-      const n = toNote(notes.find(n => n.matiere === m.nom_matiere)?.note_obtenue);
-      if (n !== null) { pts += n * c; has = true; }
-      coeff += c;
-    });
-    return has && coeff > 0 ? pts / coeff : null;
-  }
-
-  private _buildBulletinData(eleve: Eleve): BulletinData {
-    const classe = (this.data.getClasses() ?? [])
+  async envoyerMoyennesWA(): Promise<void> {
+    const cibles  = this.ciblesWA();
+    const classe  = (this.data.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
-    const rws  = this.rows();
-    const row  = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);
-    const moys = rws
-      .map(r => r.moyTrim ?? r.moySeqs[0])
-      .filter((v): v is number => v !== null);
+    const periode = this.config.annee;
 
-    return {
-      eleve,
-      nomClasse:         classe?.nom_classe ?? '',
-      niveau:            this._detectNiveau(classe?.nom_classe ?? ''),
-      config:            this.config,
-      groupes:           this._groupes(),
-      rang:              row?.rang ?? null,
-      effectif:          rws.length,
-      moyPremier:        moys.length ? Math.max(...moys) : null,
-      moyDernier:        moys.length ? Math.min(...moys) : null,
-      tauxReussite:      moys.length
-        ? (moys.filter(m => m >= 10).length / moys.length) * 100 : null,
-      moyGeneraleClasse: moys.length
-        ? moys.reduce((a, b) => a + b, 0) / moys.length : null,
-      absJustifiees: 0, absNonJustifiees: 0, appreciations: '',
-      avertissementConduite: false, blameConduite: false,
-      consigne: 0, exclusion: 0, retards: 0, conseilDiscipline: false,
-    };
+    this.envoisWA.set(true);
+    let envoyes = 0, doublons = 0, echecs = 0;
+
+    for (const row of cibles) {
+      // Construit EleveEnrichi avec la classe courante
+      const eleveEnrichi: EleveEnrichi = { ...row.eleve, classe };
+
+      const moySeqsPayload = this.config.sequences.map((seq, i) => ({
+        seq, moy: row.moySeqs[i] ?? null,
+      }));
+
+      const r = await this.wa.envoyerMoyennes(
+        eleveEnrichi,
+        this.config.titre,
+        moySeqsPayload,
+        row.moyTrim ?? null,
+        row.rang    ?? null,
+        this.rows().length,
+        null,       // template — null = message par défaut du service
+        periode
+      );
+
+      if (r === 'envoye')        envoyes++;
+      else if (r === 'doublon')  doublons++;
+      else                       echecs++;
+    }
+
+    this.envoisWA.set(false);
+    this.snack.open(
+      `${envoyes} envoyé(s) · ${doublons} doublon(s) · ${echecs} sans numéro/échec`,
+      'OK', { duration: 4000 }
+    );
+    this.cdr.markForCheck();
   }
 
-  private _detectNiveau(nomClasse: string): NiveauClasse {
-    const n = nomClasse.toLowerCase();
-    if (n.includes('tech') || n.includes('pro'))    return 'technique';
-    if (n.includes('ang')  || n.includes('bil'))    return 'secondaire-ang';
-    if (['cm','ce','cp'].some(x => n.includes(x)))  return 'primaire';
-    return 'secondaire-fr';
-  }
-
-  // ── Actions PDF ───────────────────────────────────────────────
+  // ── PDF ───────────────────────────────────────────────────────
 
   apercu(eleve: Eleve): void {
-    this.pdfSvc.apercu(this.pdfSvc.genererBulletin(this._buildBulletinData(eleve)));
+    this.pdfSvc.apercu(
+      this.pdfSvc.genererBulletin(this._buildBulletinData(eleve))
+    );
   }
 
   telecharger(eleve: Eleve): void {
-    const blob = this.pdfSvc.genererBulletin(this._buildBulletinData(eleve));
     this.pdfSvc.telecharger(
-      blob,
+      this.pdfSvc.genererBulletin(this._buildBulletinData(eleve)),
       `bulletin_${eleve.nom}_${this.config.sequences.join('-')}.pdf`
     );
     this.snack.open('Bulletin téléchargé', '', { duration: 2000 });
@@ -674,39 +584,97 @@ export class BulletinsComponent implements OnInit {
   }
 
   telechargerFicheSaisie(): void {
-    const matieres = this._matieres();
     const cls = (this.data.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
-    const data: FicheSaisieData = {
+    const fdata: FicheSaisieData = {
       nomClasse: cls?.nom_classe ?? '',
       nomEcole:  'CSB BERCEAU DU SAVOIR',
       sequences: this.config.sequences,
       annee:     this.config.annee,
-      matieres,
+      matieres:  this._matieres(),
       eleves:    this._eleves(),
     };
     this.pdfSvc.telecharger(
-      this.pdfSvc.genererFicheSaisie(data),
+      this.pdfSvc.genererFicheSaisie(fdata),
       `fiche-saisie_${cls?.nom_classe}_${this.config.sequences.join('-')}.pdf`
     );
     this.snack.open('Fiche de saisie générée', '', { duration: 2000 });
   }
 
-  // ── Mention ───────────────────────────────────────────────────
+  // ── Helpers privés ───────────────────────────────────────────
+
+  private _buildGroupes(matieres: MatiereConfig[]): GroupeMatiere[] {
+    const map = new Map<string, MatiereConfig[]>();
+    matieres.forEach(m => {
+      const key = (m as any).groupe ?? 'Matières';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(m);
+    });
+    return Array.from(map.entries()).map(([nom, mats]) => ({ nom, matieres: mats }));
+  }
+
+  private _moySeq(eleve: Eleve, seq: Sequence, matieres: MatiereConfig[]): number | null {
+    const notes = eleve.sequences?.find(s => s.sequence === seq)?.notes_eleve ?? [];
+    let pts = 0, coeff = 0, has = false;
+    matieres.forEach(m => {
+      const c = toFloat(m.coefficient);
+      const n = toNote(notes.find(n => n.matiere === m.nom_matiere)?.note_obtenue);
+      if (n !== null) { pts += n * c; has = true; }
+      coeff += c;
+    });
+    return has && coeff > 0 ? pts / coeff : null;
+  }
+
+  private _buildBulletinData(eleve: Eleve): BulletinData {
+    const classe = (this.data.getClasses() ?? [])
+      .find(c => c.id_classe === this.ctrlClasse.value);
+    const rws  = this.rows();
+    const row  = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);
+    const moys = rws
+      .map(r => r.moyTrim ?? r.moySeqs[0])
+      .filter((v): v is number => v !== null);
+
+    return {
+      eleve,
+      nomClasse:         classe?.nom_classe ?? '',
+      niveau:            this._detectNiveau(classe?.nom_classe ?? ''),
+      config:            this.config,
+      groupes:           this._groupes(),
+      rang:              row?.rang ?? null,
+      effectif:          rws.length,
+      moyPremier:        moys.length ? Math.max(...moys) : null,
+      moyDernier:        moys.length ? Math.min(...moys) : null,
+      tauxReussite:      moys.length
+        ? (moys.filter(m => m >= 10).length / moys.length) * 100 : null,
+      moyGeneraleClasse: moys.length
+        ? moys.reduce((a, b) => a + b, 0) / moys.length : null,
+      absJustifiees: 0, absNonJustifiees: 0, appreciations: '',
+      avertissementConduite: false, blameConduite: false,
+      consigne: 0, exclusion: 0, retards: 0, conseilDiscipline: false,
+    };
+  }
+
+  private _detectNiveau(nomClasse: string): NiveauClasse {
+    const n = nomClasse.toLowerCase();
+    if (n.includes('tech') || n.includes('pro'))   return 'technique';
+    if (n.includes('ang')  || n.includes('bil'))   return 'secondaire-ang';
+    if (['cm','ce','cp'].some(x => n.includes(x))) return 'primaire';
+    return 'secondaire-fr';
+  }
 
   mention(moy: number | null): string {
-    if (moy === null)  return '—';
-    if (moy >= 16)     return 'Félicitations';
-    if (moy >= 14)     return 'Compliments';
-    if (moy >= 12)     return 'Encouragements';
-    if (moy >= 10)     return 'Admis(e)';
+    if (moy === null) return '—';
+    if (moy >= 16) return 'Félicitations';
+    if (moy >= 14) return 'Compliments';
+    if (moy >= 12) return 'Encouragements';
+    if (moy >= 10) return 'Admis(e)';
     return 'Avertissement';
   }
 
   mentionCls(moy: number | null): string {
-    if (moy === null)  return 'bl-mention--none';
-    if (moy >= 10)     return 'bl-mention--ok';
-    if (moy >= 8)      return 'bl-mention--warn';
+    if (moy === null) return 'bl-mention--none';
+    if (moy >= 10)    return 'bl-mention--ok';
+    if (moy >= 8)     return 'bl-mention--warn';
     return 'bl-mention--bad';
   }
 }

@@ -2,7 +2,7 @@
 // PDF liste insolvables — paysage A4, suit le modèle sectionPVTableau
 // Pattern identique à recu.service.ts : buildDoc() privé, generer() public
 import { Injectable } from '@angular/core';
-import { Famille } from '../../core/models';
+import { Famille } from '../models';
 import jsPDF from 'jspdf';
 
 

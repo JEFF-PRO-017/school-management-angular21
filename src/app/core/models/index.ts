@@ -33,6 +33,12 @@ export interface AppUser {
   permissions: PermissionId[];  // liste des permissions accordées
 }
 
+/** Élève enrichi avec jointures (construit côté app depuis le cache) */
+export interface EleveEnrichi extends Eleve {
+  famille?: Famille;
+  classe?: Classe;
+  solde?: SoldeSnap;
+} 
 // ── Permission_User (log d'assignation) ──────────────────────────
 export interface PermissionUser {
   id:                string;
