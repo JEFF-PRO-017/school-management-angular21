@@ -463,7 +463,7 @@ export class ElevesListComponent implements OnInit {
 
   soldeKo(idEleve: string): boolean {
     const s = this.getSolde(idEleve);
-    return !!s && s.statut_insolvable;
+    return !!s && !!s.statut_insolvable;
   }
 
   soldeLabel(idEleve: string): string {

@@ -81,6 +81,12 @@ export class SheetsQueueServiceService {
   isEmpty(): boolean    { return this.queue().length === 0; }
   size():    number     { return this.queue().length; }
 
+  /** Vide complètement la file sans envoyer — à utiliser avec précaution */
+  clearQueue(): void {
+    this.queue.set([]);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
   /**
    * Tente d'envoyer le premier élément de la file.
    * En cas d'erreur réseau, l'élément est conservé pour la prochaine tentative.

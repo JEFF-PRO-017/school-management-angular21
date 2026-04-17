@@ -9,4 +9,6 @@ import { RouterOutlet } from '@angular/router';
   // Le layout complet est dans LayoutComponent — ici juste le outlet racine
   template: `<router-outlet></router-outlet>`,
 })
-export class AppComponent {}
+export class AppComponent { }
+export const titleApp = 'GBS - Berceau Du Savoir';
+

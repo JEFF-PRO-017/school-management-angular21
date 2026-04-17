@@ -449,6 +449,7 @@ export class InsolvablesListComponent implements OnInit {
   // ── Actions
 
   exportPdf(): void {
+    debugger
     const annee = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
     this.pdf.genererListeInsolvables(
       this.cibles(),

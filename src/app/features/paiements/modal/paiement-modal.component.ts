@@ -351,7 +351,6 @@ export class PaiementModalComponent implements OnInit {
   }
 
   async save(): Promise<void> {
-    debugger
     if (this.form.invalid) return;
     this.saving.set(true);
     const p: Paiement = {

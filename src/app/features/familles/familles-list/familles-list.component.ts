@@ -446,7 +446,6 @@ export class FamillesListComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    debugger
     this.cache.getClasses();
     this.search.valueChanges.subscribe(() => this.cdr.markForCheck());
   }

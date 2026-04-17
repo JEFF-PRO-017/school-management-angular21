@@ -307,7 +307,7 @@ declare const L: any;
 
                 <!-- Date naissance -->
                 <td class="bl-td bl-td--center" style="font-size:11px;color:#888">
-                  {{ fmtDate(e.date_naissance) }}
+                  {{ fmtDate(e.date_naissance ?? '') }}
                 </td>
 
                 <!-- Statut -->

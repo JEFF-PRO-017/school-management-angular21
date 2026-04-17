@@ -1,103 +1,80 @@
-// app.routes.ts — routes principales avec lazy loading complet
+// app.routes.ts — routes principales avec guards
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
-import { roleGuard } from './core/guards/role.guard';
+import { authGuard, permGuard, adminGuard } from './core/guards/auth.guard';
 
-export const routes: Routes = [
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-
-  // Authentification — sans guard
+export const APP_ROUTES: Routes = [
+  // ── Auth (publique) ──────────────────────────────────────────────
   {
     path: 'auth',
-    loadChildren: () =>
-      import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
+    loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
 
-  // Layout principal protégé
+  // ── Application (protégée) ───────────────────────────────────────
   {
     path: '',
-    loadComponent: () =>
-      import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
+    loadComponent: () => import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
     canActivate: [authGuard],
     children: [
 
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+
       {
         path: 'dashboard',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
 
-      // Admin uniquement
+      // Référentiels — admin uniquement
       {
         path: 'familles',
-        canActivate: [roleGuard],
-        data: { roles: ['admin'] },
-        loadChildren: () =>
-          import('./features/familles/familles.routes').then(m => m.FAMILLES_ROUTES),
+        canActivate: [permGuard], data: { perm: 'familles' },
+        loadChildren: () => import('./features/familles/familles.routes').then(m => m.FAMILLES_ROUTES),
       },
       {
         path: 'eleves',
-        canActivate: [roleGuard],
-        data: { roles: ['admin'] },
-        loadChildren: () =>
-          import('./features/eleves/eleves.routes').then(m => m.ELEVES_ROUTES),
+        canActivate: [permGuard], data: { perm: 'eleves' },
+        loadChildren: () => import('./features/eleves/eleves.routes').then(m => m.ELEVES_ROUTES),
       },
       {
         path: 'classes',
-        canActivate: [roleGuard],
-        data: { roles: ['admin'] },
-        loadChildren: () =>
-          import('./features/classes/classes.routes').then(m => m.CLASSES_ROUTES),
-      },
-      {
-        path: 'frais',
-        canActivate: [roleGuard],
-        data: { roles: ['admin'] },
-        loadChildren: () =>
-          import('./features/frais/frais.routes').then(m => m.FRAIS_ROUTES),
-      },
-
-      // Admin + Caissier
-      {
-        path: 'paiements',
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'caissier'] },
-        loadChildren: () =>
-          import('./features/paiements/paiements.routes').then(m => m.PAIEMENTS_ROUTES),
+        canActivate: [permGuard], data: { perm: 'classes' },
+        loadChildren: () => import('./features/classes/classes.routes').then(m => m.CLASSES_ROUTES),
       },
       {
         path: 'insolvables',
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'caissier'] },
-        loadChildren: () =>
-          import('./features/insolvables/insolvables.routes').then(m => m.INSOLVABLES_ROUTES),
+        canActivate: [permGuard], data: { perm: 'insolvables' },
+        loadChildren: () => import('./features/insolvables/insolvables.routes').then(m => m.INSOLVABLES_ROUTES),
       },
 
-      // Admin + Enseignant
+      // Pédagogie
       {
         path: 'notes',
-        canActivate: [roleGuard],
-        data: { roles: ['admin', 'enseignant'] },
-        loadChildren: () =>
-          import('./features/notes/notes.routes').then(m => m.NOTES_ROUTES),
+        canActivate: [permGuard], data: { perm: 'notes' },
+        loadChildren: () => import('./features/notes/notes.routes').then(m => m.NOTES_ROUTES),
       },
 
-      // Admin uniquement
+      // Absences
+      {
+        path: 'absences',
+        canActivate: [permGuard], data: { perm: 'absences' },
+        loadChildren: () => import('./features/absences/absences.routes').then(m => m.ABSENCES_ROUTES),
+      },
+
+      // WhatsApp
       {
         path: 'whatsapp',
-        canActivate: [roleGuard],
-        data: { roles: ['admin'] },
-        loadChildren: () =>
-          import('./features/whatsapp/whatsapp.routes').then(m => m.WHATSAPP_ROUTES),
+        canActivate: [permGuard], data: { perm: 'whatsapp' },
+        loadChildren: () => import('./features/whatsapp/whatsapp.routes').then(m => m.WHATSAPP_ROUTES),
       },
+
+      // Gestion utilisateurs — admin uniquement
+      {
+        path: 'users',
+        canActivate: [adminGuard],
+        loadChildren: () => import('./features/users/users.routes').then(m => m.USERS_ROUTES),
+      },
+
     ],
   },
 
-  // 404
-  {
-    path: '**',
-    loadComponent: () =>
-      import('./shared/components/page-not-found/page-not-found.component')
-        .then(m => m.PageNotFoundComponent),
-  },
+  { path: '**', loadComponent: () => import('./shared/components/page-not-found/page-not-found.component').then(m => m.PageNotFoundComponent) },
 ];

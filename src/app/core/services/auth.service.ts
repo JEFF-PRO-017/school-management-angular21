@@ -1,64 +1,106 @@
-// auth.service.ts — authentification locale + gestion des rôles
-// En production : remplacer le mock par un vrai backend JWT
-import { Injectable, signal, computed } from '@angular/core';
-import { Router } from '@angular/router';
-import { AppUser, Role } from '../models';
+// auth.service.ts
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Router }      from '@angular/router';
+import { AppUser, PermissionId, Section } from '../models';
+import { CacheService } from './cache.service';
+import { DataService }  from './data.service';
+import { compare }      from 'bcryptjs';
 
-const STORAGE_KEY = 'school_user';
-
-// Utilisateurs de test — à remplacer par un appel API en production
-const MOCK_USERS: AppUser[] = [
-  { id: 'u1', nom: 'Directeur',  email: 'admin@ecole.cm',      role: 'admin' },
-  { id: 'u2', nom: 'Caissier',   email: 'caissier@ecole.cm',   role: 'caissier' },
-  { id: 'u3', nom: 'Prof Maths', email: 'prof1@ecole.cm',      role: 'enseignant', classesAssignees: ['CL001','CL002'] },
-];
+const STORAGE_KEY = 'app_user';
+const SECTION_KEY = 'app_section';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
-  private _user = signal<AppUser | null>(this.loadFromStorage());
+  private cache  = inject(CacheService);
+  private data   = inject(DataService);
+  private router = inject(Router);   // injecté ici, pas dans logout()
 
-  /** Utilisateur connecté (signal public en lecture) */
+  // ── State ─────────────────────────────────────────────────────────
+  private _user    = signal<AppUser | null>(null);
+  private _section = signal<Section>(
+    (localStorage.getItem(SECTION_KEY) as Section) ?? 'secondaire'
+  );
+
   readonly user     = this._user.asReadonly();
-  readonly isLogged = computed(() => !!this._user());
-  readonly role     = computed(() => this._user()?.role ?? null);
-  readonly isAdmin  = computed(() => this._user()?.role === 'admin');
+  readonly section  = this._section.asReadonly();
+  readonly isLogged = computed(() => this._user() !== null);
+  readonly isAdmin  = computed(() => this._user()?.is_admin === true);
 
-  constructor(private router: Router) {}
+  // ── Section ───────────────────────────────────────────────────────
 
-  /** Connexion par email + mot de passe (mock — adapter pour prod) */
-  login(email: string, password: string): boolean {
-    const found = MOCK_USERS.find(u => u.email === email);
-    if (!found) return false;
-    // En prod : valider le mot de passe contre un hash
-    this._user.set(found);
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(found));
+  setSection(s: Section): void {
+    if (!this.isAdmin()) return;
+    this._section.set(s);
+    localStorage.setItem(SECTION_KEY, s);
+    this.cache.setSection(s);
+  }
+
+  getSectionActive(): Section {
+    return this.isAdmin()
+      ? this._section()
+      : (this._user()?.section ?? 'secondaire');
+  }
+
+  // ── Auth ──────────────────────────────────────────────────────────
+
+  async login(username: string, password: string): Promise<boolean> {
+    // S'assure que les utilisateurs sont bien chargés avant de vérifier
+    // (peut déjà être en cache si initAppData a tourné avant)
+    if (this.data.getUsers().length === 0) {
+      await this.data.loadUsers();
+    }
+
+    const u = this.data.getUsers().find(x => x.username === username);
+    if (!u) return false;
+
+    const ok = await compare(password, u.mot_de_passe);
+    if (!ok) return false;
+
+    this._user.set(u);
+    this._section.set(u.section);
+    this.cache.setSection(u.section);   // synchronise le filtre classes
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    localStorage.setItem(SECTION_KEY, u.section);
     return true;
   }
 
   logout(): void {
     this._user.set(null);
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SECTION_KEY);
+    this.cache.invalidateAll();         // vide les données locales
     this.router.navigate(['/auth/login']);
   }
 
-  /** Vérifie si l'utilisateur possède un des rôles requis */
-  hasRole(...roles: Role[]): boolean {
-    const current = this._user()?.role;
-    return !!current && roles.includes(current);
+  // ── Permissions ───────────────────────────────────────────────────
+
+  hasPermission(p: PermissionId): boolean {
+    const u = this._user();
+    if (!u) return false;
+    if (u.is_admin) return true;
+    return u.permissions.includes(p);
   }
 
-  /** Retourne les classes assignées à un enseignant */
+  hasRole(...roles: string[]): boolean {
+    const u = this._user();
+    if (!u) return false;
+    if (u.is_admin) return true;
+    return roles.includes(u.role);
+  }
+
   getClassesAssignees(): string[] {
-    return this._user()?.classesAssignees ?? [];
+    const u = this._user();
+    if (!u || u.is_admin) return [];
+    return [];
   }
 
-  private loadFromStorage(): AppUser | null {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
+  // ── Helpers privés ────────────────────────────────────────────────
+
+  // private loadUser(): AppUser | null {
+  //   try {
+  //     const raw = localStorage.getItem(STORAGE_KEY);
+  //     return raw ? JSON.parse(raw) : null;
+  //   } catch { return null; }
+  // }
 }

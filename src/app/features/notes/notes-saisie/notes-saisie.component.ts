@@ -31,8 +31,8 @@ import { TransfertEleveDialogComponent } from '../transfert-eleve-dialog/transfe
 /** Une cellule : valeur courante + valeur d'origine pour détecter les modifs */
 interface Cell {
   key: string;
-  valeur: number | null;
-  origine: number | null;
+  valeur:string| number | null;
+  origine: string| number | null;
 }
 
 /** Une ligne du tableau = un élève */
@@ -167,7 +167,7 @@ export class NotesSaisieComponent implements OnInit {
       ?? [];
 
     this.lignes = eleves.map(eleve => {
-      const cells: Cell[][] = this.seqActives.map(seq => {
+      const cells: any[][] = this.seqActives.map(seq => {
         const notesSeq = eleve.sequences?.find(s => s.sequence === seq)?.notes_eleve ?? [];
         return matieres.map(mat => {
           const val = notesSeq.find(n => n.matiere === mat.nom_matiere)?.note_obtenue ?? null;
@@ -185,7 +185,7 @@ export class NotesSaisieComponent implements OnInit {
   private _recalcTout(): void {
     const matieres = this.matieres();
     // Ajoute les colonnes manquantes pour les nouvelles séquences
-    this.lignes.forEach(ligne => {
+    this.lignes.forEach((ligne) => {
       const eleve = ligne.eleve;
       ligne.cells = this.seqActives.map((seq, si) => {
         if (ligne.cells[si]) return ligne.cells[si]; // déjà chargée

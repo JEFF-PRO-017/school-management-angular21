@@ -8,13 +8,13 @@ import jsPDF from 'jspdf';
 
 // ── Couleurs identiques à bulletin-sections ──────────────────────
 type RGB = [number, number, number];
-const BLANC:  RGB = [255, 255, 255];
-const NOIR:   RGB = [0, 0, 0];
-const BLEU:   RGB = [21, 95, 165];
+const BLANC: RGB = [255, 255, 255];
+const NOIR: RGB = [0, 0, 0];
+const BLEU: RGB = [21, 95, 165];
 const GRIS_H: RGB = [211, 211, 211];
 const GRIS_L: RGB = [248, 249, 252];
-const ROUGE:  RGB = [153, 60, 29];
-const VERT:   RGB = [15, 110, 86];
+const ROUGE: RGB = [153, 60, 29];
+const VERT: RGB = [15, 110, 86];
 
 // ── Mise en page paysage A4 ───────────────────────────────────────
 const WL = 297;   // largeur landscape
@@ -23,38 +23,38 @@ const ML = 10;    // marge gauche
 const MR = 10;    // marge droite
 
 export interface InfosEcole {
-  nom:   string;
+  nom: string;
   ville: string;
-  tel:   string;
+  tel: string;
 }
 
 const ECOLE_DEFAULT: InfosEcole = {
-  nom:   'CSB BERCEAU DU SAVOIR',
+  nom: 'CSB BERCEAU DU SAVOIR',
   ville: 'Yaoundé — Cameroun',
-  tel:   '+237 679 33 78 60',
+  tel: '+237 679 33 78 60',
 };
 
 @Injectable({ providedIn: 'root' })
 export class InsolvablesPdfService {
 
   genererListeInsolvables(
-    familles:      Famille[],
-    seuil:         number,
+    familles: Famille[],
+    seuil: number,
     anneeScolaire: string,
-    dateRef?:      string,
-    ecole:         InfosEcole = ECOLE_DEFAULT,
+    dateRef?: string,
+    ecole: InfosEcole = ECOLE_DEFAULT,
   ): void {
-    const doc  = this.buildDoc(familles, seuil, anneeScolaire, dateRef, ecole);
+    const doc = this.buildDoc(familles, seuil, anneeScolaire, dateRef, ecole);
     const date = new Date().toISOString().slice(0, 10);
     doc.save(`insolvables_${anneeScolaire.replace('/', '-')}_${date}.pdf`);
   }
 
   apercu(
-    familles:      Famille[],
-    seuil:         number,
+    familles: Famille[],
+    seuil: number,
     anneeScolaire: string,
-    dateRef?:      string,
-    ecole:         InfosEcole = ECOLE_DEFAULT,
+    dateRef?: string,
+    ecole: InfosEcole = ECOLE_DEFAULT,
   ): void {
     const doc = this.buildDoc(familles, seuil, anneeScolaire, dateRef, ecole);
     window.open(doc.output('bloburl') as string, '_blank');
@@ -63,15 +63,13 @@ export class InsolvablesPdfService {
   // ── Construction ─────────────────────────────────────────────────
 
   private buildDoc(
-    familles:      Famille[],
-    seuil:         number,
+    familles: Famille[],
+    seuil: number,
     anneeScolaire: string,
-    dateRef:       string | undefined,
-    ecole:         InfosEcole,
+    dateRef: string | undefined,
+    ecole: InfosEcole,
   ): any {
-    const jsPDFClass = (window as any).jspdf?.jsPDF;
-    const doc = new jsPDFClass({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     let y = this.entete(doc, ecole, seuil, anneeScolaire, dateRef, familles.length);
     y = this.tableau(doc, y, familles);
     this.signatures(doc, y);
@@ -81,21 +79,21 @@ export class InsolvablesPdfService {
 
   // ── En-tête — suit sectionPVEntete ───────────────────────────────
   private entete(
-    doc:    any,
-    ecole:  InfosEcole,
-    seuil:  number,
-    annee:  string,
+    doc: any,
+    ecole: InfosEcole,
+    seuil: number,
+    annee: string,
     dateRef: string | undefined,
-    nb:     number,
+    nb: number,
   ): number {
     let y = 6;
 
     // Bloc gauche — établissement
     const lignes: [string, boolean][] = [
       ['REPUBLIQUE DU CAMEROUN', true],
-      ['PAIX-TRAVAIL-PATRIE',    false],
-      ['MINEDUC / DDES-MAK',     true],
-      [ecole.nom,                true],
+      ['PAIX-TRAVAIL-PATRIE', false],
+      ['MINEDUC / DDES-MAK', true],
+      [ecole.nom, true],
     ];
     lignes.forEach(([txt, bold], i) => {
       doc.setFont('helvetica', bold ? 'bold' : 'italic');
@@ -136,18 +134,18 @@ export class InsolvablesPdfService {
   // ── Tableau — suit exactement sectionPVTableau ────────────────────
   private tableau(doc: any, yStart: number, familles: Famille[]): number {
     const MARGE_BAS = 18;
-    const Y_MAX     = HL - MARGE_BAS;
-    const usableW   = WL - ML - MR;
+    const Y_MAX = HL - MARGE_BAS;
+    const usableW = WL - ML - MR;
 
     // Colonnes : n° | nom famille | enfants | contact | attendu | versé | restant | rdv
-    const wN    = 7;
-    const wNom  = 38;
-    const wEnf  = 22;
+    const wN = 7;
+    const wNom = 38;
+    const wEnf = 22;
     const wCont = 26;
-    const wAtt  = 22;
-    const wVer  = 22;
+    const wAtt = 22;
+    const wVer = 22;
     const wRest = 28;
-    const wRdv  = usableW - wN - wNom - wEnf - wCont - wAtt - wVer - wRest;
+    const wRdv = usableW - wN - wNom - wEnf - wCont - wAtt - wVer - wRest;
 
     const hH = 5.5;   // hauteur en-tête
     const rH = 5.5;   // hauteur ligne
@@ -157,14 +155,14 @@ export class InsolvablesPdfService {
       let cx = ML;
 
       // Ligne 1 — en-têtes colonnes
-      this.cell(doc, cx, y, wN,    hH, 'N°',       { fill: GRIS_H, bold: true, fs: 8 }); cx += wN;
-      this.cell(doc, cx, y, wNom,  hH, 'FAMILLE',  { fill: GRIS_H, bold: true, fs: 8, align: 'left' }); cx += wNom;
-      this.cell(doc, cx, y, wEnf,  hH, 'ENFANTS',  { fill: GRIS_H, bold: true, fs: 8 }); cx += wEnf;
-      this.cell(doc, cx, y, wCont, hH, 'CONTACT',  { fill: GRIS_H, bold: true, fs: 8 }); cx += wCont;
-      this.cell(doc, cx, y, wAtt,  hH, 'ATTENDU',  { fill: GRIS_H, bold: true, fs: 8 }); cx += wAtt;
-      this.cell(doc, cx, y, wVer,  hH, 'VERSÉ',    { fill: GRIS_H, bold: true, fs: 8 }); cx += wVer;
-      this.cell(doc, cx, y, wRest, hH, 'RESTANT',  { fill: [235, 243, 252] as RGB, bold: true, fs: 8, textColor: [12, 68, 124] as RGB }); cx += wRest;
-      this.cell(doc, cx, y, wRdv,  hH, 'PROCHAIN RDV', { fill: GRIS_H, bold: true, fs: 8 });
+      this.cell(doc, cx, y, wN, hH, 'N°', { fill: GRIS_H, bold: true, fs: 8 }); cx += wN;
+      this.cell(doc, cx, y, wNom, hH, 'FAMILLE', { fill: GRIS_H, bold: true, fs: 8, align: 'left' }); cx += wNom;
+      this.cell(doc, cx, y, wEnf, hH, 'ENFANTS', { fill: GRIS_H, bold: true, fs: 8 }); cx += wEnf;
+      this.cell(doc, cx, y, wCont, hH, 'CONTACT', { fill: GRIS_H, bold: true, fs: 8 }); cx += wCont;
+      this.cell(doc, cx, y, wAtt, hH, 'ATTENDU', { fill: GRIS_H, bold: true, fs: 8 }); cx += wAtt;
+      this.cell(doc, cx, y, wVer, hH, 'VERSÉ', { fill: GRIS_H, bold: true, fs: 8 }); cx += wVer;
+      this.cell(doc, cx, y, wRest, hH, 'RESTANT', { fill: [235, 243, 252] as RGB, bold: true, fs: 8, textColor: [12, 68, 124] as RGB }); cx += wRest;
+      this.cell(doc, cx, y, wRdv, hH, 'PROCHAIN RDV', { fill: GRIS_H, bold: true, fs: 8 });
 
       return y + hH;
     };
@@ -183,17 +181,17 @@ export class InsolvablesPdfService {
       }
 
       const attendu = this.montantAttendu(f);
-      const verse   = this.totalVerse(f);
+      const verse = this.totalVerse(f);
       const restant = Math.max(0, attendu - verse);
       totAttendu += attendu;
-      totVerse   += verse;
+      totVerse += verse;
       totRestant += restant;
 
       const alt: RGB = ri % 2 === 0 ? BLANC : GRIS_L;
       let cx = ML;
 
-      this.cell(doc, cx, y, wN,    rH, String(ri + 1),            { fill: alt, fs: 7.5 }); cx += wN;
-      this.cell(doc, cx, y, wNom,  rH, this.trunc(f.nom_famille, 20), { fill: alt, fs: 7.5, bold: true, align: 'left' }); cx += wNom;
+      this.cell(doc, cx, y, wN, rH, String(ri + 1), { fill: alt, fs: 7.5 }); cx += wN;
+      this.cell(doc, cx, y, wNom, rH, this.trunc(f.nom_famille, 20), { fill: alt, fs: 7.5, bold: true, align: 'left' }); cx += wNom;
 
       // Enfants + classes
       const enfants = (f.eleves ?? []).filter(e => e.statut === 'actif');
@@ -226,24 +224,24 @@ export class InsolvablesPdfService {
     });
 
     // ── Ligne TOTAUX — suit la ligne Total du PV ──────────────────
-    y += 1;
-    doc.setFillColor(...BLEU);
-    doc.rect(ML, y, usableW, rH + 1, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...BLANC);
+    // y += 1;
+    // doc.setFillColor(...BLEU);
+    // doc.rect(ML, y, usableW, rH + 1, 'F');
+    // doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...BLANC);
 
-    const xAtt  = ML + wN + wNom + wEnf + wCont;
-    const xVer  = xAtt + wAtt;
-    const xRest = xVer + wVer;
+    // const xAtt = ML + wN + wNom + wEnf + wCont;
+    // const xVer = xAtt + wAtt;
+    // const xRest = xVer + wVer;
 
-    doc.text('TOTAUX', ML + 4, y + (rH + 1) / 2, { baseline: 'middle' });
-    doc.text(this.fcfa(totAttendu), xAtt + wAtt - 2, y + (rH + 1) / 2,
-      { align: 'right', baseline: 'middle' });
-    doc.text(this.fcfa(totVerse),   xVer + wVer - 2, y + (rH + 1) / 2,
-      { align: 'right', baseline: 'middle' });
-    // Restant total en jaune sur fond bleu (identique PV decisions ADMIS)
-    doc.setTextColor(255, 235, 59);
-    doc.text(this.fcfa(totRestant), xRest + wRest - 2, y + (rH + 1) / 2,
-      { align: 'right', baseline: 'middle' });
+    // doc.text('TOTAUX', ML + 4, y + (rH + 1) / 2, { baseline: 'middle' });
+    // doc.text(this.fcfa(totAttendu), xAtt + wAtt - 2, y + (rH + 1) / 2,
+    //   { align: 'right', baseline: 'middle' });
+    // doc.text(this.fcfa(totVerse), xVer + wVer - 2, y + (rH + 1) / 2,
+    //   { align: 'right', baseline: 'middle' });
+    // // Restant total en jaune sur fond bleu (identique PV decisions ADMIS)
+    // doc.setTextColor(255, 235, 59);
+    // doc.text(this.fcfa(totRestant), xRest + wRest - 2, y + (rH + 1) / 2,
+    //   { align: 'right', baseline: 'middle' });
 
     y += rH + 3;
     return y;
@@ -261,23 +259,23 @@ export class InsolvablesPdfService {
   // ── Utilitaire cell — suit exactement la fonction cell() de pdf-helpers ──
   // Options : fill, bold, fs (fontSize), textColor, align, border
   private cell(
-    doc:   any,
-    x:     number,
-    y:     number,
-    w:     number,
-    h:     number,
-    text:  string,
-    opts:  {
-      fill?:      RGB;
-      bold?:      boolean;
-      fs?:        number;
+    doc: any,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    text: string,
+    opts: {
+      fill?: RGB;
+      bold?: boolean;
+      fs?: number;
       textColor?: RGB;
-      align?:     'left' | 'center' | 'right';
-      border?:    boolean;
+      align?: 'left' | 'center' | 'right';
+      border?: boolean;
     } = {}
   ): void {
     const { fill = BLANC, bold = false, fs = 8,
-            textColor = NOIR, align = 'center', border = true } = opts;
+      textColor = NOIR, align = 'center', border = true } = opts;
 
     doc.setFillColor(...fill);
     doc.rect(x, y, w, h, 'F');
@@ -293,9 +291,9 @@ export class InsolvablesPdfService {
     doc.setFontSize(fs);
     doc.setTextColor(...textColor);
 
-    const xText = align === 'right'  ? x + w - 1.5
-                : align === 'center' ? x + w / 2
-                : x + 1.5;
+    const xText = align === 'right' ? x + w - 1.5
+      : align === 'center' ? x + w / 2
+        : x + 1.5;
     doc.text(text, xText, y + h / 2, { align, baseline: 'middle' });
   }
 

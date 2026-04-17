@@ -188,6 +188,20 @@ export class GoogleSheetsService {
     return idx === -1 ? -1 : idx + 1; // 1-based, ligne 1 = en-têtes
   }
 
+  async findRowByValue(sheetName: string, col: number, value: any): Promise<number> {
+    const hdrs = await this.headers();
+    const colLetter = this.colLetter(col);
+    const res: any = await firstValueFrom(
+      this.http.get(
+        this.url(`/values/${this.enc(sheetName)}!${colLetter}:${colLetter}`),
+        { headers: hdrs }
+      )
+    );
+    const rows: any[][] = res.values ?? [];
+    const idx = rows.findIndex(r => String(r[0]) === String(value));
+    return idx === -1 ? -1 : idx + 1; // 1-based, ligne 1 = en-têtes
+  }
+
   /**
    * batchGet : retourne les données dans le même ordre que les plages demandées.
    * Intercale les noms de plage entre les tableaux de données (comportement d'origine).

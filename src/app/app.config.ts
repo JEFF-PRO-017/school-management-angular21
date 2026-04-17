@@ -3,7 +3,7 @@ import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDete
 import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { routes } from './app.routes';
+import { APP_ROUTES } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -12,7 +12,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
 
     // Router avec préchargement de tous les modules lazy
-    provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideRouter(APP_ROUTES, withPreloading(PreloadAllModules)),
 
     // HTTP avec intercepteur d'auth global
     provideHttpClient(withInterceptors([authInterceptor])),
