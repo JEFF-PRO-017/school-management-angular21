@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
+    "start": "npx serve -s dist/school-app/browser -l $PORT",
+    "build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "electron": "ng build && electron .",
@@ -31,6 +31,7 @@
     "material-icons": "^1.13.14",
     "ngx-mask": "^16.0.0",
     "rxjs": "~7.8.1",
+    "serve": "^14.2.4",
     "tslib": "^2.6.2",
     "zone.js": "~0.15.0"
   },
