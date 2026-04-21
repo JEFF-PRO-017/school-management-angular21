@@ -8,6 +8,8 @@ import {
   MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note,
   MsgTemplate, Absence, LogAlerte, AppUser, PermissionId
 } from '../models';
+import { FamilleTampon, SHEET_TAMPON, H_TAMPON, EleveTampon, PensionTampon, DemandePaiement } from '../models/parent.models';
+
 
 // ── Helpers sérialisation permissions (tableau ↔ chaîne CSV) ──────
 export function concatStrings(arr: PermissionId[] | string[]): string {
@@ -18,7 +20,7 @@ export function deconcatString(s: string): PermissionId[] {
 }
 
 // ── Constantes feuilles ───────────────────────────────────────────
-const SHEET = {
+export const SHEET = {
   familles:    'F1_FAMILLES',
   eleves:      'F2_ELEVES',
   classes:     'F3_CLASSES',
@@ -35,7 +37,7 @@ const SHEET = {
   users:       'F14_USERS',
 } as const;
 
-const H = {
+export const H = {
   familles:    ['id_famille','nom_famille','tel_pere','tel_mere','tel_autre',
                 'latitude','longitude','adresse_texte',
                 'montant_total_attendu','annee_scolaire','montant_reduction','commentaire'],
@@ -451,6 +453,174 @@ export class DataService {
     return this.parse<T>(await this.sheets.fetchRaw(sheetName), headers);
   }
 
+  // ── Tables tampon (espace parent) ─────────────────────────────
+  // Lecture, écriture et validation des données en attente
+
+  /** Charge toutes les familles tampon */
+  async getFamillesTampon(): Promise<FamilleTampon[]> {
+    const raw = await this.sheets.fetchRaw(SHEET_TAMPON.familles);
+    return this.parse<FamilleTampon>(raw, H_TAMPON.familles);
+  }
+
+  /** Charge tous les élèves tampon */
+  async getElevesTampon(): Promise<EleveTampon[]> {
+    const raw = await this.sheets.fetchRaw(SHEET_TAMPON.eleves);
+    return this.parse<EleveTampon>(raw, H_TAMPON.eleves);
+  }
+
+  /** Charge toutes les pensions tampon */
+  async getPensionsTampon(): Promise<PensionTampon[]> {
+    const raw = await this.sheets.fetchRaw(SHEET_TAMPON.pensions);
+    return this.parse<PensionTampon>(raw, H_TAMPON.pensions);
+  }
+
+  /** Charge toutes les demandes de paiement initiées */
+  async getDemandePaiements(): Promise<DemandePaiement[]> {
+    const raw = await this.sheets.fetchRaw(SHEET_TAMPON.paiements);
+    return this.parse<DemandePaiement>(raw, H_TAMPON.paiements);
+  }
+
+  /** Ajoute une famille en tampon */
+  addFamilleTampon(f: FamilleTampon): void {
+    this.queue.enqueue(
+      { sheetName: SHEET_TAMPON.familles, rowData: this.toRow(f, H_TAMPON.familles) },
+      'addRow'
+    );
+  }
+
+  /** Ajoute un élève en tampon */
+  addEleveTampon(e: EleveTampon): void {
+    this.queue.enqueue(
+      { sheetName: SHEET_TAMPON.eleves, rowData: this.toRow(e, H_TAMPON.eleves) },
+      'addRow'
+    );
+  }
+
+  /** Ajoute une pension en tampon */
+  addPensionTampon(p: PensionTampon): void {
+    this.queue.enqueue(
+      { sheetName: SHEET_TAMPON.pensions, rowData: this.toRow(p, H_TAMPON.pensions) },
+      'addRow'
+    );
+  }
+
+  /** Enregistre une demande de paiement initiée par le parent */
+  addDemandePaiement(d: DemandePaiement): void {
+    this.queue.enqueue(
+      { sheetName: SHEET_TAMPON.paiements, rowData: this.toRow(d, H_TAMPON.paiements) },
+      'addRow'
+    );
+  }
+
+  /**
+   * Valide une famille tampon :
+   *   1. Insère dans les tables principales (famille + élèves)
+   *   2. Met à jour le statut dans le tampon
+   */
+  async validerFamilleTampon(
+    famille: FamilleTampon,
+    eleves:  EleveTampon[],
+    pension: PensionTampon | null
+  ): Promise<void> {
+    // Insertion famille principale
+    await this.addFamille({
+      id_famille:    famille.id_famille,
+      nom_famille:   famille.nom_famille,
+      tel_pere:      famille.tel_pere,
+      tel_mere:      famille.tel_mere,
+      tel_autre:     famille.tel_autre,
+      adresse_texte: famille.adresse_texte,
+      annee_scolaire: pension?.annee_scolaire ?? '',
+      montant_total_attendu: pension?.montant_total_attendu ?? 0,
+      montant_reduction:     pension?.montant_reduction ?? 0,
+      commentaire:   pension?.commentaire ?? '',
+    });
+
+    // Insertion élèves principaux
+    for (const e of eleves) {
+      await this.addEleve({
+        id_eleve:        e.id_eleve,
+        id_famille:      famille.id_famille,
+        id_classe:       e.id_classe ?? '',
+        nom:             e.nom,
+        prenom:          e.prenom,
+        date_naissance:  e.date_naissance ?? '',
+        sexe:            e.sexe ?? undefined,
+        statut:          'actif',
+        matricule:       '',
+      });
+    }
+
+    // Mise à jour statut tampon → 'valide'
+    const rowFam = await this.sheets.findRowById(SHEET_TAMPON.familles, famille.id_famille);
+    if (rowFam !== -1) {
+      this.queue.enqueue(
+        {
+          sheetName: SHEET_TAMPON.familles,
+          row: rowFam,
+          col: 1,
+          values: this.toRow(
+            { ...famille, statut_validation: 'valide' },
+            H_TAMPON.familles
+          ),
+        },
+        'updateRow'
+      );
+    }
+  }
+
+  /**
+   * Refuse une famille tampon (met à jour le statut)
+   */
+  async refuserFamilleTampon(idFamille: string): Promise<void> {
+    const row = await this.sheets.findRowById(SHEET_TAMPON.familles, idFamille);
+    if (row === -1) return;
+    const familles = await this.getFamillesTampon();
+    const f = familles.find(x => x.id_famille === idFamille);
+    if (!f) return;
+    this.queue.enqueue(
+      {
+        sheetName: SHEET_TAMPON.familles,
+        row,
+        col: 1,
+        values: this.toRow({ ...f, statut_validation: 'refuse' }, H_TAMPON.familles),
+      },
+      'updateRow'
+    );
+  }
+
+  /**
+   * Valide une demande de paiement :
+   * Crée un vrai Paiement dans F4_PAIEMENTS et met à jour le statut tampon
+   */
+  async validerDemandePaiement(d: DemandePaiement): Promise<void> {
+    await this.addPaiement({
+      id_paiement:    `PAI-${Date.now()}`,
+      id_famille:     d.id_famille,
+      montant_verse:  d.montant,
+      date_paiement:  new Date().toISOString().slice(0, 10),
+      mode_paiement:  d.mode_paiement as any,
+      periode_concernee: '',
+      date_prochain_rdv: '',
+      recu_numero:    d.reference ?? '',
+      notes_caissier: d.commentaire ?? '',
+      statut_alerte_whatsapp: 'EN_ATTENTE',
+    });
+
+    const row = await this.sheets.findRowById(SHEET_TAMPON.paiements, d.id);
+    if (row !== -1) {
+      this.queue.enqueue(
+        {
+          sheetName: SHEET_TAMPON.paiements,
+          row,
+          col: 1,
+          values: this.toRow({ ...d, statut: 'valide' }, H_TAMPON.paiements),
+        },
+        'updateRow'
+      );
+    }
+  }
+
   // ── Helpers privés ─────────────────────────────────────────────
 
   private toRow(obj: any, headers: readonly string[]): any[] {
@@ -485,7 +655,7 @@ export class DataService {
     });
   }
 
-  private async ensureSheets(): Promise<void> {
+  public async ensureSheets(): Promise<void> {
     const entries = Object.entries(SHEET) as [keyof typeof SHEET, string][];
     await Promise.all(
       entries

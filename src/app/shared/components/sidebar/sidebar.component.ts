@@ -2,7 +2,6 @@
 import { Component, inject, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { titleApp } from '../../../app.component';
 
 @Component({
   selector: 'app-sidebar',
@@ -20,7 +19,7 @@ import { titleApp } from '../../../app.component';
       </svg>
     </div>
     <div>
-      <div class="sb-logo-text">{{ titleApp }}</div>
+      <div class="sb-logo-text">EcoleApp</div>
       <div class="sb-logo-sub">{{ sectionLabel() }}</div>
     </div>
   </div>
@@ -39,7 +38,7 @@ import { titleApp } from '../../../app.component';
     </a>
 
     <!-- ── Référentiels ── -->
-    @if (can('familles') || can('eleves') || can('classes')) {
+    @if (can('familles') || can('eleves') || can('classes') || can('frais')) {
       <div class="sb-section">Référentiels</div>
     }
     @if (can('familles')) {
@@ -73,10 +72,30 @@ import { titleApp } from '../../../app.component';
         Classes
       </a>
     }
+    @if (can('frais')) {
+      <a routerLink="/frais" routerLinkActive="sb-link--active" class="sb-link">
+        <svg class="sb-icon" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5 7h2M5 10h4M10 7h1"
+                stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        Frais
+      </a>
+    }
 
     <!-- ── Transactions ── -->
-    @if (can('insolvables')) {
+    @if (can('validation_parents') || can('insolvables')) {
       <div class="sb-section">Transactions</div>
+    }
+    @if (can('validation_parents')) {
+      <a routerLink="/paiements" routerLinkActive="sb-link--active" class="sb-link">
+        <svg class="sb-icon" viewBox="0 0 16 16" fill="none">
+          <path d="M2 5h12M4 2h8M3 8l1 6h8l1-6"
+                stroke="currentColor" stroke-width="1.3"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Paiements
+      </a>
     }
     @if (can('insolvables')) {
       <a routerLink="/insolvables" routerLinkActive="sb-link--active" class="sb-link">
@@ -161,6 +180,26 @@ import { titleApp } from '../../../app.component';
       </a>
     }
 
+    <!-- ── Espace parent — accessible aux admins et caissiers ── -->
+    @if (isAdmin() || can('validation_parents')) {
+      <div class="sb-section">Espace parent</div>
+      <a routerLink="/consultant"
+         routerLinkActive="sb-link--active" class="sb-link">
+        <svg class="sb-icon" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="3" width="14" height="10" rx="1.5"
+                stroke="currentColor" stroke-width="1.3"/>
+          <path d="M1 6h14M5 6v7M11 6v7"
+                stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Inscriptions tampon
+      </a>
+      <a routerLink="/espace-parent/login"
+         routerLinkActive="sb-link--active" class="sb-link sb-link--indent"
+         target="_blank" rel="noopener">
+        Aperçu espace parent
+      </a>
+    }
+
   </div>
 
   <div class="sb-foot">v1.0.0</div>
@@ -204,13 +243,12 @@ import { titleApp } from '../../../app.component';
 })
 export class SidebarComponent {
   private auth = inject(AuthService);
-  titleApp = titleApp;
 
-  // Vérifie la permission — méthode simple, pas de computed
-  // (les permissions ne changent pas en cours de session)
   can(p: string): boolean {
     return this.auth.hasPermission(p as any);
   }
+
+  isAdmin = this.auth.isAdmin;
 
   sectionLabel = computed(() => {
     const s = this.auth.getSectionActive();

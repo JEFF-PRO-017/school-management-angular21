@@ -1,8 +1,13 @@
 // app.routes.ts — routes principales avec guards
-import { Routes } from '@angular/router';
+import { Router, Routes } from '@angular/router';
 import { authGuard, permGuard, adminGuard } from './core/guards/auth.guard';
+import { PARENT_ROUTES } from './features/parents/parent.routes';
+import { inject } from '@angular/core';
+import { AuthService } from './core/services/auth.service';
 
-export const APP_ROUTES: Routes = [
+
+
+const routes: Routes = [
   // ── Auth (publique) ──────────────────────────────────────────────
   {
     path: 'auth',
@@ -72,9 +77,27 @@ export const APP_ROUTES: Routes = [
         canActivate: [adminGuard],
         loadChildren: () => import('./features/users/users.routes').then(m => m.USERS_ROUTES),
       },
+            // ── Espace consultant (guard staff) ─────────────────────────
+      {
+        path: 'consultant',
+        canActivate: [consultantGuard],
+        loadComponent: () =>
+          import('./features/consultant-public/consultant.component')
+            .then(m => m.ConsultantComponent),
+      },
 
     ],
   },
 
-  { path: '**', loadComponent: () => import('./shared/components/page-not-found/page-not-found.component').then(m => m.PageNotFoundComponent) },
+  // { path: '**', loadComponent: () => import('./shared/components/page-not-found/page-not-found.component').then(m => m.PageNotFoundComponent) },
 ];
+
+export const APP_ROUTES: Routes = [...routes, ...PARENT_ROUTES];
+
+// ── Guard consultant : vérifie que c'est un admin ou caissier ──────
+export function consultantGuard() {
+  const auth   = inject(AuthService);
+  const router = inject(Router);
+  if (auth.isAdmin() || auth.hasPermission('validation_parents')) return true;
+  return router.createUrlTree(['/dashboard']);
+}

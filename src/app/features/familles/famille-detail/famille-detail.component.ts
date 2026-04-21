@@ -23,13 +23,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { CacheService }  from '../../../core/services/cache.service';
 import { DataService }   from '../../../core/services/data.service';
 import { Famille, Eleve, Paiement } from '../../../core/models';
-
-import { ConfirmDialogComponent }                    from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { MapService, MapRef, DEFAULT_CENTER, MapMode, DEFAULT_ZOOM_MINI, COLOR_CSB } from '../../../core/services/map/map.service';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EleveModalComponent, EleveModalData } from '../../eleves/modal/eleve-modal.component';
 import { PaiementModalComponent, PaiementModalData } from '../../paiements/modal/paiement-modal.component';
 import { FamilleModalComponent, FamilleModalData } from '../modal/famille-modal.component';
 
-declare const L: any;
 
 @Component({
   selector: 'app-famille-detail',
@@ -307,7 +306,7 @@ declare const L: any;
 
                 <!-- Date naissance -->
                 <td class="bl-td bl-td--center" style="font-size:11px;color:#888">
-                  {{ fmtDate(e.date_naissance ?? '') }}
+                  {{ fmtDate(e.date_naissance??'') }}
                 </td>
 
                 <!-- Statut -->
@@ -540,6 +539,7 @@ export class FamilleDetailComponent implements OnInit, AfterViewInit, OnDestroy 
   private data   = inject(DataService);
   private dialog = inject(MatDialog);
   private snack  = inject(MatSnackBar);
+  private ms     = inject(MapService);    // ← service centralisé
   private cdr    = inject(ChangeDetectorRef);
 
   famille  = signal<Famille | null>(null);
@@ -547,9 +547,9 @@ export class FamilleDetailComponent implements OnInit, AfterViewInit, OnDestroy 
 
   anneeScolaire = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
 
-  private map:       any;
-  private marker:    any;
-  private mapInit    = false;
+  // Référence carte — gérée par MapService
+  private ref:    MapRef | null = null;
+  private marker: any = null;             // marqueur position famille
 
   private palette = [
     { bg: '#E8F5E9', txt: '#2E7D32' },
@@ -641,41 +641,29 @@ export class FamilleDetailComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  // ── Mini-carte Leaflet ──
+  // ── Mini-carte Leaflet (mode MINI = lecture seule) ─────────────
 
   private initMap(): void {
-    if (this.mapInit || typeof L === 'undefined') return;
+    if (this.ref) return;                       // évite la double init
     const f   = this.famille();
-    const lat = f?.latitude  ?? 3.848;
-    const lng = f?.longitude ?? 11.502;
+    const lat = f?.latitude  ?? DEFAULT_CENTER[0];
+    const lng = f?.longitude ?? DEFAULT_CENTER[1];
 
-    this.map = L.map('detail-map', { zoomControl: false, dragging: false, scrollWheelZoom: false })
-                .setView([lat, lng], 15);
+    // Mode MINI : interactions désactivées, carte compacte
+    this.ref = this.ms.creerCarte('detail-map', MapMode.MINI,
+      [lat, lng], DEFAULT_ZOOM_MINI);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OSM', maxZoom: 19
-    }).addTo(this.map);
-
+    // Marqueur épingle bleue CSB avec popup nom famille
     if (f?.latitude && f?.longitude) {
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="30" viewBox="0 0 20 30">
-        <path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 20 10 20S20 17.5 20 10C20 4.5 15.5 0 10 0z"
-              fill="#185FA5" stroke="#fff" stroke-width="1.5"/>
-        <circle cx="10" cy="10" r="4" fill="#fff" fill-opacity=".9"/>
-      </svg>`;
-      this.marker = L.marker([f.latitude, f.longitude], {
-        icon: L.divIcon({
-          html: svg, iconSize: [20, 30], iconAnchor: [10, 30],
-          className: ''
-        })
-      }).addTo(this.map).bindPopup(f.nom_famille);
+      this.marker = this.ms.creerMarqueurFamille(
+        this.ref, [f.latitude, f.longitude],
+        COLOR_CSB,
+        `<div style="font-weight:600;font-size:12px;padding:2px">${f.nom_famille}</div>`,
+      );
     }
-
-    this.mapInit = true;
   }
 
-  ngOnDestroy(): void {
-    if (this.map) this.map.remove();
-  }
+  ngOnDestroy(): void { this.ms.detruire(this.ref); }
 
   // ── Actions ──
 

@@ -11,22 +11,18 @@ import { NgxMaskDirective, provideNgxMask } from 'ngx-mask';
 
 import { DataService } from '../../../core/services/data.service';
 import { Famille } from '../../../core/models';
+import { MapSearchComponent } from '../../../core/services/map/map-search.component';
+import { MapService, TILE_KEYS, MapRef, MapMode, NominatimResult } from '../../../core/services/map/map.service';
 
-declare const L: any;
 
 export interface FamilleModalData { famille: Famille | null; }
 
-const TILES: Record<string, string> = {
-  OSM: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  Satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  Sombre: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-};
 
 @Component({
   selector: 'app-famille-modal',
   standalone: true,
   providers: [provideNgxMask()],
-  imports: [ReactiveFormsModule, MatDialogModule, NgxMaskDirective],
+  imports: [ReactiveFormsModule, MatDialogModule, NgxMaskDirective, MapSearchComponent],
   styles: [`
     .host  { display:flex; flex-direction:column; font-size:13px;
              width:100%; max-width:500px; }
@@ -165,6 +161,11 @@ const TILES: Record<string, string> = {
             }
           </div>
         </div>
+        <!-- Recherche Nominatim au-dessus de la carte -->
+        <app-map-search
+          style="display:block;margin-bottom:6px"
+          (resultatChoisi)="onAdresseChoisie($event)">
+        </app-map-search>
         <div id="fam-map"
              style="height:120px;border-radius:6px;overflow:hidden;
                     border:0.5px solid rgba(0,0,0,.18)"></div>
@@ -176,27 +177,36 @@ const TILES: Record<string, string> = {
             </span>
             <span style="cursor:pointer;color:#A32D2D" (click)="effacer()">Effacer</span>
           } @else {
-            <span>Cliquer sur la carte pour placer</span>
+            <span>Rechercher ou cliquer sur la carte pour placer</span>
           }
         </div>
       </div>
 
-   
+    </form>
 
     <div class="div"></div>
 
     <!-- ── FRAIS PENSION (champs directs sur Famille) ── -->
     <div class="frais">
-   
-  
-        <div >
+      <div class="frais-head">
+        <span class="frais-title">Frais pension — {{ annee }}</span>
+        <div style="display:flex;align-items:center;gap:7px;
+                    font-size:11px;color:#888;cursor:pointer"
+             (click)="toggleFrais()">
+          <span>Configurer</span>
+          <div class="tog" [class.on]="fraisOn()"></div>
+        </div>
+      </div>
+
+      @if (fraisOn()) {
+        <div class="frais-body" [formGroup]="ffForm">
 
           <!-- Montant attendu avec ngx-mask -->
           <div>
             <label>Montant total attendu (FCFA) *</label>
             <div class="wrap">
               <input class="fi"
-                     [class.err]="fc.montant.invalid && fc.montant.touched"
+                     [class.err]="ffc.montant.invalid && ffc.montant.touched"
                      formControlName="montant"
                      mask="separator.0"
                      thousandSeparator=" "
@@ -206,7 +216,7 @@ const TILES: Record<string, string> = {
                      style="font-size:16px;font-weight:500;padding-right:55px">
               <span class="sfx">FCFA</span>
             </div>
-            @if (fc.montant.invalid && fc.montant.touched) {
+            @if (ffc.montant.invalid && ffc.montant.touched) {
               <div class="hint">Montant requis</div>
             }
           </div>
@@ -252,9 +262,11 @@ const TILES: Record<string, string> = {
           }
 
         </div>
-
+      } @else {
+        <div class="frais-off">Configurable depuis la fiche famille.</div>
+      }
     </div>
- </form>
+
   </div>
 
   <!-- Pied -->
@@ -271,37 +283,44 @@ const TILES: Record<string, string> = {
 })
 export class FamilleModalComponent implements OnInit, AfterViewInit, OnDestroy {
 
-  readonly data = inject<FamilleModalData>(MAT_DIALOG_DATA);
+  readonly data     = inject<FamilleModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<FamilleModalComponent>);
-  private svc = inject(DataService);
-  private snack = inject(MatSnackBar);
+  private svc       = inject(DataService);
+  private ms        = inject(MapService);   // ← service centralisé Leaflet
+  private snack     = inject(MatSnackBar);
 
-  isEdit = false;
-  saving = signal(false);
-  lat = signal<number | null>(null);
-  lng = signal<number | null>(null);
-  tuile = signal('OSM');
+  isEdit  = false;
+  saving  = signal(false);
+  lat     = signal<number | null>(null);
+  lng     = signal<number | null>(null);
+  tuile   = signal('OSM');                  // fond de carte actif
   fraisOn = signal(true);
-  tileKeys = Object.keys(TILES);
-  annee = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
+  tileKeys = TILE_KEYS;                     // noms exposés par MapService
+  annee   = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
 
-  private map: any; private marker: any; private tileLayer: any;
+  // Référence carte et marqueur — gérés par MapService (pas d'accès direct à L.*)
+  private ref:       MapRef | null = null;
+  private marker:    any = null;            // marqueur position maison
   private familleId: string | null = null;
 
   // ── Formulaire infos famille ──
   form = new FormGroup({
-    nom_famille: new FormControl('', Validators.required),
-    tel_pere: new FormControl('', Validators.required),
-    tel_mere: new FormControl(''),
-    tel_autre: new FormControl(''),
+    nom_famille:   new FormControl('', Validators.required),
+    tel_pere:      new FormControl('', Validators.required),
+    tel_mere:      new FormControl(''),
+    tel_autre:     new FormControl(''),
     adresse_texte: new FormControl(''),
-    montant: new FormControl('', Validators.required),
-    reduction: new FormControl('0'),
-    commentaire: new FormControl(''),
   });
   get fc() { return this.form.controls; }
 
-
+  // ── Formulaire frais pension ──
+  // ngx-mask retourne une string → on lit avec toNum()
+  ffForm = new FormGroup({
+    montant:     new FormControl('', Validators.required),
+    reduction:   new FormControl('0'),
+    commentaire: new FormControl(''),
+  });
+  get ffc() { return this.ffForm.controls; }
 
   // ── Helpers lecture montants (ngx-mask → string → number) ──
   // dropSpecialCharacters:true retire les espaces → "25000" pas "25 000"
@@ -310,9 +329,9 @@ export class FamilleModalComponent implements OnInit, AfterViewInit, OnDestroy {
     return isNaN(n) ? 0 : n;
   }
 
-  montantBrut() { return this.toNum(this.fc.montant.value); }
-  montantReduction() { return this.toNum(this.fc.reduction.value); }
-  montantNet() { return Math.max(0, this.montantBrut() - this.montantReduction()); }
+  montantBrut()     { return this.toNum(this.ffc.montant.value); }
+  montantReduction(){ return this.toNum(this.ffc.reduction.value); }
+  montantNet()      { return Math.max(0, this.montantBrut() - this.montantReduction()); }
 
   labelBtn(): string {
     if (this.isEdit) return 'Modifier';
@@ -321,7 +340,7 @@ export class FamilleModalComponent implements OnInit, AfterViewInit, OnDestroy {
 
   invalid(): boolean {
     if (this.form.invalid) return true;
-    if (this.fraisOn() && (!this.fc.montant.value || this.montantBrut() <= 0)) return true;
+    if (this.fraisOn() && (!this.ffc.montant.value || this.montantBrut() <= 0)) return true;
     return false;
   }
 
@@ -331,70 +350,88 @@ export class FamilleModalComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     if (!this.data.famille) return;
-    this.isEdit = true;
+    this.isEdit    = true;
     this.familleId = this.data.famille.id_famille;
-    // this.form.patchValue(this.data.famille);
-    this.lat.set(this.data.famille.latitude ?? null);
+    this.form.patchValue(this.data.famille);
+    this.lat.set(this.data.famille.latitude  ?? null);
     this.lng.set(this.data.famille.longitude ?? null);
 
     // Pré-remplit les frais si déjà saisis sur la famille
     // patchValue avec string car ngx-mask travaille en string
-    this.form.patchValue({
-      nom_famille: this.data.famille.nom_famille,
-      tel_pere: this.data.famille.tel_pere,
-      tel_mere: this.data.famille.tel_mere,
-      tel_autre: this.data.famille.tel_autre ?? '',
-      adresse_texte: this.data.famille.adresse_texte ?? '',
-      montant: String(this.data.famille.montant_total_attendu ?? ''),
-      reduction: String(this.data.famille.montant_reduction ?? '0'),
-      commentaire: this.data.famille.commentaire ?? '',
-    });
-
+    if (this.data.famille.montant_total_attendu) {
+      this.ffForm.patchValue({
+        montant:     String(this.data.famille.montant_total_attendu ?? ''),
+        reduction:   String(this.data.famille.montant_reduction ?? '0'),
+        commentaire: this.data.famille.commentaire ?? '',
+      });
+    }
   }
 
   ngAfterViewInit(): void { setTimeout(() => this.initMap(), 150); }
 
-  // ── Carte Leaflet ──
+  // ── Carte Leaflet (mode FORM) — délégué à MapService ──────────
 
   private initMap(): void {
-    this.map = L.map('fam-map', { zoomControl: true })
-      .setView([this.lat() ?? 3.848, this.lng() ?? 11.502], 14);
-    this.tileLayer = L.tileLayer(TILES[this.tuile()], {
-      attribution: '© OpenStreetMap', maxZoom: 19
-    }).addTo(this.map);
-    if (this.lat() && this.lng()) this.pin(this.lat()!, this.lng()!);
+    const lat0 = this.lat() ?? 3.848;
+    const lng0 = this.lng() ?? 11.502;
+
+    // Mode FORM : zoom actif, scroll désactivé (pas de conflit dans le modal)
+    this.ref = this.ms.creerCarte('fam-map', MapMode.FORM,
+      [lat0, lng0], 14, this.tuile());
+
+    // Marqueur formulaire draggable + clic carte → met à jour [lat, lng]
+    this.marker = this.ms.creerMarqueurFormulaire(
+      this.ref,
+      [lat0, lng0],
+      (lat, lng) => { this.lat.set(lat); this.lng.set(lng); },
+    );
+
+    // En mode création : centre sur la position GPS si disponible
     if (!this.isEdit) {
-      navigator.geolocation?.getCurrentPosition(
-        p => this.map.setView([p.coords.latitude, p.coords.longitude], 15),
-        () => { }, { enableHighAccuracy: true, timeout: 5000 }
-      );
+      this.ms.obtenirPosition(5000)
+        .then(([lat, lng]) => {
+          this.ms.centrer(this.ref!, [lat, lng], 15);
+          this.ms.deplacerMarqueur(this.marker, [lat, lng]);
+          this.lat.set(lat);
+          this.lng.set(lng);
+        })
+        .catch(() => { /* permission refusée — silencieux */ });
     }
-    this.map.on('click', (e: any) => {
-      this.lat.set(e.latlng.lat); this.lng.set(e.latlng.lng);
-      this.pin(e.latlng.lat, e.latlng.lng);
-    });
   }
 
-  private pin(lat: number, lng: number): void {
-    if (this.marker) this.map.removeLayer(this.marker);
-    this.marker = L.marker([lat, lng]).addTo(this.map)
-      .bindPopup('Position de la maison');
-  }
-
+  // ── Fond de carte — délégué au service ────────────────────────
   changerTuile(key: string): void {
     this.tuile.set(key);
-    if (this.tileLayer) this.map.removeLayer(this.tileLayer);
-    this.tileLayer = L.tileLayer(TILES[key], {
-      attribution: '© OpenStreetMap', maxZoom: 19
-    }).addTo(this.map);
+    if (this.ref) this.ms.changerTuile(this.ref, key);
   }
 
+  // ── Recherche Nominatim — centre la carte sur le résultat ─────
+  onAdresseChoisie(r: NominatimResult): void {
+    const lat = parseFloat(r.lat);
+    const lng = parseFloat(r.lon);
+    this.lat.set(lat);
+    this.lng.set(lng);
+    if (this.ref) {
+      this.ms.centrer(this.ref, [lat, lng], 16);
+      this.ms.deplacerMarqueur(this.marker, [lat, lng]);
+    }
+    // Pré-remplit l'adresse textuelle si encore vide
+    if (!this.form.value.adresse_texte) {
+      this.form.patchValue({ adresse_texte: this.ms.formaterResultat(r) });
+    }
+  }
+
+  // ── Effacer la position GPS ────────────────────────────────────
   effacer(): void {
-    this.lat.set(null); this.lng.set(null);
-    if (this.marker) { this.map.removeLayer(this.marker); this.marker = null; }
+    this.lat.set(null);
+    this.lng.set(null);
+    if (this.ref && this.marker) {
+      this.ms.supprimerMarqueur(this.ref, this.marker);
+      this.marker = null;
+    }
   }
 
-  ngOnDestroy(): void { if (this.map) this.map.remove(); }
+  ngOnDestroy(): void { this.ms.detruire(this.ref); }
 
   // ── Sauvegarde ──
 
@@ -403,24 +440,25 @@ export class FamilleModalComponent implements OnInit, AfterViewInit, OnDestroy {
     this.saving.set(true);
 
     const famille: Famille = {
-      id_famille: this.familleId ?? `FAM-${Date.now()}`,
-      nom_famille: this.form.value.nom_famille!,
-      tel_pere: this.form.value.tel_pere!,
-      tel_mere: this.form.value.tel_mere ?? '',
-      tel_autre: this.form.value.tel_autre ?? '',
+      id_famille:    this.familleId ?? `FAM-${Date.now()}`,
+      nom_famille:   this.form.value.nom_famille!,
+      tel_pere:      this.form.value.tel_pere!,
+      tel_mere:      this.form.value.tel_mere  ?? '',
+      tel_autre:     this.form.value.tel_autre ?? '',
       adresse_texte: this.form.value.adresse_texte ?? '',
-      latitude: this.lat() ?? undefined,
-      longitude: this.lng() ?? undefined,
+      latitude:      this.lat()  ?? undefined,
+      longitude:     this.lng()  ?? undefined,
       // Frais directement sur Famille
-      montant_total_attendu: this.montantBrut(),
-      montant_reduction: this.montantReduction(),
-      annee_scolaire: this.annee,
-      commentaire: this.form.value.commentaire ?? '',
-
+      ...(this.fraisOn() && this.montantBrut() > 0 ? {
+        montant_total_attendu: this.montantBrut(),
+        montant_reduction:     this.montantReduction(),
+        annee_scolaire:        this.annee,
+        commentaire:           this.ffForm.value.commentaire ?? '',
+      } : {}),
     };
 
     if (this.isEdit) await this.svc.updateFamille(famille);
-    else await this.svc.addFamille(famille);
+    else             await this.svc.addFamille(famille);
 
     this.saving.set(false);
     this.snack.open(this.isEdit ? 'Famille modifiée' : 'Famille créée', 'OK', { duration: 3000 });

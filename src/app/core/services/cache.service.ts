@@ -6,6 +6,8 @@ import {
   Note, Sequence, SEQUENCES, Paiement, Absence,
   MsgTemplate, LogAlerte, AppUser, PermissionId
 } from '../models';
+import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
+
 
 @Injectable({ providedIn: 'root' })
 export class CacheService {
@@ -25,6 +27,12 @@ export class CacheService {
   private _templates   = signal<MsgTemplate[]>([]);
   private _logs        = signal<LogAlerte[]>([]);
   private _users       = signal<AppUser[]>([]);
+
+  // ── Signaux tampon (espace parent — données en attente) ────────
+  private _famillesTampon  = signal<FamilleTampon[]>([]);
+  private _elevesTampon    = signal<EleveTampon[]>([]);
+  private _pensionsTampon  = signal<PensionTampon[]>([]);
+  private _demandesPaiement = signal<DemandePaiement[]>([]);
 
   // ── Section active — injectée depuis AuthService via setSection() ─
   // Permet de filtrer les classes par section sans passer par le composant
@@ -190,6 +198,58 @@ export class CacheService {
     this._users.update(l => l.filter(u => u.id !== id));
   }
 
+  // ── Familles tampon ───────────────────────────────────────────
+  getFamillesTampon():       FamilleTampon[]  { return this._famillesTampon(); }
+  setFamillesTampon(d: FamilleTampon[])       { this._famillesTampon.set(d); }
+  upsertFamilleTampon(f: FamilleTampon)       {
+    this._famillesTampon.update(l => upsert(l, f, 'id_famille'));
+  }
+  removeFamilleTampon(id: string)             {
+    this._famillesTampon.update(l => l.filter(f => f.id_famille !== id));
+  }
+
+  // ── Élèves tampon ─────────────────────────────────────────────
+  getElevesTampon():         EleveTampon[]    { return this._elevesTampon(); }
+  setElevesTampon(d: EleveTampon[])           { this._elevesTampon.set(d); }
+  upsertEleveTampon(e: EleveTampon)           {
+    this._elevesTampon.update(l => upsert(l, e, 'id_eleve'));
+  }
+  removeElevesTamponFamille(idFamille: string){
+    this._elevesTampon.update(l => l.filter(e => e.id_famille !== idFamille));
+  }
+
+  // ── Pensions tampon ───────────────────────────────────────────
+  getPensionsTampon():       PensionTampon[]  { return this._pensionsTampon(); }
+  setPensionsTampon(d: PensionTampon[])       { this._pensionsTampon.set(d); }
+  upsertPensionTampon(p: PensionTampon)       {
+    this._pensionsTampon.update(l => upsert(l, p, 'id'));
+  }
+
+  // ── Demandes paiement ─────────────────────────────────────────
+  getDemandesPaiement():     DemandePaiement[]   { return this._demandesPaiement(); }
+  setDemandesPaiement(d: DemandePaiement[])      { this._demandesPaiement.set(d); }
+  upsertDemandePaiement(d: DemandePaiement)      {
+    this._demandesPaiement.update(l => upsert(l, d, 'id'));
+  }
+  removeDemandePaiement(id: string)              {
+    this._demandesPaiement.update(l => l.filter(d => d.id !== id));
+  }
+
+  // ── Computed consultant — vue enrichie (jointure en mémoire) ──
+  // Accessible depuis ConsultantComponent sans recharger Sheets à chaque fois
+  readonly famillesTamponEnrichies = computed(() => {
+    const fams  = this._famillesTampon();
+    const elevs = this._elevesTampon();
+    const pens  = this._pensionsTampon();
+    return fams.map(f => ({
+      ...f,
+      eleves:  elevs.filter(e =>
+        e.id_famille === f.id_famille || (e as any).id_famille_tampon === f.id_famille
+      ),
+      pension: pens.find(p => p.id_famille === f.id_famille) ?? null,
+    }));
+  });
+
   // ── Section — permet de filtrer _classesEnrichies ─────────────────
   setSection(s: 'primaire' | 'secondaire' | 'all') { this._section.set(s); }
 
@@ -215,6 +275,9 @@ export class CacheService {
     this._notes.set([]);       this._paiements.set([]);
     this._absences.set([]);    this._templates.set([]);
     this._logs.set([]);        this._users.set([]);
+    // Tables tampon
+    this._famillesTampon.set([]);   this._elevesTampon.set([]);
+    this._pensionsTampon.set([]);   this._demandesPaiement.set([]);
   }
 }
 

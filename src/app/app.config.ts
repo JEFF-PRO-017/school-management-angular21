@@ -5,8 +5,11 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { APP_ROUTES } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { DataService } from './core/services/data.service';
+import { ParentService } from './core/services/parent.service';
 
 export const appConfig: ApplicationConfig = {
+
   providers: [
     // Détection de changements optimisée
     provideZoneChangeDetection({ eventCoalescing: true }),
@@ -20,6 +23,20 @@ export const appConfig: ApplicationConfig = {
     // Animations Material async (meilleure perf au démarrage)
     provideAnimationsAsync(),
 
+    // Initialisation au démarrage : crée les feuilles Sheets si absentes
+    // puis charge toutes les données en cache
+    provideAppInitializer(() => {
+      const data = inject(DataService);
+      const data_parent = inject(ParentService)
+
+      setTimeout(async () => {
+        await data_parent.ensureSheetsTampom()
+      }, 300)
+      setTimeout(async () => {
+        await data.ensureSheets()
+      }, 600)
+
+    })
   ],
 
 };

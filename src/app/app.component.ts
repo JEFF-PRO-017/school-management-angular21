@@ -10,5 +10,5 @@ import { RouterOutlet } from '@angular/router';
   template: `<router-outlet></router-outlet>`,
 })
 export class AppComponent { }
-export const titleApp = 'GBS - Berceau Du Savoir';
+export const titleApp = 'GSB - Berceau Du Savoir';
 
