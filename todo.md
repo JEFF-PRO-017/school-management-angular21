@@ -9,3 +9,7 @@
 - page insolvables : filtre Exclure RDV après (faut arrenger)
 - mettre a jour rendevous au niveau de la page liste parent,ddonner la possibiliter de mettre a jour la date du prochain rendevous
 - integrer le pwa
+- PAGE  LISTE DES CLASSES  REMPLACER LE BUTTON BULLETIN PAR DELETE
+- PAGE CREATION DES FAMILLES ,  FAIRE QUE LE MODAL DE LA CARTE SOI PLUS GRANDE DONC POSSIBILITE D'AGRANDIR LE CARDE COMME FAIT YOUTUBE AVEC LES VIDEOS 
+- PAGE DETAIL FAMILLE : LES ENFANTS NE S'AFFICHE PAS DIRECTEMENT QUAND ONT LES CREE
+- LISTE DES FAMILLES : FAIRE LE FITRE EN FOCNTION DES SECTION
