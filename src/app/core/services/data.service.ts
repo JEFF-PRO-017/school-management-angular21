@@ -1,8 +1,8 @@
 // data.service.ts
 import { Injectable, inject } from '@angular/core';
-import { CacheService }              from './cache.service';
+import { CacheService } from './cache.service';
 import { SheetsQueueServiceService } from './sheets-queue.service';
-import { GoogleSheetsService }       from './@google-sheets/google-sheets.service';
+import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
   MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note,
@@ -21,57 +21,57 @@ export function deconcatString(s: string): PermissionId[] {
 
 // ── Constantes feuilles ───────────────────────────────────────────
 export const SHEET = {
-  familles:    'F1_FAMILLES',
-  eleves:      'F2_ELEVES',
-  classes:     'F3_CLASSES',
-  paiements:   'F4_PAIEMENTS',
-  frais:       'F5_FRAIS_CONFIG',
-  notes:       `F6_${new Date().getFullYear()}`,
-  templates:   'F7_MSG_TEMPLATES',
-  logs:        'F8_LOG_ALERTES',
-  soldes:      'F9_SNAP',
+  familles: 'F1_FAMILLES',
+  eleves: 'F2_ELEVES',
+  classes: 'F3_CLASSES',
+  paiements: 'F4_PAIEMENTS',
+  frais: 'F5_FRAIS_CONFIG',
+  notes: `F6_${new Date().getFullYear()}`,
+  templates: 'F7_MSG_TEMPLATES',
+  logs: 'F8_LOG_ALERTES',
+  soldes: 'F9_SNAP',
   enseignants: 'F10_ENSEIGNANTS',
-  bulletins:   'F11_SNAP',
-  matieres:    'F12_MATIERES_CONFIG',
-  absences:    'F13_ABSENCES',
-  users:       'F14_USERS',
+  bulletins: 'F11_SNAP',
+  matieres: 'F12_MATIERES_CONFIG',
+  absences: 'F13_ABSENCES',
+  users: 'F14_USERS',
 } as const;
 
 export const H = {
-  familles:    ['id_famille','nom_famille','tel_pere','tel_mere','tel_autre',
-                'latitude','longitude','adresse_texte',
-                'montant_total_attendu','annee_scolaire','montant_reduction','commentaire'],
-  eleves:      ['id_eleve','id_famille','id_classe','nom','prenom','date_naissance',
-                'date_inscription','statut','lieu_naissance','sexe','matricule'],
-  classes:     ['id_classe','nom_classe','niveau','cycle','annee_scolaire',
-                'effectif_max','enseignant_principal'],
-  paiements:   ['id_paiement','id_famille','montant_verse','date_paiement','mode_paiement',
-                'periode_concernee','date_prochain_rdv','recu_numero','notes_caissier',
-                'statut_alerte_whatsapp'],
-  frais:       ['id_frais','id_famille','id_classe','type_frais','montant_total_attendu',
-                'montant_reduction','seuil_insolvable','annee_scolaire','commentaire'],
-  notes:       ['id_note','id_eleve','id_classe','matiere','id_enseignant','sequence',
-                'note_obtenue','note_sur','annee_scolaire'],
-  enseignants: ['id_enseignant','nom','prenom','tel','email','classes_assignees'],
-  matieres:    ['id_matiere','nom_matiere','id_classe','coefficient','note_eliminatoire',
-                'groupe','niveau','id_enseignant'],
-  soldes:      ['id_eleve','id_famille','total_verse','montant_attendu','reste_a_payer',
-                'statut_insolvable','dernier_paiement','nb_enfants_famille'],
-  bulletins:   ['id_eleve','id_classe','sequence','moy_ponderee','rang','premier',
-                'dernier','mention','moy_classe'],
-  templates:   ['id_template','type','objet','contenu','variables_dynamiques','actif',
-                'langue','destinataire'],
-  logs:        ['id_log','id_eleve','id_famille','id_template','numero_dest',
-                'date_envoi','statut','hash_dedup'],
-  absences:    ['id','id_enfant','id_famille','id_classe','date','heure','justifie','motif'],
-  users:       ['id','username','mot_de_passe','nom','role','is_admin','section','permissions'],
+  familles: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre',
+    'latitude', 'longitude', 'adresse_texte',
+    'montant_total_attendu', 'annee_scolaire', 'montant_reduction', 'commentaire'],
+  eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance',
+    'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule'],
+  classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire',
+    'effectif_max', 'enseignant_principal'],
+  paiements: ['id_paiement', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement',
+    'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier',
+    'statut_alerte_whatsapp'],
+  frais: ['id_frais', 'id_famille', 'id_classe', 'type_frais', 'montant_total_attendu',
+    'montant_reduction', 'seuil_insolvable', 'annee_scolaire', 'commentaire'],
+  notes: ['id_note', 'id_eleve', 'id_classe', 'matiere', 'id_enseignant', 'sequence',
+    'note_obtenue', 'note_sur', 'annee_scolaire'],
+  enseignants: ['id_enseignant', 'nom', 'prenom', 'tel', 'email', 'classes_assignees'],
+  matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire',
+    'groupe', 'niveau', 'id_enseignant'],
+  soldes: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer',
+    'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
+  bulletins: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier',
+    'dernier', 'mention', 'moy_classe'],
+  templates: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif',
+    'langue', 'destinataire'],
+  logs: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest',
+    'date_envoi', 'statut', 'hash_dedup'],
+  absences: ['id', 'id_enfant', 'id_famille', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
+  users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions'],
 } as const;
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
 
-  private cache  = inject(CacheService);
-  private queue  = inject(SheetsQueueServiceService);
+  private cache = inject(CacheService);
+  private queue = inject(SheetsQueueServiceService);
   private sheets = inject(GoogleSheetsService);
 
   // ── Cache ──────────────────────────────────────────────────────
@@ -91,19 +91,19 @@ export class DataService {
       `${SHEET.enseignants}!A:F`,
       `${SHEET.matieres}!A:H`,
     ]);
-    this.cache.setFamilles(    this.parse<Famille>(rawFam,      H.familles));
-    this.cache.setClasses(     this.parse<Classe>(rawCls,       H.classes));
-    this.cache.setFrais(       this.parse<FraisConfig>(rawFrais,H.frais));
-    this.cache.setEnseignants( this.parse<Enseignant>(rawEns,   H.enseignants));
-    this.cache.setMatieres(    this.parse<MatiereConfig>(rawMat,H.matieres));
+    this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
+    this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
+    this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
+    this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
+    this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
 
     // Groupe B — élèves + soldes
     const [rawElv, rawSol] = await this.batchFetch([
       `${SHEET.eleves}!A:K`,
       `${SHEET.soldes}!A:H`,
     ]);
-    this.cache.setEleves(this.parse<Eleve>(rawElv,       H.eleves));
-    this.cache.setSoldes(this.parse<SoldeSnap>(rawSol,   H.soldes));
+    this.cache.setEleves(this.parse<Eleve>(rawElv, H.eleves));
+    this.cache.setSoldes(this.parse<SoldeSnap>(rawSol, H.soldes));
 
     // Groupe C — en arrière-plan (pas bloquant)
     this.sheets.fetchRaw(SHEET.notes).then(r =>
@@ -123,14 +123,14 @@ export class DataService {
 
   // ── Getters ────────────────────────────────────────────────────
 
-  getClasses():     Classe[]       { return this.cache.getClasses(); }
-  getFamilles():    Famille[]      { return this.cache.getFamilles(); }
-  getEleves():      Eleve[]        { return this.cache.getEleves(); }
-  getMatieres():    MatiereConfig[]{ return this.cache.getMatieres(); }
-  getFrais():       FraisConfig[]  { return this.cache.getFrais(); }
-  getEnseignants(): Enseignant[]   { return this.cache.getEnseignants(); }
-  getSoldes():      SoldeSnap[]    { return this.cache.getSoldes(); }
-  getPaiements():   Paiement[]     { return this.cache.getPaiements(); }
+  getClasses(): Classe[] { return this.cache.getClasses(); }
+  getFamilles(): Famille[] { return this.cache.getFamilles(); }
+  getEleves(): Eleve[] { return this.cache.getEleves(); }
+  getMatieres(): MatiereConfig[] { return this.cache.getMatieres(); }
+  getFrais(): FraisConfig[] { return this.cache.getFrais(); }
+  getEnseignants(): Enseignant[] { return this.cache.getEnseignants(); }
+  getSoldes(): SoldeSnap[] { return this.cache.getSoldes(); }
+  getPaiements(): Paiement[] { return this.cache.getPaiements(); }
 
   // ── Refreshs individuels ───────────────────────────────────────
   // Utilisés par le header pour actualiser une seule feuille
@@ -385,7 +385,7 @@ export class DataService {
     this.cache.setUsers(
       this.parse<AppUser>(raw, H.users).map(u => ({
         ...u,
-        is_admin:    String(u.is_admin) === 'OUI' || u.is_admin === true,
+        is_admin: String(u.is_admin) === 'OUI' || u.is_admin === true,
         permissions: deconcatString(
           typeof u.permissions === 'string' ? u.permissions : ''
         ),
@@ -443,7 +443,7 @@ export class DataService {
   async readSheetPublic<T>(sheetName: string): Promise<T[]> {
     const map: Partial<Record<string, readonly string[]>> = {
       [SHEET.templates]: H.templates,
-      [SHEET.logs]:      H.logs,
+      [SHEET.logs]: H.logs,
     };
     const headers = map[sheetName];
     if (!headers) {
@@ -519,35 +519,35 @@ export class DataService {
    */
   async validerFamilleTampon(
     famille: FamilleTampon,
-    eleves:  EleveTampon[],
+    eleves: EleveTampon[],
     pension: PensionTampon | null
   ): Promise<void> {
     // Insertion famille principale
     await this.addFamille({
-      id_famille:    famille.id_famille,
-      nom_famille:   famille.nom_famille,
-      tel_pere:      famille.tel_pere,
-      tel_mere:      famille.tel_mere,
-      tel_autre:     famille.tel_autre,
+      id_famille: famille.id_famille,
+      nom_famille: famille.nom_famille,
+      tel_pere: famille.tel_pere,
+      tel_mere: famille.tel_mere,
+      tel_autre: famille.tel_autre,
       adresse_texte: famille.adresse_texte,
       annee_scolaire: pension?.annee_scolaire ?? '',
       montant_total_attendu: pension?.montant_total_attendu ?? 0,
-      montant_reduction:     pension?.montant_reduction ?? 0,
-      commentaire:   pension?.commentaire ?? '',
+      montant_reduction: pension?.montant_reduction ?? 0,
+      commentaire: pension?.commentaire ?? '',
     });
 
     // Insertion élèves principaux
     for (const e of eleves) {
       await this.addEleve({
-        id_eleve:        e.id_eleve,
-        id_famille:      famille.id_famille,
-        id_classe:       e.id_classe ?? '',
-        nom:             e.nom,
-        prenom:          e.prenom,
-        date_naissance:  e.date_naissance ?? '',
-        sexe:            e.sexe ?? undefined,
-        statut:          'actif',
-        matricule:       '',
+        id_eleve: e.id_eleve,
+        id_famille: famille.id_famille,
+        id_classe: e.id_classe ?? '',
+        nom: e.nom,
+        prenom: e.prenom,
+        date_naissance: e.date_naissance ?? '',
+        sexe: e.sexe ?? undefined,
+        statut: 'actif',
+        matricule: '',
       });
     }
 
@@ -595,14 +595,14 @@ export class DataService {
    */
   async validerDemandePaiement(d: DemandePaiement): Promise<void> {
     await this.addPaiement({
-      id_paiement:    `PAI-${Date.now()}`,
-      id_famille:     d.id_famille,
-      montant_verse:  d.montant,
-      date_paiement:  new Date().toISOString().slice(0, 10),
-      mode_paiement:  d.mode_paiement as any,
+      id_paiement: `PAI-${Date.now()}`,
+      id_famille: d.id_famille,
+      montant_verse: d.montant,
+      date_paiement: new Date().toISOString().slice(0, 10),
+      mode_paiement: d.mode_paiement as any,
       periode_concernee: '',
       date_prochain_rdv: '',
-      recu_numero:    d.reference ?? '',
+      recu_numero: d.reference ?? '',
       notes_caissier: d.commentaire ?? '',
       statut_alerte_whatsapp: 'EN_ATTENTE',
     });
@@ -648,10 +648,10 @@ export class DataService {
     const reste = Math.max(0, +s.reste_a_payer - +p.montant_verse);
     this.cache.upsertSolde({
       ...s,
-      total_verse:       +s.total_verse + +p.montant_verse,
-      reste_a_payer:     reste,
+      total_verse: +s.total_verse + +p.montant_verse,
+      reste_a_payer: reste,
       statut_insolvable: String(reste > 0),
-      dernier_paiement:  p.date_paiement,
+      dernier_paiement: p.date_paiement,
     });
   }
 
@@ -664,6 +664,24 @@ export class DataService {
           sheetName: name,
           headers: H[key as keyof typeof H] as unknown as string[],
         }))
+    );
+  }
+
+  async addMatiere(m: MatiereConfig): Promise<void> {
+    this.cache.upsertMatiere(m);
+    this.queue.enqueue(
+      { sheetName: SHEET.matieres, rowData: this.toRow(m, H.matieres) },
+      'addRow'
+    );
+  }
+
+  async updateMatiere(m: MatiereConfig): Promise<void> {
+    this.cache.upsertMatiere(m);
+    const row = await this.sheets.findRowById(SHEET.matieres, m.id_matiere);
+    if (row === -1) return this.addMatiere(m);
+    this.queue.enqueue(
+      { sheetName: SHEET.matieres, row, col: 1, values: this.toRow(m, H.matieres) },
+      'updateRow'
     );
   }
 }

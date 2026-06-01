@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   { id: 'absences', label: 'Absences', section: 'both' },
   { id: 'whatsapp', label: 'WhatsApp', section: 'both' },
   { id: 'users', label: 'Gestion utilisateurs', section: 'both' },
+  { id: 'matieres', label: 'Matières', section: 'both' },
 ] as const;
 
 export type PermissionId = typeof PERMISSIONS[number]['id'];
@@ -135,7 +136,7 @@ export interface MatiereConfig {
   coefficient: number | string;
   note_eliminatoire?: number;
   groupe?: string;
-  niveau?: number;
+  niveau?: any;
   id_enseignant: string;
   enseignant?: Enseignant;
   classe?: Classe;

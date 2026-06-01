@@ -168,6 +168,8 @@ export class CacheService {
 
   upsertSolde(s: SoldeSnap)   { this._soldes.update(l => upsert(l, s, 'id_eleve')); }
 
+  upsertMatiere(m: MatiereConfig) { this._matieres.update(l => upsert(l, m, 'id_matiere')); }
+
   // ── Absences ──────────────────────────────────────────────────────
   getAbsences():       Absence[]  { return this._absences(); }
   setAbsences(d: Absence[])       { this._absences.set(d); }

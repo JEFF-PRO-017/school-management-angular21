@@ -33,14 +33,11 @@ export function sectionBandeVerticale(doc: jsPDF): void {
 
 // ── En-tête ───────────────────────────────────────────────────────────────
 // v3 : y+16 au lieu de y+17 (-1mm), fontSize école 16→14
-export function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?: string): number {
+export function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?: any): number {
   const xR = IW + ML;
 
-  if (logoBase64) {
-    try { doc.addImage(logoBase64, 'PNG', ML, y, 15, 14); } catch {}
-  }
 
-  const xTxt = logoBase64 ? ML + 17 : ML;
+  const xTxt = ML;
 
   doc.setFont('helvetica', 'italic'); doc.setFontSize(6); doc.setTextColor(...NOIR);
   doc.text('MINEDUC/DELEGATION REGIONALE DU CENTRE/DDES-MAK', xTxt, y + 3, { baseline: 'middle' });
@@ -50,6 +47,12 @@ export function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?:
 
   doc.setFont('helvetica', 'italic'); doc.setFontSize(6); doc.setTextColor(...NOIR);
   doc.text('Tél: +237 679 33 78 60 / 656 48 82 90 / 674 73 50 44', xTxt, y + 14, { baseline: 'middle' });
+
+
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, 'PNG', ML +105, y, 15, 14); } catch {
+    }
+  }
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...NOIR);
   doc.text('REPUBLIQUE DU CAMEROUN', xR, y + 3, { align: 'right', baseline: 'middle' });
@@ -97,7 +100,7 @@ export function sectionInfoEleve(doc: jsPDF, y: number, d: BulletinData): number
   // Ligne 2 — Né le / à / Sexe / Redouble
   const lW = IW * 0.10, vW = IW * 0.15;
   const labels2 = ['NE LE', 'A', 'SEXE', 'REDOUBLE'];
-  const vals2   = [eleve.date_naissance ?? '', eleve.lieu_naissance ?? '', eleve.sexe ?? '', ''];
+  const vals2 = [eleve.date_naissance ?? '', eleve.lieu_naissance ?? '', eleve.sexe ?? '', ''];
   x = ML;
   for (let i = 0; i < 4; i++) {
     cell(doc, x, y, lW, rH, '', { fill: BLANC, border: true });
@@ -139,16 +142,16 @@ export function sectionInfoEleve(doc: jsPDF, y: number, d: BulletinData): number
 export function sectionTableauHeader(doc: jsPDF, y: number, seqs: Sequence[], dims: TableDims): number {
   const { wMat, wCoef, wSeq, wMoy, wCoef2, wApp, hH } = dims;
   const xAM = ML + wMat + wCoef;
-  cell(doc, ML,        y, wMat,  hH, 'MATIERES',  { fill: BLANC, textColor: NOIR, bold: true, fontSize: 8, align: 'left', border: true });
-  cell(doc, ML + wMat, y, wCoef, hH, 'COEF',       { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true });
+  cell(doc, ML, y, wMat, hH, 'MATIERES', { fill: BLANC, textColor: NOIR, bold: true, fontSize: 8, align: 'left', border: true });
+  cell(doc, ML + wMat, y, wCoef, hH, 'COEF', { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true });
   seqs.forEach((s, i) =>
     cell(doc, xAM + i * wSeq, y, wSeq, hH, s.replace('SEQ', 'SEC'),
       { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true })
   );
   const xM = xAM + seqs.length * wSeq;
-  cell(doc, xM,                 y, wMoy,   hH, 'MOY/20',   { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true });
-  cell(doc, xM + wMoy,          y, wCoef2, hH, 'MOY×C',    { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7,   border: true });
-  cell(doc, xM + wMoy + wCoef2, y, wApp,   hH, 'APP',      { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true });
+  cell(doc, xM, y, wMoy, hH, 'MOY/20', { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true });
+  cell(doc, xM + wMoy, y, wCoef2, hH, 'MOY×C', { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7, border: true });
+  cell(doc, xM + wMoy + wCoef2, y, wApp, hH, 'APP', { fill: BLANC, textColor: NOIR, bold: true, fontSize: 7.5, border: true });
   return y + hH;
 }
 
@@ -161,7 +164,7 @@ export function sectionGroupe(
 ): { y: number; totalPts: number; totalCoef: number } {
   const { wMat, wCoef, wSeq, wMoy, wCoef2, wApp, rH } = dims;
   const xAM = ML + wMat + wCoef;
-  const xM  = xAM + seqs.length * wSeq;
+  const xM = xAM + seqs.length * wSeq;
   let totalPts = 0, totalCoef = 0;
 
   groupe.matieres.forEach((mat: MatiereConfig) => {
@@ -170,7 +173,7 @@ export function sectionGroupe(
       toNote(eleve.sequences?.find((s: any) => s.sequence === seq)
         ?.notes_eleve?.find((n: any) => n.matiere === mat.nom_matiere)?.note_obtenue)
     );
-    const moy     = moyenneSimple(notesSeq);
+    const moy = moyenneSimple(notesSeq);
     const moyCoef = moy !== null ? moy * coeff : null;
     if (moyCoef !== null) totalPts += moyCoef;
     totalCoef += coeff;
@@ -196,10 +199,12 @@ export function sectionGroupe(
         n !== null ? n.toFixed(2) : '',
         { fill: BLANC, fontSize: 7.5, textColor: nc, border: true });
     });
-    cell(doc, xM,           y, wMoy,   h2, fmt(moy),
-      { fill: BLANC, bold: true, fontSize: 7.5,
-        textColor: moy !== null && moy < 10 ? ROUGE : NOIR, border: true });
-    cell(doc, xM + wMoy,    y, wCoef2, h2,
+    cell(doc, xM, y, wMoy, h2, fmt(moy),
+      {
+        fill: BLANC, bold: true, fontSize: 7.5,
+        textColor: moy !== null && moy < 10 ? ROUGE : NOIR, border: true
+      });
+    cell(doc, xM + wMoy, y, wCoef2, h2,
       moyCoef !== null ? moyCoef.toFixed(0) : '',
       { fill: BLANC, fontSize: 7.5, border: true });
     cell(doc, xM + wMoy + wCoef2, y, wApp, h2,
@@ -228,19 +233,19 @@ export function sectionTotalGroupe(
 ): number {
   const { wMat, wCoef, wSeq, wMoy, wCoef2, wApp, rH } = dims;
   const xAM = ML + wMat + wCoef;
-  const xM  = xAM + seqs.length * wSeq;
+  const xM = xAM + seqs.length * wSeq;
   const moy = totalCoef > 0 ? totalPts / totalCoef : null;
 
   doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(...NOIR);
   doc.setDrawColor(...NOIR); doc.setLineWidth(0.22);
 
-  cell(doc, ML,        y, wMat,  rH, 'Total', { fill: BLANC, fontSize: 7.5, align: 'left', border: true });
+  cell(doc, ML, y, wMat, rH, 'Total', { fill: BLANC, fontSize: 7.5, align: 'left', border: true });
   cell(doc, ML + wMat, y, wCoef, rH, String(totalCoef), { fill: BLANC, fontSize: 7.5, border: true });
   seqs.forEach((_, i) =>
     cell(doc, xAM + i * wSeq, y, wSeq, rH, '', { fill: BLANC, border: true })
   );
-  cell(doc, xM,            y, wMoy,   rH, '', { fill: BLANC, border: true });
-  cell(doc, xM + wMoy,     y, wCoef2, rH, totalPts.toFixed(0),
+  cell(doc, xM, y, wMoy, rH, '', { fill: BLANC, border: true });
+  cell(doc, xM + wMoy, y, wCoef2, rH, totalPts.toFixed(0),
     { fill: BLANC, bold: true, fontSize: 7.5, border: true });
   cell(doc, xM + wMoy + wCoef2, y, wApp, rH, '', { fill: BLANC, border: true });
   y += rH;
@@ -291,9 +296,9 @@ export function sectionTotauxGlobaux(
 // ── Récapitulatif ─────────────────────────────────────────────────────────
 // v3 : rH 4.3, sigH 3.5
 export function sectionRecap(doc: jsPDF, y: number, d: BulletinData, moyGlobale: number | null): number {
-  const seqs  = d.config.sequences;
-  const rH    = 4.3;   // v3
-  const sigH  = 3.5;   // v3
+  const seqs = d.config.sequences;
+  const rH = 4.3;   // v3
+  const sigH = 3.5;   // v3
   const col1W = IW * 0.4, col2W = IW * 0.3, col3W = IW - col1W - col2W;
 
   // Moyenne trimestrielle
@@ -328,40 +333,40 @@ export function sectionRecap(doc: jsPDF, y: number, d: BulletinData, moyGlobale:
   // En-têtes 3 colonnes
   doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...NOIR);
   doc.setFillColor(235, 240, 255);
-  doc.rect(ML,                 y, col1W, rH, 'FD');
-  doc.rect(ML + col1W,         y, col2W, rH, 'FD');
+  doc.rect(ML, y, col1W, rH, 'FD');
+  doc.rect(ML + col1W, y, col2W, rH, 'FD');
   doc.rect(ML + col1W + col2W, y, col3W, rH, 'FD');
   doc.setDrawColor(...NOIR); doc.setLineWidth(0.22);
   doc.text("RESULTAT TRIMESTRIEL",
-    ML + col1W / 2,           y + rH / 2 + 0.2, { align: 'center', baseline: 'middle' });
+    ML + col1W / 2, y + rH / 2 + 0.2, { align: 'center', baseline: 'middle' });
   doc.text('PROFIL DE LA CLASSE',
-    ML + col1W + col2W / 2,   y + rH / 2 + 0.2, { align: 'center', baseline: 'middle' });
+    ML + col1W + col2W / 2, y + rH / 2 + 0.2, { align: 'center', baseline: 'middle' });
   doc.text('CONDUITE',
     ML + col1W + col2W + col3W / 2, y + rH / 2 + 0.2, { align: 'center', baseline: 'middle' });
   y += rH;
 
   const profil: [string, string][] = [
-    ['Moy. Premier',   fmt(d.moyPremier, 3)],
-    ['Moy. Dernier',   fmt(d.moyDernier, 3)],
-    ['Taux reussite',  d.tauxReussite !== null ? `${d.tauxReussite.toFixed(1)}%` : '—'],
-    ['Moy. Generale',  fmt(d.moyGeneraleClasse, 2)],
+    ['Moy. Premier', fmt(d.moyPremier, 3)],
+    ['Moy. Dernier', fmt(d.moyDernier, 3)],
+    ['Taux reussite', d.tauxReussite !== null ? `${d.tauxReussite.toFixed(1)}%` : '—'],
+    ['Moy. Generale', fmt(d.moyGeneraleClasse, 2)],
   ];
   const conduite: [string, string][] = [
-    ['Abs. Justifiee',  String(d.absJustifiees || '')],
+    ['Abs. Justifiee', String(d.absJustifiees || '')],
     ['Abs. N. Justif.', String(d.absNonJustifiees || '')],
     ['Avert. Conduite', d.avertissementConduite ? 'OUI' : ''],
-    ['Blame Conduite',  d.blameConduite ? 'OUI' : ''],
-    ['Consigne',        d.consigne ? String(d.consigne) : ''],
-    ['Exclusion',       d.exclusion ? String(d.exclusion) : ''],
-    ['Retards',         d.retards ? String(d.retards) : ''],
-    ['Conseil Disc.',   d.conseilDiscipline ? 'OUI' : ''],
+    ['Blame Conduite', d.blameConduite ? 'OUI' : ''],
+    ['Consigne', d.consigne ? String(d.consigne) : ''],
+    ['Exclusion', d.exclusion ? String(d.exclusion) : ''],
+    ['Retards', d.retards ? String(d.retards) : ''],
+    ['Conseil Disc.', d.conseilDiscipline ? 'OUI' : ''],
   ];
 
   const nRows = Math.max(seqs.length, profil.length, conduite.length);
   for (let i = 0; i < nRows; i++) {
     doc.setFillColor(...BLANC); doc.setDrawColor(...NOIR); doc.setLineWidth(0.18);
-    doc.rect(ML,                 y, col1W, rH, 'FD');
-    doc.rect(ML + col1W,         y, col2W, rH, 'FD');
+    doc.rect(ML, y, col1W, rH, 'FD');
+    doc.rect(ML + col1W, y, col2W, rH, 'FD');
     doc.rect(ML + col1W + col2W, y, col3W, rH, 'FD');
 
     if (i < seqs.length) {
@@ -408,12 +413,12 @@ export function sectionRecap(doc: jsPDF, y: number, d: BulletinData, moyGlobale:
   ];
   sigRows.forEach(([c1, c2, c3]) => {
     doc.setFillColor(...BLANC); doc.setDrawColor(...NOIR); doc.setLineWidth(0.22);
-    doc.rect(ML,                 y, col1W, sigH, 'FD');
-    doc.rect(ML + col1W,         y, col2W, sigH, 'FD');
+    doc.rect(ML, y, col1W, sigH, 'FD');
+    doc.rect(ML + col1W, y, col2W, sigH, 'FD');
     doc.rect(ML + col1W + col2W, y, col3W, sigH, 'FD');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...NOIR);
-    if (c1) doc.text(c1, ML + 1.5,                 y + sigH / 2 + 0.2, { baseline: 'middle' });
-    if (c2) doc.text(c2, ML + col1W + 1.5,         y + sigH / 2 + 0.2, { baseline: 'middle' });
+    if (c1) doc.text(c1, ML + 1.5, y + sigH / 2 + 0.2, { baseline: 'middle' });
+    if (c2) doc.text(c2, ML + col1W + 1.5, y + sigH / 2 + 0.2, { baseline: 'middle' });
     if (c3) doc.text(c3, ML + col1W + col2W + 1.5, y + sigH / 2 + 0.2, { baseline: 'middle' });
     y += sigH;
   });
@@ -430,13 +435,13 @@ export interface TableDims {
 }
 
 export function calcDims(seqs: Sequence[]): TableDims {
-  const wMat   = 46;
-  const wCoef  = 10;
-  const wSeq   = Math.min(15, Math.max(10,
+  const wMat = 46;
+  const wCoef = 10;
+  const wSeq = Math.min(15, Math.max(10,
     (IW - wMat - wCoef - 18 - 18) / Math.max(seqs.length, 1)));
-  const wMoy   = 16;
+  const wMoy = 16;
   const wCoef2 = 18;
-  const wApp   = IW - wMat - wCoef - wSeq * seqs.length - wMoy - wCoef2;
+  const wApp = IW - wMat - wCoef - wSeq * seqs.length - wMoy - wCoef2;
   return {
     wMat, wCoef, wSeq, wMoy, wCoef2, wApp,
     hH: 5.5,   // inchangé
@@ -516,11 +521,11 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
     cell(doc, cx, yh, wTot, hH, String(totalCoef),
       { fill: BLANC, bold: true, fontSize: 8, border: true }); cx += wTot;
     cell(doc, cx, yh, wRang, hH, '', { fill: BLANC, border: true }); cx += wRang;
-    cell(doc, cx, yh, wMoy,  hH, '', { fill: BLANC, border: true }); cx += wMoy;
-    cell(doc, cx, yh, wDec,  hH, '', { fill: BLANC, border: true });
+    cell(doc, cx, yh, wMoy, hH, '', { fill: BLANC, border: true }); cx += wMoy;
+    cell(doc, cx, yh, wDec, hH, '', { fill: BLANC, border: true });
     yh += hH;
     cx = ML;
-    cell(doc, cx, yh, wN,   hH, 'N°',           { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wN;
+    cell(doc, cx, yh, wN, hH, 'N°', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wN;
     cell(doc, cx, yh, wNom, hH, 'NOMS & PRENOMS',
       { fill: GRIS_H, bold: true, fontSize: 8, align: 'left', border: true }); cx += wNom;
     mats.forEach((m, i) => {
@@ -531,10 +536,10 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
       cell(doc, cx, yh, wMoySeq, hH, `M.${s.replace('SEQ', '')}`,
         { fill: GRIS_H, bold: true, fontSize: 6.5, border: true }); cx += wMoySeq;
     });
-    cell(doc, cx, yh, wTot,  hH, 'TOTAUX',    { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wTot;
-    cell(doc, cx, yh, wRang, hH, 'RANG',      { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wRang;
-    cell(doc, cx, yh, wMoy,  hH, 'MOY',       { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wMoy;
-    cell(doc, cx, yh, wDec,  hH, 'DECISIONS', { fill: GRIS_H, bold: true, fontSize: 8, border: true });
+    cell(doc, cx, yh, wTot, hH, 'TOTAUX', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wTot;
+    cell(doc, cx, yh, wRang, hH, 'RANG', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wRang;
+    cell(doc, cx, yh, wMoy, hH, 'MOY', { fill: GRIS_H, bold: true, fontSize: 8, border: true }); cx += wMoy;
+    cell(doc, cx, yh, wDec, hH, 'DECISIONS', { fill: GRIS_H, bold: true, fontSize: 8, border: true });
     return yh + hH;
   };
 
@@ -547,7 +552,7 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
     }
     const alt: RGB = ri % 2 === 0 ? BLANC : [248, 250, 255];
     let cx = ML;
-    cell(doc, cx, y, wN,   rH, String(ligne.numero), { fill: alt, fontSize: 7.5, border: true }); cx += wN;
+    cell(doc, cx, y, wN, rH, String(ligne.numero), { fill: alt, fontSize: 7.5, border: true }); cx += wN;
     cell(doc, cx, y, wNom, rH,
       `${ligne.eleve.nom.toLocaleUpperCase()} ${ligne.eleve.prenom.toLocaleUpperCase()}`.slice(0, 20),
       { fill: alt, fontSize: 7, align: 'left', border: true }); cx += wNom;
@@ -557,24 +562,32 @@ export function sectionPVTableau(doc: jsPDF, y: number, d: PVData): number {
           ?.notes_eleve?.find((n: any) => n.matiere === m.nom_matiere)?.note_obtenue));
       const n = seqs.length === 1 ? vals[0] : moyenneSimple(vals);
       cell(doc, cx, y, wMats[mi], rH, n !== null ? n.toFixed(2) : '',
-        { fill: alt, fontSize: 7.5, border: true,
-          textColor: n !== null && n < 10 ? ROUGE : NOIR }); cx += wMats[mi];
+        {
+          fill: alt, fontSize: 7.5, border: true,
+          textColor: n !== null && n < 10 ? ROUGE : NOIR
+        }); cx += wMats[mi];
     });
     if (seqs.length > 1) seqs.forEach(seq => {
       const ms = ligne.moyParSeq?.[seq] ?? null;
       cell(doc, cx, y, wMoySeq, rH, fmt(ms),
-        { fill: [240, 248, 240], bold: true, fontSize: 7, border: true,
-          textColor: ms !== null && ms < 10 ? ROUGE : NOIR }); cx += wMoySeq;
+        {
+          fill: [240, 248, 240], bold: true, fontSize: 7, border: true,
+          textColor: ms !== null && ms < 10 ? ROUGE : NOIR
+        }); cx += wMoySeq;
     });
     cell(doc, cx, y, wTot, rH, fmt(ligne.total, 1), { fill: alt, fontSize: 7.5, border: true }); cx += wTot;
     cell(doc, cx, y, wRang, rH, ligne.rang !== null ? String(ligne.rang) : '',
       { fill: alt, fontSize: 7.5, border: true }); cx += wRang;
     cell(doc, cx, y, wMoy, rH, fmt(ligne.moyGlobale),
-      { fill: alt, bold: true, fontSize: 7.5, border: true,
-        textColor: ligne.moyGlobale !== null && ligne.moyGlobale < 10 ? ROUGE : NOIR }); cx += wMoy;
+      {
+        fill: alt, bold: true, fontSize: 7.5, border: true,
+        textColor: ligne.moyGlobale !== null && ligne.moyGlobale < 10 ? ROUGE : NOIR
+      }); cx += wMoy;
     cell(doc, cx, y, wDec, rH, ligne.decision,
-      { fill: alt, bold: true, fontSize: 7.5, border: true,
-        textColor: ligne.decision === 'ADMIS' ? VERT : ROUGE });
+      {
+        fill: alt, bold: true, fontSize: 7.5, border: true,
+        textColor: ligne.decision === 'ADMIS' ? VERT : ROUGE
+      });
     y += rH;
   });
   return y;
@@ -614,9 +627,9 @@ export function sectionFicheSaisie(doc: jsPDF, d: FicheSaisieData, seq: Sequence
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
     doc.text(`Coefficient : ${toFloat(mat.coefficient)}   /20`, ML, y, { baseline: 'middle' }); y += 6;
     const wNom = WP - ML - MR - 30 - 20, wNote = 30, wApp = 20;
-    cell(doc, ML,            y, wNom,  8, 'NOM & PRÉNOM', { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, align: 'left', border: true });
-    cell(doc, ML + wNom,     y, wNote, 8, 'NOTE /20',     { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
-    cell(doc, ML + wNom + wNote, y, wApp, 8, 'APP.',      { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
+    cell(doc, ML, y, wNom, 8, 'NOM & PRÉNOM', { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, align: 'left', border: true });
+    cell(doc, ML + wNom, y, wNote, 8, 'NOTE /20', { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
+    cell(doc, ML + wNom + wNote, y, wApp, 8, 'APP.', { fill: BLEU_F, textColor: BLANC, bold: true, fontSize: 8, border: true });
     y += 8;
     return y;
   };
@@ -642,10 +655,10 @@ export function sectionFicheSaisie(doc: jsPDF, d: FicheSaisieData, seq: Sequence
         y = startPage(mat);
       }
       const alt: RGB = i % 2 === 0 ? BLANC : [248, 250, 255];
-      cell(doc, ML,            y, wNom,  rH,
+      cell(doc, ML, y, wNom, rH,
         `${i + 1}. ${eleve.nom.toLocaleUpperCase()} ${eleve.prenom.toLocaleUpperCase()}`,
         { fill: alt, align: 'left', fontSize: 7.5, border: true });
-      cell(doc, ML + wNom,     y, wNote, rH, '', { fill: alt, border: true });
+      cell(doc, ML + wNom, y, wNote, rH, '', { fill: alt, border: true });
       cell(doc, ML + wNom + wNote, y, wApp, rH, '', { fill: alt, border: true });
       y += rH;
     });

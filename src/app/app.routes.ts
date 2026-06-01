@@ -49,6 +49,11 @@ const routes: Routes = [
         canActivate: [permGuard], data: { perm: 'insolvables' },
         loadChildren: () => import('./features/insolvables/insolvables.routes').then(m => m.INSOLVABLES_ROUTES),
       },
+      {
+        path: 'matieres',
+        canActivate: [permGuard], data: { perm: 'matieres' },
+        loadChildren: () => import('./features/matieres/matieres.routes').then(m => m.MATIERES_ROUTES), 
+      },
 
       // Pédagogie
       {

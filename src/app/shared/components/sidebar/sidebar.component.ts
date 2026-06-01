@@ -72,6 +72,16 @@ import { AuthService } from '../../../core/services/auth.service';
         Classes
       </a>
     }
+    @if(can('matieres')){
+      <a routerLink="/matieres" routerLinkActive="sb-link--active" class="sb-link">
+        <svg class="sb-icon" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5 8h6M5 5h3M5 11h4"
+                stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        Matières
+      </a>
+    }
     @if (can('frais')) {
       <a routerLink="/frais" routerLinkActive="sb-link--active" class="sb-link">
         <svg class="sb-icon" viewBox="0 0 16 16" fill="none">
