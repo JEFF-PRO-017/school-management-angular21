@@ -19,6 +19,7 @@ export function deconcatString(s: string): PermissionId[] {
   return s ? (s.split(',').filter(Boolean) as PermissionId[]) : [];
 }
 
+
 // ── Constantes feuilles ───────────────────────────────────────────
 export const SHEET = {
   familles: 'F1_FAMILLES',

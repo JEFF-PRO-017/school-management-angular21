@@ -6,8 +6,7 @@ export interface Paiement {
   montant_verse:          number;
   date_paiement:          string;
   mode_paiement:          ModePaiement;
-  periode_concernee:      string;
-  date_prochain_rdv?:     string;
+  // periode_concernee:      string;
   recu_numero:            string;
   notes_caissier?:        string;
   statut_alerte_whatsapp: StatutAlerte;

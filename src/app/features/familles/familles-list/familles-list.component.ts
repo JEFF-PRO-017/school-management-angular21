@@ -23,7 +23,7 @@ import { Famille, Paiement } from '../../../core/models';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EleveModalComponent, EleveModalData } from '../../eleves/modal/eleve-modal.component';
 import { PaiementModalComponent, PaiementModalData } from '../../paiements/modal/paiement-modal.component';
-import { FamilleModalComponent, FamilleModalData } from '../modal/famille-modal.component';
+import { FamilleModalComponent, FamilleModalData } from '../famille-form/famille-modal.component';
 
 
 type FiltreEtat = 'tous' | 'solde' | 'sans-gps';

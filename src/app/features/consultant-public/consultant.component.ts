@@ -13,7 +13,7 @@ import { GoogleSheetsService } from '../../core/services/@google-sheets/google-s
 import { CacheService } from '../../core/services/cache.service';
 import { DataService } from '../../core/services/data.service';
 import { EleveModalComponent, EleveModalData } from '../eleves/modal/eleve-modal.component';
-import { FamilleModalComponent, FamilleModalData } from '../familles/modal/famille-modal.component';
+import { FamilleModalComponent, FamilleModalData } from '../familles/famille-form/famille-modal.component';
 
 
 // ── Types internes ────────────────────────────────────────────────
