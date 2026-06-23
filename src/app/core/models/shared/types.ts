@@ -11,3 +11,4 @@ export type StatutLog        = 'envoye' | 'echec';
 export type StatutEleve      = 'actif' | 'archive';
 export type Sexe             = 'M' | 'F';
 export type NotifType = 'absence' | 'note' | 'rdv' | 'paiement' | 'info';
+export type StatusFamille = 'ACTIF'|'NON-ACTIF'|'BANNI'

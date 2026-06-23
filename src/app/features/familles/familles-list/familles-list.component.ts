@@ -594,7 +594,7 @@ export class FamillesListComponent implements OnInit {
     }).afterClosed().subscribe(r => { if (r?.success) this.cdr.markForCheck(); });
   }
 
-  ouvrirModalFamille(f: Famille | null): void {
+  ouvrirModalFamille(f:any): void {
     this.dialog.open(FamilleModalComponent, {
       data: { famille: f } satisfies FamilleModalData,
       width: '520px', maxWidth: '96vw',

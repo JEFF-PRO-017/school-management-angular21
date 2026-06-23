@@ -649,7 +649,7 @@ export class ConsultantComponent implements OnInit {
   // ── Modifier via les modaux existants ─────────────────────────
 
   modifierFamille(f: FamilleTamponEnrichie): void {
-    const famPourModal: Famille = {
+    const famPourModal: any = {
       id_famille:            f.id_famille,
       nom_famille:           f.nom_famille,
       tel_pere:              f.tel_pere,

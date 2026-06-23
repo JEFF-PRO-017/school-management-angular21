@@ -9,6 +9,7 @@ import {
   MsgTemplate, Absence, LogAlerte, AppUser, PermissionId
 } from '../models';
 import { FamilleTampon, SHEET_TAMPON, H_TAMPON, EleveTampon, PensionTampon, DemandePaiement } from '../models/parent.models';
+import { AnneeScolaireFamille } from '../models/family';
 
 
 // ── Helpers sérialisation permissions (tableau ↔ chaîne CSV) ──────
@@ -36,6 +37,7 @@ export const SHEET = {
   matieres: 'F12_MATIERES_CONFIG',
   absences: 'F13_ABSENCES',
   users: 'F14_USERS',
+  anneesvc: 'F15_ANNEESVC',
 } as const;
 
 export const H = {
@@ -66,6 +68,7 @@ export const H = {
     'date_envoi', 'statut', 'hash_dedup'],
   absences: ['id', 'id_enfant', 'id_famille', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
   users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions'],
+  anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete']
 } as const;
 
 @Injectable({ providedIn: 'root' })
@@ -85,18 +88,20 @@ export class DataService {
     await this.ensureSheets();
 
     // Groupe A — données statiques (batchGet)
-    const [rawFam, rawCls, rawFrais, rawEns, rawMat] = await this.batchFetch([
+    const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn] = await this.batchFetch([
       `${SHEET.familles}!A:L`,
       `${SHEET.classes}!A:G`,
       `${SHEET.frais}!A:I`,
       `${SHEET.enseignants}!A:F`,
       `${SHEET.matieres}!A:H`,
+      `${SHEET.anneesvc}!A:H`,
     ]);
     this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
     this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
     this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
     this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
     this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
+    this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc))
 
     // Groupe B — élèves + soldes
     const [rawElv, rawSol] = await this.batchFetch([
@@ -203,6 +208,22 @@ export class DataService {
     this.queue.enqueue({ sheetName: SHEET.familles, rowIndex: row - 1 }, 'deleteRow');
   }
 
+  async addAnneeSvc(a: AnneeScolaireFamille) {
+    this.cache.upsertAnneeSvc(a);
+    this.queue.enqueue(
+      { sheetName: SHEET.anneesvc, rowData: this.toRow(a, H.anneesvc) },
+      'addRow'
+    );
+  }
+  async updateAnneeSvc(a: AnneeScolaireFamille) {
+    this.cache.upsertAnneeSvc(a);
+    const row = await this.sheets.findRowById(SHEET.anneesvc, a.id_annee_scolaire);
+    if (row === -1) return this.addAnneeSvc(a);
+    this.queue.enqueue(
+      { sheetName: SHEET.anneesvc, row, col: 1, values: this.toRow(a, H.anneesvc) },
+      'updateRow'
+    );
+  }
   // ── Élèves ─────────────────────────────────────────────────────
 
   async addEleve(e: Eleve): Promise<void> {

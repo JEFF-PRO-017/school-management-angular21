@@ -7,6 +7,7 @@ import {
   MsgTemplate, LogAlerte, AppUser, PermissionId
 } from '../models';
 import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
+import { AnneeScolaireFamille } from '../models/family';
 
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +28,7 @@ export class CacheService {
   private _templates   = signal<MsgTemplate[]>([]);
   private _logs        = signal<LogAlerte[]>([]);
   private _users       = signal<AppUser[]>([]);
+  private _anneeSvc    = signal<AnneeScolaireFamille[]>([])
 
   // ── Signaux tampon (espace parent — données en attente) ────────
   private _famillesTampon  = signal<FamilleTampon[]>([]);
@@ -62,6 +64,7 @@ export class CacheService {
     return idx;
   });
 
+
   // ── Niveau 2 : élèves enrichis ────────────────────────────────
   private _elevesEnrichis = computed<Eleve[]>(() => {
     const famMap   = new Map(this._familles().map(f => [f.id_famille, f]));
@@ -82,14 +85,18 @@ export class CacheService {
   // RÈGLE RESPECTÉE : on crée un NOUVEL objet avec { ...f } pour chaque famille
   // On ne mute jamais un objet existant dans un computed()
   private _famillesEnrichies = computed<Famille[]>(() => {
+    const anneeSvc          = this._anneeSvc() //N3
     const elevesEnrichis    = this._elevesEnrichis();   // N2
     const paiementsParFam   = this._paiementsParFamille(); // N1
 
+    console.log('fammille enrichies')
     return this._familles().map(f => ({
       ...f,                                               // copie tous les champs bruts
       eleves:    elevesEnrichis.filter(e => e.id_famille === f.id_famille),
       paiements: paiementsParFam.get(f.id_famille) ?? [], // ← enrichissement paiements
+      annee_scolaires: anneeSvc.filter(a=>a.id_famille === f.id_famille)
     }));
+    
   });
 
   // ── Niveau 3 : matières enrichies ─────────────────────────────
@@ -154,6 +161,7 @@ export class CacheService {
   setBulletins(d: BulletinSnap[])   { this._bulletins.set(d); }
   setNotes(d: Note[])               { this._notes.set(d); }
   setPaiements(d: Paiement[])       { this._paiements.set(d); }
+  setAnneeSvc(a:AnneeScolaireFamille[]){this._anneeSvc.set(a);}
 
   // ── Upsert / remove ───────────────────────────────────────────
   upsertFamille(f: Famille)   { this._familles.update(l => upsert(l, f, 'id_famille')); }
@@ -169,6 +177,8 @@ export class CacheService {
   upsertSolde(s: SoldeSnap)   { this._soldes.update(l => upsert(l, s, 'id_eleve')); }
 
   upsertMatiere(m: MatiereConfig) { this._matieres.update(l => upsert(l, m, 'id_matiere')); }
+
+  upsertAnneeSvc(a:AnneeScolaireFamille){ this._anneeSvc.update(l => upsert(l, a, 'id_annee_scolaire')) }
 
   // ── Absences ──────────────────────────────────────────────────────
   getAbsences():       Absence[]  { return this._absences(); }

@@ -1,5 +1,6 @@
 import { Classe, Eleve } from "../academic";
 import { Paiement } from "../payment";
+import { StatusFamille } from "../shared";
 
 export interface Famille {
     id_famille: string;
@@ -11,6 +12,7 @@ export interface Famille {
     longitude?: number;
     adresse_texte?: string;
     mots_de_passe?: string,
+    status: StatusFamille
 }
 export interface FamilleEnrichi extends Famille {
     eleves?: EleveEnrichi[];

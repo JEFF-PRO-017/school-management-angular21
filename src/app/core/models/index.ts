@@ -2,6 +2,8 @@
 // models.ts — types centraux de l'application
 // ─────────────────────────────────────────────────────────────────
 
+import { AnneeScolaireFamille } from "./family";
+
 // ── Permissions (liste exhaustive stockée côté client) ────────────
 export const PERMISSIONS = [
   { id: 'familles', label: 'Familles', section: 'both' },
@@ -76,6 +78,7 @@ export interface Famille {
   annee_scolaire?: string;
   montant_reduction?: number;
   commentaire?: string;
+  annee_scolaires?: AnneeScolaireFamille[];
 }
 
 export interface Eleve {

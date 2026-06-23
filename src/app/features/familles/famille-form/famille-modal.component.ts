@@ -1,11 +1,8 @@
-// famille-modal.component.ts — orchestrateur léger
-// Délègue le rendu à : FamilleFormComponent + FamilleFraisComponent
-// AnneeScolaireFamille est créée via la factory creerAnneeScolaire()
-// et sauvegardée via un service dédié (AnneeScolaireService)
+// famille-modal.component.ts — orchestrateur
+// Zéro ViewChild — tout passe par @Input / @Output
+// Supporte Famille et FamilleEnrichi (récupère annee_scolaires[0] si présent)
 
-import {
-  Component, inject, signal, OnInit, ViewChild
-} from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -15,11 +12,15 @@ import { DataService } from '../../../core/services/data.service';
 import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 
 import { FamilleFormComponent } from './famille-form.component';
-import { FamilleFraisComponent } from './famille-frais.component';
-import { Famille } from '../../../core/models';
-import { creerAnneeScolaire } from '../../../core/models/family';
+import { FamilleFraisComponent, FraisFormValue } from './famille-frais.component';
+import { AnneeScolaireFamille, creerAnneeScolaire, Famille, FamilleEnrichi } from '../../../core/models/family';
 
-export interface FamilleModalData { famille: Famille | null; }
+export interface FamilleModalData { famille: Famille | FamilleEnrichi | null; }
+
+/** Vérifie si la donnée est un FamilleEnrichi */
+function isFamilleEnrichi(f: Famille | FamilleEnrichi): f is FamilleEnrichi {
+  return 'annee_scolaires' in f;
+}
 
 @Component({
   selector: 'app-famille-modal',
@@ -34,9 +35,8 @@ export interface FamilleModalData { famille: Famille | null; }
 <div class="d-flex flex-column" style="width:100%;max-width:520px">
 
   <!-- En-tête -->
-  <div class="d-flex align-items-center justify-content-between
-              px-3 py-2 border-bottom">
-    <span class="fw-semibold">
+  <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+    <span class="">
       {{ isEdit ? 'Modifier la famille' : 'Nouvelle famille' }}
     </span>
     <button class="btn-close btn-sm" mat-dialog-close></button>
@@ -45,20 +45,18 @@ export interface FamilleModalData { famille: Famille | null; }
   <!-- Corps -->
   <div class="px-3 py-3 d-flex flex-column gap-3 overflow-auto" style="max-height:72vh">
 
-    <!-- Sous-composant : infos famille -->
+    <!-- Identité famille -->
     <app-famille-form
-      #familleForm
       [form]="form"
       (gpsChange)="onGpsChange($event)">
     </app-famille-form>
 
     <hr class="my-1">
 
-    <!-- Sous-composant : frais année scolaire -->
+    <!-- Frais année scolaire -->
     <app-famille-frais
-      #familleFrais
-      [reductionSpecialInit]="reductionSpecialInit"
-      [commentaireInit]="commentaireInit">
+      [anneeScolaire]="anneeScolaireExistante"
+      (fraisChange)="onFraisChange($event)">
     </app-famille-frais>
 
   </div>
@@ -72,6 +70,7 @@ export interface FamilleModalData { famille: Famille | null; }
             (click)="save()">
 
         {{ isEdit ? 'Modifier' : 'Créer famille' }}
+      
     </button>
   </div>
 
@@ -80,25 +79,28 @@ export interface FamilleModalData { famille: Famille | null; }
 })
 export class FamilleModalComponent implements OnInit {
 
-  @ViewChild('familleForm') familleFormRef!: FamilleFormComponent;
-  @ViewChild('familleFrais') familleFraisRef!: FamilleFraisComponent;
-
   readonly data = inject<FamilleModalData>(MAT_DIALOG_DATA);
+  private dialogRef = inject(MatDialogRef<FamilleModalComponent>);
   private svc = inject(DataService);
-
+  private snack = inject(MatSnackBar);
 
   isEdit = false;
   familleId = '';
 
-  // GPS géré localement après émission du sous-composant
+  // GPS — mis à jour via Output de FamilleFormComponent
   private lat: number | null = null;
   private lng: number | null = null;
 
-  // Données de pré-remplissage frais (mode édition)
-  reductionSpecialInit = 0;
-  commentaireInit = '';
+  // Frais — mis à jour via Output de FamilleFraisComponent
+  private fraisValue: FraisFormValue = {
+    actif: false,
+    montant_reduction_special: 0,
+    commentaire: '',
+  };
 
-  // Formulaire identité (passé en @Input au sous-composant)
+  // AnneeScolaireFamille existante passée en @Input à FamilleFraisComponent
+  anneeScolaireExistante: AnneeScolaireFamille | null = null;
+
   form = new FormGroup({
     nom_famille: new FormControl('', Validators.required),
     tel_pere: new FormControl('', Validators.required),
@@ -116,20 +118,34 @@ export class FamilleModalComponent implements OnInit {
     this.lat = this.data.famille.latitude ?? null;
     this.lng = this.data.famille.longitude ?? null;
 
-    // Pré-charge les frais existants depuis AnneeScolaireService si besoin
-    // (à adapter selon votre implémentation réelle)
+    // Récupère l'AnneeScolaireFamille si FamilleEnrichi
+    if (isFamilleEnrichi(this.data.famille)) {
+      const annees = this.data.famille.annee_scolaires ?? [];
+      // Prend celle de l'année courante si elle existe
+      this.anneeScolaireExistante =
+        annees.find(a => a.annee_scolaire === ANNEE_SCOLAIRE) ?? annees[0] ?? null;
+    }
   }
+
+  // ── Callbacks Output ──────────────────────────────────────────
 
   onGpsChange(pos: { lat: number | null; lng: number | null }): void {
     this.lat = pos.lat;
     this.lng = pos.lng;
   }
 
+  onFraisChange(val: FraisFormValue): void {
+    this.fraisValue = val;
+  }
+
+  // ── Sauvegarde ────────────────────────────────────────────────
+
   async save(): Promise<void> {
     if (this.form.invalid) return;
-    // ── 1. Construire la Famille (modèle simplifié sans frais) ──
+
     const idFamille = this.familleId || `FAM-${Date.now()}`;
 
+    // 1. Famille
     const famille: Famille = {
       id_famille: idFamille,
       nom_famille: this.form.value.nom_famille!,
@@ -139,23 +155,28 @@ export class FamilleModalComponent implements OnInit {
       adresse_texte: this.form.value.adresse_texte ?? '',
       latitude: this.lat ?? undefined,
       longitude: this.lng ?? undefined,
+      status: 'ACTIF'
     };
 
-    if (this.isEdit) await this.svc.updateFamille(famille);
-    else await this.svc.addFamille(famille);
+    if (this.isEdit)  this.svc.updateFamille(famille);
+    else  this.svc.addFamille(famille);
 
-    // ── 2. AnneeScolaireFamille — créée automatiquement si section active ──
-    if (this.familleFraisRef?.isActif()) {
-      const { montant_reduction_special, commentaire } =this.familleFraisRef.getData();
+    // 2. AnneeScolaireFamille — si section active
+    // 2. AnneeScolaireFamille
+    const base = this.anneeScolaireExistante ?? creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
 
-      const anneeScolaire = creerAnneeScolaire(
-        idFamille,
-        ANNEE_SCOLAIRE,
-        montant_reduction_special,
-      );
-      anneeScolaire.commentaire = commentaire;
+    const annee: AnneeScolaireFamille = {
+      ...base,
+      ...(this.fraisValue.actif && {
+        montant_reduction_special: this.fraisValue.montant_reduction_special,
+        commentaire: this.fraisValue.commentaire,
+      }),
+    };
 
-      // await this.anneeSvc.save(anneeScolaire); // service dédié
-    }
+    this.anneeScolaireExistante
+      ? this.svc.updateAnneeSvc(annee)
+      :  this.svc.addAnneeSvc(annee);
+
+    this.dialogRef.close({ success: true, famille });
   }
 }
