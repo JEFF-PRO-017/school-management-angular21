@@ -7,8 +7,8 @@ import {
   AfterViewInit, OnDestroy, Input
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MapSearchComponent } from '../../../core/services/map/map-search.component';
-import { MapService, MapRef, TILE_KEYS, MapMode, NominatimResult } from '../../../core/services/map/map.service';
+import { MapSearchComponent } from '../../../../core/services/map/map-search.component';
+import { MapService, MapRef, TILE_KEYS, MapMode, NominatimResult } from '../../../../core/services/map/map.service';
 
 
 export interface PositionGPS { lat: number; lng: number; }
@@ -95,8 +95,8 @@ export class FamilleMapOverlayComponent implements AfterViewInit, OnDestroy {
   }
 
   private initMap(): void {
-    const lat0 = this.latInit ?? 3.848;
-    const lng0 = this.lngInit ?? 11.502;
+    const lat0 =  3.82174;
+    const lng0 =  11.45396;
 
     this.ref = this.ms.creerCarte('overlay-map', MapMode.FORM,
       [lat0, lng0], 14, this.tuileCourante);

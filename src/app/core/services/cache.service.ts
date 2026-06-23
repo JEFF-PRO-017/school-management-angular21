@@ -139,7 +139,7 @@ export class CacheService {
   );
 
   // ── Getters publics ────────────────────────────────────────────
-  getFamilles():    Famille[]        { return this._famillesEnrichies(); }
+  getFamilles():    any[]        { return this._famillesEnrichies(); }
   getClasses():     Classe[]         { return this._classesEnrichies(); }
   getEleves():      Eleve[]          { return this._elevesEnrichis(); }
   getMatieres():    MatiereConfig[]  { return this._matieresEnrichies(); }

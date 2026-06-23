@@ -11,9 +11,9 @@ import { DataService } from '../../../core/services/data.service';
 
 import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 
-import { FamilleFormComponent } from './famille-form.component';
-import { FamilleFraisComponent, FraisFormValue } from './famille-frais.component';
-import { AnneeScolaireFamille, creerAnneeScolaire, Famille, FamilleEnrichi } from '../../../core/models/family';
+import { FamilleFormComponent } from './components/famille-form.component';
+import { FamilleFraisComponent, FraisFormValue } from './components/famille-frais.component';
+import { AnneeScolaireFamille, creerAnneeScolaire, Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
 
 export interface FamilleModalData { famille: Famille | FamilleEnrichi | null; }
 
@@ -82,8 +82,7 @@ export class FamilleModalComponent implements OnInit {
   readonly data = inject<FamilleModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<FamilleModalComponent>);
   private svc = inject(DataService);
-  private snack = inject(MatSnackBar);
-
+  private fas = inject(FamilleService)
   isEdit = false;
   familleId = '';
 
@@ -99,7 +98,7 @@ export class FamilleModalComponent implements OnInit {
   };
 
   // AnneeScolaireFamille existante passée en @Input à FamilleFraisComponent
-  anneeScolaireExistante: AnneeScolaireFamille | null = null;
+  anneeScolaireExistante: AnneeScolaireFamille | undefined = undefined;
 
   form = new FormGroup({
     nom_famille: new FormControl('', Validators.required),
@@ -122,8 +121,7 @@ export class FamilleModalComponent implements OnInit {
     if (isFamilleEnrichi(this.data.famille)) {
       const annees = this.data.famille.annee_scolaires ?? [];
       // Prend celle de l'année courante si elle existe
-      this.anneeScolaireExistante =
-        annees.find(a => a.annee_scolaire === ANNEE_SCOLAIRE) ?? annees[0] ?? null;
+      this.anneeScolaireExistante =this.fas.anneeSvcEncours(annees)
     }
   }
 

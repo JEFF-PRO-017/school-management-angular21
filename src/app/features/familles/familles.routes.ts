@@ -5,7 +5,7 @@ export const FAMILLES_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./familles-list/familles-list.component').then(m => m.FamillesListComponent),
+      import('./familles-list').then(m => m.FamillesListComponent),
   },
   {
     path: 'carte',

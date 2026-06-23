@@ -1,6 +1,6 @@
 import { Classe, Eleve } from "../academic";
 import { Paiement } from "../payment";
-import { StatusFamille } from "../shared";
+import {  StatusFamille } from "../shared";
 
 export interface Famille {
     id_famille: string;
@@ -17,7 +17,7 @@ export interface Famille {
 export interface FamilleEnrichi extends Famille {
     eleves?: EleveEnrichi[];
     paiements?: Paiement[];
-    annee_scolaires?: AnneeScolaireFamille[];
+    annee_scolaires: AnneeScolaireFamille[];
     moratoires?: moratoire[];
 }
 export interface AnneeScolaireFamille {
@@ -28,7 +28,7 @@ export interface AnneeScolaireFamille {
     montant_total_attendu: number;
     montant_reduction?: number;
     montant_reduction_special: number;
-    anciennete?: number;
+    anciennete: number;
 }
 
 export interface moratoire {
@@ -72,17 +72,17 @@ export interface EleveEnrichi extends Eleve {
 
 
 export function creerAnneeScolaire(
-  idFamille: string,
-  annee: string,
-  reductionSpecial = 0
+    idFamille: string,
+    annee: string,
+    reductionSpecial = 0
 ): AnneeScolaireFamille {
-  return {
-    id_annee_scolaire:        `${idFamille}AN_SC`,
-    id_famille:               idFamille,
-    annee_scolaire:           annee,
-    montant_total_attendu:    0,
-    montant_reduction:        0,
-    montant_reduction_special: reductionSpecial,
-    anciennete:               0,
-  };
+    return {
+        id_annee_scolaire: `${idFamille}AN_SC`,
+        id_famille: idFamille,
+        annee_scolaire: annee,
+        montant_total_attendu: 0,
+        montant_reduction: 0,
+        montant_reduction_special: reductionSpecial,
+        anciennete: 0,
+    };
 }

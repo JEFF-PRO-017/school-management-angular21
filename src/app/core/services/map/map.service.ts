@@ -85,7 +85,7 @@ export const TILE_KEYS   = Object.keys(TILE_CONFIGS);
 export const DEFAULT_TILE: string = 'OSM';
 
 /** Coordonnées par défaut — Yaoundé centre */
-export const DEFAULT_CENTER: [number, number] = [3.848, 11.502];
+export const DEFAULT_CENTER: [number, number] = [3.82174, 11.45396];
 export const DEFAULT_ZOOM       = 14;
 export const DEFAULT_ZOOM_MINI  = 15;
 export const DEFAULT_ZOOM_RESULT = 16;  // zoom après sélection résultat recherche

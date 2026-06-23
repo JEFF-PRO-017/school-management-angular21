@@ -7,8 +7,8 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { NgxMaskDirective, provideNgxMask } from 'ngx-mask';
-import { AnneeScolaireFamille } from '../../../core/models/family';
-import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
+import { AnneeScolaireFamille } from '../../../../core/models/family';
+import { ANNEE_SCOLAIRE } from '../../../../core/models/shared';
 
 
 export interface FraisFormValue {
@@ -89,7 +89,7 @@ export interface FraisFormValue {
 export class FamilleFraisComponent implements OnChanges {
 
   /** Passe l'entrée existante en mode édition (peut être null en création) */
-  @Input() anneeScolaire: AnneeScolaireFamille | null = null;
+  @Input() anneeScolaire: AnneeScolaireFamille | undefined = undefined;
 
   /** Émis à chaque changement de valeur ou de toggle */
   @Output() fraisChange = new EventEmitter<FraisFormValue>();

@@ -380,11 +380,12 @@ export class InsolvablesListComponent implements OnInit {
         if (rdv && rdv > dateRef) return false;
       }
 
+      //TODO
       // Filtre 4 — classe
       if (classe) {
-        const ok = (f.eleves ?? [])
-          .some(e => e.id_classe === classe && e.statut === 'actif');
-        if (!ok) return false;
+        // const ok = (f.eleves ?? [])
+        //   .some(e => e.id_classe === classe && e.statut === 'actif');
+        // if (!ok) return false;
       }
 
       return true;
