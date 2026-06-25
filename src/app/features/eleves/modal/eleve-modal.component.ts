@@ -1,183 +1,115 @@
-// ─────────────────────────────────────────────────────────────────
-// eleve-modal.component.ts
-// Modal ajout / modification élève — template bulletins (bl-*)
-// ─────────────────────────────────────────────────────────────────
-import {
-  Component, inject, signal, Inject, OnInit, computed
-} from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService }  from '../../../core/services/data.service';
-import { Eleve, Famille } from '../../../core/models';
+import { StatutEleve } from '../../../core/models/shared';
+import { FamilleEnrichi } from '../../../core/models/family';
+import { Eleve } from '../../../core/models/academic';
 
-export interface EleveModalData { famille: Famille; eleve?: Eleve; }
+export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }
 
 @Component({
   selector: 'app-eleve-modal',
   standalone: true,
   imports: [ReactiveFormsModule, MatDialogModule],
-  styles: [`
-    .bl-modal-host { display:flex; flex-direction:column; gap:0;
-                     font-size:13px; width:100%; max-width:440px; }
-    .bl-modal-head { display:flex; align-items:flex-start;
-                     justify-content:space-between;
-                     padding:14px 18px 12px;
-                     border-bottom:0.5px solid rgba(0,0,0,.09); }
-    .bl-modal-title { font-size:14px; font-weight:500; }
-    .bl-modal-sub   { font-size:11px; color:#888; margin-top:2px; }
-    .bl-modal-body  { padding:14px 18px;
-                      display:flex; flex-direction:column; gap:11px; }
-    .bl-modal-foot  { display:flex; justify-content:flex-end; gap:8px;
-                      padding:10px 18px 14px;
-                      border-top:0.5px solid rgba(0,0,0,.09); }
-
-    .bl-field label { font-size:11px; color:#888;
-                      display:block; margin-bottom:3px; }
-    .bl-field-input, .bl-field-select {
-      width:100%; height:32px; padding:0 10px; font-size:13px;
-      border:0.5px solid rgba(0,0,0,.18); border-radius:6px;
-      background:white; outline:none; color:#333;
-      transition:border-color .15s;
-    }
-    .bl-field-input:focus,
-    .bl-field-select:focus { border-color:#185FA5; }
-    .bl-field-input.invalid { border-color:#A32D2D; }
-    .bl-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-
-    /* Toggle sexe — même style que mode_paiement dans paiement-modal */
-    .bl-sex-btn { flex:1; height:32px; border-radius:6px; font-size:13px;
-                  font-weight:500; cursor:pointer;
-                  border:0.5px solid rgba(0,0,0,.18);
-                  background:white; color:#555; transition:all .12s; }
-    .bl-sex-btn.on { background:#EBF3FC; color:#185FA5;
-                     border-color:#B5D4F4; }
-
-    .bl-btn { height:32px; padding:0 14px; border-radius:6px; font-size:13px;
-              cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
-    .bl-btn:disabled    { opacity:.35; cursor:default; }
-    .bl-btn--outline    { background:white; color:#333;
-                          border:0.5px solid rgba(0,0,0,.18); }
-    .bl-btn--outline:hover { background:#f5f5f5; }
-    .bl-btn--primary    { background:#185FA5; color:#fff; border:none; }
-    .bl-btn--primary:hover { opacity:.88; }
-    .bl-close { width:28px; height:28px; border:0.5px solid rgba(0,0,0,.12);
-                background:white; border-radius:5px; cursor:pointer;
-                display:flex; align-items:center; justify-content:center; color:#555; }
-    .bl-close:hover { background:#FCEBEB; color:#A32D2D; border-color:#F09595; }
-    .bl-spinner { width:13px; height:13px; border-radius:50%;
-                  border:2px solid rgba(255,255,255,.3); border-top-color:#fff;
-                  animation:spin .7s linear infinite; display:inline-block; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-  `],
   template: `
-<div class="bl-modal-host">
+<div style="width:100%;max-width:440px">
 
-  <!-- ── En-tête ── -->
-  <div class="bl-modal-head">
+  <!-- En-tête -->
+  <div class="d-flex align-items-start justify-content-between px-3 py-3 border-bottom">
     <div>
-      <div class="bl-modal-title">
-        {{ isEdit ? "Modifier l\'élève" : "Ajouter un élève" }}
-      </div>
-      <div class="bl-modal-sub">{{ data.famille.nom_famille }}</div>
+      <div class="fw-semibold">{{ isEdit ? "Modifier l'élève" : "Ajouter un élève" }}</div>
+      <div class="text-muted small">{{ data.famille.nom_famille }}</div>
     </div>
-    <button class="bl-close" mat-dialog-close>
-      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-        <path d="M1 1l10 10M11 1L1 11" stroke="currentColor"
-              stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </button>
+    <button class="btn-close" mat-dialog-close></button>
   </div>
 
-  <!-- ── Corps ── -->
-  <div class="bl-modal-body">
-    <form [formGroup]="form">
+  <!-- Corps -->
+  <div class="px-3 py-3 d-flex flex-column gap-3" [formGroup]="form">
 
-      <!-- Nom + Prénom -->
-      <div class="bl-grid2">
-        <div class="bl-field">
-          <label>Nom *</label>
-          <input class="bl-field-input"
-                 [class.invalid]="form.controls.nom.invalid && form.controls.nom.touched"
-                 formControlName="nom" placeholder="Nom de famille">
-          @if (form.controls.nom.invalid && form.controls.nom.touched) {
-            <span style="font-size:10px;color:#A32D2D">Requis</span>
+    <!-- Nom + Prénom -->
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small mb-1">Nom *</label>
+        <input class="form-control form-control-sm"
+               formControlName="nom" placeholder="Nom de famille"
+               [class.is-invalid]="form.controls.nom.invalid && form.controls.nom.touched">
+        <div class="invalid-feedback">Requis</div>
+      </div>
+      <div class="col-6">
+        <label class="form-label small mb-1">Prénom *</label>
+        <input class="form-control form-control-sm"
+               formControlName="prenom" placeholder="Prénom"
+               [class.is-invalid]="form.controls.prenom.invalid && form.controls.prenom.touched">
+        <div class="invalid-feedback">Requis</div>
+      </div>
+    </div>
+
+    <!-- Classe + Sexe -->
+    <div class="row g-2">
+      <div class="col-7">
+        <label class="form-label small mb-1">Classe *</label>
+        <select class="form-select form-select-sm" formControlName="id_classe"
+                [class.is-invalid]="form.controls.id_classe.invalid && form.controls.id_classe.touched">
+          <option value="">Choisir…</option>
+          @for (c of classes(); track c.id_classe) {
+            <option [value]="c.id_classe">{{ c.nom_classe }}</option>
           }
-        </div>
-        <div class="bl-field">
-          <label>Prénom *</label>
-          <input class="bl-field-input"
-                 [class.invalid]="form.controls.prenom.invalid && form.controls.prenom.touched"
-                 formControlName="prenom" placeholder="Prénom">
-          @if (form.controls.prenom.invalid && form.controls.prenom.touched) {
-            <span style="font-size:10px;color:#A32D2D">Requis</span>
-          }
+        </select>
+        <div class="invalid-feedback">Requis</div>
+      </div>
+      <div class="col-5">
+        <label class="form-label small mb-1">Sexe</label>
+        <div class="btn-group btn-group-sm w-100">
+          <button type="button" class="btn"
+                  [class.btn-primary]="form.controls.sexe.value === 'M'"
+                  [class.btn-outline-secondary]="form.controls.sexe.value !== 'M'"
+                  (click)="form.controls.sexe.setValue('M')">M</button>
+          <button type="button" class="btn"
+                  [class.btn-primary]="form.controls.sexe.value === 'F'"
+                  [class.btn-outline-secondary]="form.controls.sexe.value !== 'F'"
+                  (click)="form.controls.sexe.setValue('F')">F</button>
         </div>
       </div>
+    </div>
 
-      <!-- Classe + Sexe -->
-      <div class="bl-grid2">
-        <div class="bl-field">
-          <label>Classe *</label>
-          <select class="bl-field-select" formControlName="id_classe">
-            <option value="">Choisir…</option>
-            @for (c of classes(); track c.id_classe) {
-              <option [value]="c.id_classe">{{ c.nom_classe }}</option>
-            }
-          </select>
-          @if (form.controls.id_classe.invalid && form.controls.id_classe.touched) {
-            <span style="font-size:10px;color:#A32D2D">Requis</span>
-          }
-        </div>
-        <div class="bl-field">
-          <label>Sexe</label>
-          <div style="display:flex;gap:6px;margin-top:1px">
-            <button type="button" class="bl-sex-btn"
-              [class.on]="form.controls.sexe.value === 'M'"
-              (click)="form.controls.sexe.setValue('M')">M</button>
-            <button type="button" class="bl-sex-btn"
-              [class.on]="form.controls.sexe.value === 'F'"
-              (click)="form.controls.sexe.setValue('F')">F</button>
-          </div>
-        </div>
+    <!-- Date naissance + Matricule -->
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small mb-1">Date de naissance</label>
+        <input class="form-control form-control-sm" type="date"
+               formControlName="date_naissance">
       </div>
-
-      <!-- Date naissance + Matricule -->
-      <div class="bl-grid2">
-        <div class="bl-field">
-          <label>Date de naissance</label>
-          <input class="bl-field-input" type="date"
-                 formControlName="date_naissance">
-        </div>
-        <div class="bl-field">
-          <label>Matricule</label>
-          <input class="bl-field-input" formControlName="matricule"
-                 placeholder="Optionnel">
-        </div>
+      <div class="col-6">
+        <label class="form-label small mb-1">Matricule</label>
+        <input class="form-control form-control-sm" formControlName="matricule"
+               placeholder="Optionnel">
       </div>
+    </div>
 
-      <!-- Statut — seulement en mode édition -->
-      @if (isEdit) {
-        <div class="bl-field">
-          <label>Statut</label>
-          <select class="bl-field-select" formControlName="statut">
-            <option value="actif">Actif</option>
-            <option value="archive">Archivé</option>
-          </select>
-        </div>
-      }
+    <!-- Statut — édition uniquement -->
+    @if (isEdit) {
+      <div>
+        <label class="form-label small mb-1">Statut</label>
+        <select class="form-select form-select-sm" formControlName="statut">
+          <option value="ACTIF">Actif</option>
+          <option value="NON-ACTIF">Non actif</option>
+          <option value="ARCHIVE">Archivé</option>
+        </select>
+      </div>
+    }
 
-    </form>
   </div>
 
-  <!-- ── Pied ── -->
-  <div class="bl-modal-foot">
-    <button class="bl-btn bl-btn--outline" mat-dialog-close>Annuler</button>
-    <button class="bl-btn bl-btn--primary"
+  <!-- Pied -->
+  <div class="d-flex justify-content-end gap-2 px-3 py-2 border-top">
+    <button class="btn btn-sm btn-outline-secondary" mat-dialog-close>Annuler</button>
+    <button class="btn btn-sm btn-primary"
             (click)="save()" [disabled]="form.invalid || saving()">
-      @if (saving()) { <span class="bl-spinner"></span> }
+      @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
       {{ saving() ? 'Enregistrement…' : (isEdit ? 'Modifier' : 'Ajouter élève') }}
     </button>
   </div>
@@ -206,28 +138,28 @@ export class EleveModalComponent implements OnInit {
     sexe:           new FormControl<'M' | 'F' | ''>(''),
     date_naissance: new FormControl(''),
     matricule:      new FormControl(''),
-    statut:         new FormControl<'actif' | 'archive'>('actif'),
+    statut:         new FormControl<StatutEleve>('ACTIF'),
   });
 
   ngOnInit(): void {
-    if (this.data.eleve) {
-      this.isEdit  = true;
-      this.eleveId = this.data.eleve.id_eleve;
-      this.form.patchValue({
-        nom:            this.data.eleve.nom,
-        prenom:         this.data.eleve.prenom,
-        id_classe:      this.data.eleve.id_classe,
-        sexe:           this.data.eleve.sexe ?? '',
-        date_naissance: this.data.eleve.date_naissance,
-        matricule:      this.data.eleve.matricule ?? '',
-        statut:         this.data.eleve.statut,
-      });
-    }
+    if (!this.data.eleve) return;
+    this.isEdit  = true;
+    this.eleveId = this.data.eleve.id_eleve;
+    this.form.patchValue({
+      nom:            this.data.eleve.nom,
+      prenom:         this.data.eleve.prenom,
+      id_classe:      this.data.eleve.id_classe,
+      sexe:           this.data.eleve.sexe ?? '',
+      date_naissance: this.data.eleve.date_naissance,
+      matricule:      this.data.eleve.matricule ?? '',
+      statut:         this.data.eleve.statut,
+    });
   }
 
   async save(): Promise<void> {
     if (this.form.invalid) return;
-    this.saving.set(true);
+    // this.saving.set(true);
+
     const eleve: Eleve = {
       id_eleve:         this.eleveId ?? `ELV-${Date.now()}`,
       id_famille:       this.data.famille.id_famille,
@@ -236,17 +168,16 @@ export class EleveModalComponent implements OnInit {
       prenom:           this.form.value.prenom!,
       date_naissance:   this.form.value.date_naissance ?? '',
       date_inscription: new Date().toISOString().split('T')[0],
-      statut:           this.form.value.statut ?? 'actif',
+      statut:           this.form.value.statut ?? 'ACTIF',
       sexe:             this.form.value.sexe || undefined,
       matricule:        this.form.value.matricule || undefined,
     };
-    if (this.isEdit) {
-      await this.dataSvc.updateEleve(eleve);
-    } else {
-      await this.dataSvc.addEleve(eleve);
-    }
-    this.saving.set(false);
-    this.snack.open(`Élève ${this.isEdit ? 'modifié' : 'ajouté'}`, 'OK', { duration: 3000 });
+
+    if (this.isEdit) await this.dataSvc.updateEleve(eleve);
+    else             await this.dataSvc.addEleve(eleve);
+
+    // this.saving.set(false);
+    // this.snack.open(`Élève ${this.isEdit ? 'modifié' : 'ajouté'}`, 'OK', { duration: 3000 });
     this.dialogRef.close({ success: true, eleve });
   }
 }

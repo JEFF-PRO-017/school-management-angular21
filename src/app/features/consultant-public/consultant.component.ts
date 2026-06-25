@@ -699,7 +699,7 @@ export class ConsultantComponent implements OnInit {
       matricule:      '',
     };
     this.dialog.open(EleveModalComponent, {
-      data: { famille: famPourModal, eleve: elevePourModal } satisfies EleveModalData,
+      data: { famille: famPourModal, eleve: elevePourModal } satisfies any,
       width: '480px', maxWidth: '96vw',
     }).afterClosed().subscribe((r?: { success: boolean; eleve: Eleve }) => {
       if (!r?.success) return;

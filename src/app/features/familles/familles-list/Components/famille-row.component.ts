@@ -69,18 +69,7 @@ export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprime
 </td>
 
 <!-- Prochain RDV -->
-<td class="text-center">
-  @if (prochainRdv) {
-    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis"
-          style="cursor:pointer"
-          title="Enregistrer un paiement"
-          (click)="action.emit('paiement')">
-      {{ prochainRdv }}
-    </span>
-  } @else {
-    <span class="text-muted" style="font-size:11px">—</span>
-  }
-</td>
+
 
 <!-- GPS -->
 <td class="text-center">
@@ -206,14 +195,7 @@ export class FamilleRowComponent {
   get isOk(): boolean   { return this.restant === 0 && this.montantAttendu > 0; }
   get isSolde(): boolean { return this.totalVerse >= this.montantAttendu && this.montantAttendu > 0; }
 
-  get prochainRdv(): string | null {
-    return null
-    // const rdv = [...(this.f.paiements ?? [])]
-    //   .sort((a, b) => b.date_paiement.localeCompare(a.date_paiement))
-    //   .find(p => p.date_prochain_rdv)?.date_prochain_rdv;
-    // if (!rdv) return null;
-    // return new Date(rdv).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
+
 
   fmt(n: number): string { return new Intl.NumberFormat('fr-FR').format(Math.round(n)); }
 }

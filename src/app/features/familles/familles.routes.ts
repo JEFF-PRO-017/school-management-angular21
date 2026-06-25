@@ -15,6 +15,6 @@ export const FAMILLES_ROUTES: Routes = [
   {
     path:':id',
     loadComponent: () =>
-      import('./famille-detail/famille-detail.component').then(m => m.FamilleDetailComponent),
+      import('./famille-detail').then(m => m.FamilleDetailComponent),
   }
 ];

@@ -226,7 +226,7 @@ export class DataService {
   }
   // ── Élèves ─────────────────────────────────────────────────────
 
-  async addEleve(e: Eleve): Promise<void> {
+  async addEleve(e: any): Promise<void> {
     this.cache.upsertEleve(e);
     this.queue.enqueue(
       { sheetName: SHEET.eleves, rowData: this.toRow(e, H.eleves) },
@@ -234,7 +234,7 @@ export class DataService {
     );
   }
 
-  async updateEleve(e: Eleve): Promise<void> {
+  async updateEleve(e: any): Promise<void> {
     this.cache.upsertEleve(e);
     const row = await this.sheets.findRowById(SHEET.eleves, e.id_eleve);
     if (row === -1) return this.addEleve(e);

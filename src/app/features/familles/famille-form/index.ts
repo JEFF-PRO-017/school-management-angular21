@@ -161,6 +161,7 @@ export class FamilleModalComponent implements OnInit {
 
     // 2. AnneeScolaireFamille — si section active
     // 2. AnneeScolaireFamille
+    debugger
     const base = this.anneeScolaireExistante ?? creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
 
     const annee: AnneeScolaireFamille = {

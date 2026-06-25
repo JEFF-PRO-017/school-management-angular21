@@ -558,7 +558,7 @@ export class MapService {
                 style="width:100%;padding:6px 0;background:#185FA5;color:#fff;
                        border:none;border-radius:7px;font-size:11px;
                        cursor:pointer;font-weight:600;letter-spacing:.02em">
-          Voir fiche →
+          Voir la famille →
         </button>
       </div>`;
   }
