@@ -108,6 +108,7 @@ export interface Classe {
   enseignant_principal: string;
   eleves?: Eleve[];
   matieres?: MatiereConfig[];
+  prix:number
 }
 
 export interface FraisConfig {

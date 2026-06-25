@@ -1,6 +1,6 @@
-import { Classe, Eleve } from "../academic";
+import { Classe, Eleve, Note } from "../academic";
 import { Paiement } from "../payment";
-import {  StatusFamille } from "../shared";
+import {  Sequence, StatusFamille } from "../shared";
 
 export interface Famille {
     id_famille: string;
@@ -49,7 +49,7 @@ export interface MoratoireEnrichi extends moratoire {
 export interface EleveEnrichi extends Eleve {
     famille?: Famille;
     classe?: Classe;
-    // solde?: SoldeSnap;
+    sequences?: { sequence: Sequence; notes_eleve: Note[] }[];
 }
 
 // export interface SoldeSnap {

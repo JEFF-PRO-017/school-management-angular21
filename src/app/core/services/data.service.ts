@@ -47,7 +47,7 @@ export const H = {
   eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance',
     'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule'],
   classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire',
-    'effectif_max', 'enseignant_principal'],
+    'effectif_max', 'enseignant_principal','prix'],
   paiements: ['id_paiement', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement',
     'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier',
     'statut_alerte_whatsapp'],
@@ -90,7 +90,7 @@ export class DataService {
     // Groupe A — données statiques (batchGet)
     const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn] = await this.batchFetch([
       `${SHEET.familles}!A:L`,
-      `${SHEET.classes}!A:G`,
+      `${SHEET.classes}!A:H`,
       `${SHEET.frais}!A:I`,
       `${SHEET.enseignants}!A:F`,
       `${SHEET.matieres}!A:H`,
@@ -251,7 +251,7 @@ export class DataService {
 
   // ── Classes ────────────────────────────────────────────────────
 
-  async addClasse(c: Classe): Promise<void> {
+  async addClasse(c: any): Promise<void> {
     this.cache.upsertClasse(c);
     this.queue.enqueue(
       { sheetName: SHEET.classes, rowData: this.toRow(c, H.classes) },
@@ -259,7 +259,7 @@ export class DataService {
     );
   }
 
-  async updateClasse(c: Classe): Promise<void> {
+  async updateClasse(c: any): Promise<void> {
     this.cache.upsertClasse(c);
     const row = await this.sheets.findRowById(SHEET.classes, c.id_classe);
     if (row === -1) return this.addClasse(c);
