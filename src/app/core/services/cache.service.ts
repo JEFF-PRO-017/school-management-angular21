@@ -66,11 +66,14 @@ export class CacheService {
 
 
   // ── Niveau 2 : élèves enrichis ────────────────────────────────
-  private _elevesEnrichis = computed<Eleve[]>(() => {
+  private _elevesEnrichis = computed<any[]>(() => {
     const famMap   = new Map(this._familles().map(f => [f.id_famille, f]));
     const notesIdx = this._notesIndex();
+    const classe = this._classes()
+    console.log('eleve enrichis')
     return this._eleves().map(e => ({
       ...e,
+      classe:classe.filter(c => c.id_classe ===e.id_classe)[0],
       famille:   famMap.get(e.id_famille),
       sequences: SEQUENCES.map((seq: Sequence) => ({
         sequence:    seq,

@@ -53,7 +53,7 @@ export class WhatsappService {
   // ══════════════════════════════════════════════════════════════
 
   /** Ouvre WhatsApp Web avec le message pré-rempli pour une famille. */
-  ouvrirWA(famille: Famille, template?: MsgTemplate | null): void {
+  ouvrirWA(famille: any, template?: MsgTemplate | null): void {
     const tel = this.choisirTel(famille);
     if (!tel) return;
     const msg = this.interpoler(
@@ -226,7 +226,7 @@ export class WhatsappService {
   // ══════════════════════════════════════════════════════════════
 
   /** Numéro prioritaire : père d'abord, mère en repli. */
-  choisirTel(f: Famille): string {
+  choisirTel(f: any): string {
     return (f.tel_pere || f.tel_mere || '').replace(/\s+/g, '');
   }
 

@@ -1,79 +1,89 @@
-// insolvables-list.component.ts — v3
-// - Logique WhatsApp déléguée à WhatsappService
-// - Filtre montant restant (max restant)
-// - Filtres tous en signal() purs — toSignal() pour FormControl
-// - debugger supprimé
-// - Pas de recherche texte (trop lent — supprimée)
 import {
   Component, inject, signal, computed,
   ChangeDetectionStrategy, ChangeDetectorRef, OnInit,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { DecimalPipe } from '@angular/common';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { toSignal }   from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 
-import { CacheService }      from '../../../core/services/cache.service';
-import { DataService }       from '../../../core/services/data.service';
-import { WhatsappService }   from '../../../core/services/whatsapp.service';
-import { Famille, MsgTemplate } from '../../../core/models';
-import { InsolvablesPdfService } from '../../../core/services/insolvables-pdf.service';
+import { CacheService } from '../../../core/services/cache.service';
+import { DataService } from '../../../core/services/data.service';
+import { WhatsappService } from '../../../core/services/whatsapp.service';
+import { InsolvablesPdfService } from '../../../core/services/@insolvables/insolvables-pdf.service';
+import { EleveEnrichi, Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
+import { MsgTemplate } from '../../../core/models/communication';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
+import { _dernierRdvFamille, _fmtDate } from '../../../core/services/@insolvables';
+
+// ── Modèle enrichi par élève ──────────────────────────────────────
+export interface EleveData extends EleveEnrichi {
+  nb_enfants_famille: number;   // nb frères/sœurs actifs dans la famille
+  montant_par_enfant: number;   // part versée imputée à cet élève
+  reste_par_enfant: number;   // pension - montant_par_enfant
+  verse_famille: number;   // total versé par la famille
+  attendu_famille: number;   // total attendu pour la famille
+  restant_famille: number;   // restant global de la famille
+  moratoire_depasse: boolean;  // dernier RDV de moratoire dépassé aujourd'hui
+}
 
 @Component({
   selector: 'app-insolvables-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DecimalPipe, PaginationComponent],
   template: `
-<div class="bl-host">
+<div class="d-flex flex-column gap-3" style="font-size:13px">
 
-  <!-- ══ BARRE ══ -->
-  <div class="bl-bar">
-    <div class="bl-cfg-summary">
-      <span class="bl-cfg-titre">Suivi des impayés</span>
-      <span class="bl-cfg-seqs">{{ resumeSous() }}</span>
+  <!-- ══ BARRE OUTILS ══ -->
+  <div class="d-flex align-items-center flex-wrap gap-2 pb-2 border-bottom">
+
+    <div class="d-flex flex-column" style="gap:1px">
+      <span class="fw-medium" style="font-size:12px">Suivi des impayés</span>
+      <span class="text-primary" style="font-size:10px">{{ resumeSous() }}</span>
     </div>
 
-    <span class="bl-sep"></span>
+    <div class="vr mx-1"></div>
 
-    <!-- Versé inférieur à (seuil min) -->
-    <div class="bl-fi-group">
-      <span class="bl-fi-label">Versé &lt;</span>
+    <!-- Versé < seuil -->
+    <div class="d-flex align-items-center gap-1" style="font-size:12px">
+      <span class="text-secondary" style="white-space:nowrap">Versé &lt;</span>
       <input [formControl]="ctrlSeuil" type="number" min="0" step="1000"
-             class="bl-fi" style="width:110px" placeholder="50 000">
-      <span class="bl-fi-unit">FCFA</span>
+             class="form-control form-control-sm" style="width:110px"
+             placeholder="50 000">
+      <span class="text-muted" style="font-size:11px">FCFA</span>
     </div>
 
-    <!-- Restant inférieur à (filtre max restant) -->
-    <div class="bl-fi-group">
-      <span class="bl-fi-label">Restant &lt;</span>
+    <!-- Restant < max -->
+    <div class="d-flex align-items-center gap-1" style="font-size:12px">
+      <span class="text-secondary" style="white-space:nowrap">Restant &lt;</span>
       <input [formControl]="ctrlMaxRestant" type="number" min="0" step="5000"
-             class="bl-fi" style="width:110px" placeholder="200 000">
-      <span class="bl-fi-unit">FCFA</span>
+             class="form-control form-control-sm" style="width:110px"
+             placeholder="200 000">
+      <span class="text-muted" style="font-size:11px">FCFA</span>
     </div>
 
     <!-- Date RDV -->
-    <div class="bl-fi-group">
-      <span class="bl-fi-label">Exclure RDV après</span>
-      <input [formControl]="ctrlDateRef" type="date" class="bl-fi"
-             style="width:140px">
+    <div class="d-flex align-items-center gap-1" style="font-size:12px">
+      <span class="text-secondary" style="white-space:nowrap">Exclure RDV après</span>
+      <input [formControl]="ctrlDateRef" type="date"
+             class="form-control form-control-sm" style="width:140px">
     </div>
 
-    <span class="bl-sep"></span>
+    <div class="vr mx-1"></div>
 
-    <button class="bl-btn" (click)="exportPdf()"
-            [disabled]="cibles().length === 0">
+    <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+            (click)="exportPdf()" [disabled]="cibles().length === 0">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="M3 1h7l3 3v11H3V1z" stroke="currentColor"
-              stroke-width="1.3" stroke-linejoin="round"/>
-        <path d="M10 1v3h3" stroke="currentColor" stroke-width="1.3"/>
-        <path d="M6 9h4M6 11.5h2" stroke="currentColor"
-              stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M3 1h7l3 3v11H3V1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M10 1v3h3M6 9h4M6 11.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
       </svg>
       PDF {{ labelCibles() }}
     </button>
 
-    <button class="bl-btn bl-btn--ok" (click)="envoyerRappels()"
-            [disabled]="cibles().length === 0">
+    <button class="btn btn-sm btn-success d-inline-flex align-items-center gap-1"
+            (click)="envoyerRappels()" [disabled]="cibles().length === 0">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
         <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z"
               stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
@@ -83,267 +93,257 @@ import { InsolvablesPdfService } from '../../../core/services/insolvables-pdf.se
   </div>
 
   <!-- ══ CHIPS FILTRES ══ -->
-  <div class="bl-chips-bar">
+  <div class="d-flex align-items-center flex-wrap gap-2 pb-2 border-bottom">
 
-    <span class="bl-chips-lbl">Classe</span>
-    <button class="bl-chip" [class.bl-chip--on]="filtreClasse() === ''"
+    <span class="text-muted" style="font-size:11px">Classe</span>
+    <button class="btn btn-sm"
+            [class.btn-primary]="filtreClasse() === ''"
+            [class.btn-outline-secondary]="filtreClasse() !== ''"
+            style="font-size:11px;padding:2px 10px"
             (click)="setClasse('')">Toutes</button>
     @for (c of classes(); track c.id_classe) {
-      <button class="bl-chip" [class.bl-chip--on]="filtreClasse() === c.id_classe"
+      <button class="btn btn-sm"
+              [class.btn-primary]="filtreClasse() === c.id_classe"
+              [class.btn-outline-secondary]="filtreClasse() !== c.id_classe"
+              style="font-size:11px;padding:2px 10px"
               (click)="setClasse(c.id_classe)">{{ c.nom_classe }}</button>
     }
 
-    <span class="bl-sep"></span>
+    <div class="vr mx-1"></div>
 
-    <span class="bl-chips-lbl">Message</span>
+    <span class="text-muted" style="font-size:11px">Message</span>
     @if (templates().length === 0) {
-      <span style="font-size:11px;color:#bbb">Aucun template</span>
+      <span class="text-muted" style="font-size:11px">Aucun template</span>
     } @else {
       @for (t of templates(); track t.id_template) {
-        <button class="bl-chip"
-                [class.bl-chip--on]="templateChoisi()?.id_template === t.id_template"
+        <button class="btn btn-sm"
+                [class.btn-primary]="templateChoisi()?.id_template === t.id_template"
+                [class.btn-outline-secondary]="templateChoisi()?.id_template !== t.id_template"
+                style="font-size:11px;padding:2px 10px"
                 (click)="setTemplate(t)">{{ t.objet }}</button>
       }
     }
-
   </div>
 
   <!-- ══ CONTENU ══ -->
   @if (seuil() <= 0 && maxRestant() <= 0) {
-    <div class="bl-empty">Saisissez un montant seuil pour lancer la recherche</div>
+    <div class="text-center text-muted py-5">
+      Saisissez un montant seuil pour lancer la recherche
+    </div>
 
   } @else if (filtered().length === 0) {
-    <div class="bl-empty">Aucune famille correspondant aux critères</div>
+    <div class="text-center text-muted py-5">
+      Aucun élève correspondant aux critères
+    </div>
 
   } @else {
 
     <!-- Barre sélection -->
-    <div class="bl-sel-bar">
-      <label class="bl-chk-wrap">
-        <input type="checkbox" class="bl-chk"
+    <div class="d-flex align-items-center gap-3 py-1">
+      <div class="form-check mb-0">
+        <input type="checkbox" class="form-check-input" id="chkTout"
                [checked]="toutSelectionne()"
                [indeterminate]="selectionPartielle()"
                (change)="toggleTout($event)">
-        <span>Tout sélectionner</span>
-      </label>
+        <label class="form-check-label" for="chkTout" style="font-size:12px">
+          Tout sélectionner
+        </label>
+      </div>
       @if (selection().size > 0) {
-        <span class="bl-mention bl-mention--info">
+        <span class="badge text-bg-primary">
           {{ selection().size }} / {{ filtered().length }} sél.
         </span>
-        <button class="bl-btn" style="height:26px;font-size:11px;padding:0 10px"
+        <button class="btn btn-sm btn-outline-secondary"
+                style="font-size:11px;padding:1px 8px"
                 (click)="viderSelection()">Désélectionner</button>
       }
     </div>
 
-    <div class="bl-table-wrap">
-      <table class="bl-table">
-        <thead>
+    <!-- Tableau -->
+    <div class="table-responsive border rounded">
+      <table class="table table-sm table-hover mb-0" style="font-size:12px">
+        <thead class="table-light">
           <tr>
-            <th class="bl-th" style="width:32px"></th>
-            <th class="bl-th" style="text-align:left">Famille</th>
-            <th class="bl-th">Enfants · classe</th>
-            <th class="bl-th">Contact</th>
-            <th class="bl-th">Attendu</th>
-            <th class="bl-th bl-th--trim">Versé</th>
-            <th class="bl-th bl-th--trim">Restant</th>
-            <th class="bl-th">Prochain RDV</th>
-            <th class="bl-th">WA</th>
+  <th style="width:32px"></th>
+  <th class="text-start">Élève</th>
+  <th class="text-center">Famille</th>
+  <th class="text-center">Classe</th>
+  <th class="text-center">Contact</th>
+  <th class="text-center table-primary">Versé/e</th>
+  <th class="text-center table-primary">Versé T</th>
+  <th class="text-center">Attendu</th>
+  <th class="text-center table-warning">Reste</th>
+  <th class="text-center">Prochain RDV</th>
+  <th class="text-center">WA</th>
           </tr>
         </thead>
         <tbody>
-          @for (f of filtered(); track f.id_famille) {
-            <tr class="bl-tr" [class.bl-tr--sel]="estSelectionne(f.id_famille)">
+          @for (e of pageCourante(); track e.id_eleve) {
+<!-- TBODY — une ligne @for -->
+<tr [class.table-active]="estSelectionne(e.id_eleve)">
 
-              <td class="bl-td bl-td--center">
-                <input type="checkbox" class="bl-chk"
-                       [checked]="estSelectionne(f.id_famille)"
-                       (change)="toggleLigne(f.id_famille, $event)">
-              </td>
+  <td class="text-center align-middle">
+    <input type="checkbox" class="form-check-input"
+           [checked]="estSelectionne(e.id_eleve)"
+           (change)="toggleLigne(e.id_eleve, $event)">
+  </td>
 
-              <td class="bl-td bl-td--name">
-                <div>{{ f.nom_famille }}</div>
-                <div style="font-size:10px;color:#aaa">{{ f.id_famille }}</div>
-              </td>
+  <!-- Élève -->
+  <td class="fw-medium align-middle">{{ e.nom }} {{ e.prenom }}</td>
 
-              <td class="bl-td bl-td--center" style="font-size:11px">
-                <div>{{ nbEnfants(f) }} enfant(s)</div>
-                <div style="color:#aaa">{{ nomsClasses(f) }}</div>
-              </td>
+  <!-- Famille -->
+  <td class="text-center align-middle" style="font-size:11px">
+    <div> {{ e.famille?.nom_famille }}</div>
+    <div class="text-muted" style="font-size:10px">({{ e.nb_enfants_famille }}) enfant(s)</div>
+  </td>
 
-              <td class="bl-td bl-td--center" style="font-size:11px">
-                <div>{{ f.tel_pere || '—' }}</div>
-                @if (f.tel_mere) {
-                  <div style="color:#aaa">{{ f.tel_mere }}</div>
-                }
-              </td>
+  <!-- Classe -->
+  <td class="text-center align-middle" style="font-size:11px">
+    <div>{{ e.classe?.nom_classe }}</div>
+    <div class="text-muted" style="font-size:10px">{{ e.classe?.enseignant_principal }}</div>
+  </td>
 
-              <td class="bl-td bl-td--center" style="font-size:11px;color:#888">
-                {{ fmt(montantAttendu(f)) }}
-              </td>
+  <!-- Contact -->
+  <td class="text-center align-middle" style="font-size:11px">
+    <div>{{ e.famille?.tel_pere || '—' }}</div>
+    @if (e.famille?.tel_mere) {
+      <div class="text-muted">{{ e.famille?.tel_mere }}</div>
+    }
+  </td>
 
-              <td class="bl-td bl-td--center bl-td--trim">
-                <span class="bl-mention bl-mention--warn">{{ fmt(totalVerse(f)) }}</span>
-              </td>
+  <!-- Versé/e (par élève) -->
+  <td class="text-center align-middle table-primary">
+    <span class="badge text-bg-warning">{{ e.montant_par_enfant | number }} FCFA</span>
+  </td>
 
-              <td class="bl-td bl-td--center bl-td--trim">
-                <span class="bl-mention bl-mention--bad">
-                  {{ fmt(restant(f)) }} FCFA
-                </span>
-              </td>
+  <!-- Versé T (total famille) -->
+  <td class="text-center align-middle table-primary" style="font-size:11px">
+    {{ e.verse_famille | number }} FCFA
+  </td>
 
-              <td class="bl-td bl-td--center" style="font-size:11px">
-                @if (prochainRdv(f)) {
-                  <span class="bl-mention bl-mention--info">{{ prochainRdv(f) }}</span>
-                } @else {
-                  <span style="color:#bbb">—</span>
-                }
-              </td>
+  <!-- Attendu famille -->
+  <td class="text-center align-middle" style="font-size:11px">
+    {{ e.attendu_famille | number }} FCFA
+  </td>
 
-              <td class="bl-td bl-td--center">
-                <button class="bl-icon-btn" title="WhatsApp individuel"
-                        (click)="waIndividuel(f)">
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z"
-                          stroke="currentColor" stroke-width="1.3"
-                          stroke-linejoin="round"/>
-                  </svg>
-                </button>
-              </td>
+  <!-- Reste -->
+  <td class="text-center align-middle">
+    <span class="badge"
+          [class.text-bg-danger]="e.moratoire_depasse"
+          [class.text-bg-warning]="!e.moratoire_depasse">
+      {{ e.reste_par_enfant | number }} FCFA
+    </span>
+  </td>
 
-            </tr>
+  <!-- Prochain RDV -->
+  <td class="text-center align-middle" style="font-size:11px">
+    @if (prochainRdv(e.famille)) {
+      <span class="badge"
+            [class.text-bg-danger]="e.moratoire_depasse"
+            [class.text-bg-info]="!e.moratoire_depasse">
+        {{ prochainRdv(e.famille) }}
+      </span>
+    } @else {
+      <span class="text-muted">—</span>
+    }
+  </td>
+
+  <!-- WA -->
+  <td class="text-center align-middle">
+    <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center"
+            style="width:28px;height:28px;padding:0"
+            title="WhatsApp individuel"
+            (click)="waIndividuel(e.famille)">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M2 2l12 6-12 6V9.5l8-1.5-8-1.5V2z"
+              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </td>
+
+</tr>
           }
         </tbody>
       </table>
     </div>
 
-    <div class="bl-foot">
-      <span class="bl-foot-info">
-        {{ filtered().length }} famille(s) en retard
-        · Total restant : {{ fmt(totalRestantGlobal()) }} FCFA
+    <!-- Pagination -->
+    <app-pagination
+      [total]="filtered().length"
+      [pageSize]="pageSize"
+      (pageChange)="onPage($event)">
+    </app-pagination>
+
+    <!-- Pied de liste -->
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <span class="text-muted" style="font-size:11px">
+        {{ filtered().length }} élève(s) en retard
+        · Total restant : {{ totalRestantGlobal() | number }} FCFA
       </span>
-      <span class="bl-foot-info">
-        @if (seuil() > 0)    { Versé &lt; {{ fmt(seuil()) }} · }
-        @if (maxRestant() > 0){ Restant &lt; {{ fmt(maxRestant()) }} · }
-        @if (dateRefSignal()) { RDV exclu après {{ fmtDate(dateRefSignal()) }} }
+      <span class="text-muted" style="font-size:11px">
+        @if (seuil() > 0)      { Versé &lt; {{ seuil() | number }} · }
+        @if (maxRestant() > 0) { Restant &lt; {{ maxRestant() | number }} · }
+        <!-- @if (dateRefSignal())  { RDV exclu après {{ _fmtDate(dateRefSignal()) }} } -->
       </span>
     </div>
   }
 
 </div>
   `,
-  styles: [`
-    .bl-host      { display:flex; flex-direction:column; gap:12px; font-size:13px; }
-    .bl-bar       { display:flex; align-items:center; flex-wrap:wrap; gap:8px;
-                    padding-bottom:12px; border-bottom:0.5px solid rgba(0,0,0,.09); }
-    .bl-sep       { width:0.5px; height:20px; background:rgba(0,0,0,.1); }
-    .bl-cfg-summary{ display:flex; flex-direction:column; gap:1px; }
-    .bl-cfg-titre { font-size:12px; font-weight:500; }
-    .bl-cfg-seqs  { font-size:10px; color:#185FA5; }
-
-    /* Input group */
-    .bl-fi-group  { display:flex; align-items:center; gap:5px; font-size:12px; }
-    .bl-fi-label  { color:#888; white-space:nowrap; }
-    .bl-fi-unit   { color:#aaa; font-size:11px; }
-    .bl-fi        { height:32px; padding:0 8px; font-size:13px;
-                    border:0.5px solid rgba(0,0,0,.18); border-radius:6px;
-                    background:white; outline:none; }
-    .bl-fi:focus  { border-color:#185FA5; }
-
-    .bl-btn { height:32px; padding:0 14px; border-radius:6px; font-size:13px;
-              cursor:pointer; display:inline-flex; align-items:center; gap:5px;
-              border:0.5px solid rgba(0,0,0,.18); background:white; color:#333; }
-    .bl-btn:disabled { opacity:.35; cursor:default; }
-    .bl-btn:not(:disabled):hover { background:#f5f5f5; }
-    .bl-btn--ok { background:#0F6E56; color:#fff; border:none; }
-    .bl-btn--ok:not(:disabled):hover { opacity:.88; }
-
-    .bl-chips-bar { display:flex; align-items:center; flex-wrap:wrap; gap:6px;
-                    padding-bottom:10px;
-                    border-bottom:0.5px solid rgba(0,0,0,.06); }
-    .bl-chips-lbl { font-size:11px; color:#aaa; }
-    .bl-chip      { height:26px; padding:0 10px; border-radius:6px; font-size:11px;
-                    cursor:pointer; border:0.5px solid rgba(0,0,0,.18);
-                    background:white; color:#555; transition:all .12s; }
-    .bl-chip--on  { background:#EBF3FC; color:#185FA5;
-                    border-color:#B5D4F4; font-weight:500; }
-
-    .bl-sel-bar   { display:flex; align-items:center; gap:10px; padding:4px 0; }
-    .bl-chk-wrap  { display:flex; align-items:center; gap:6px; cursor:pointer;
-                    font-size:12px; color:#555; }
-    .bl-chk       { width:14px; height:14px; cursor:pointer; accent-color:#185FA5; }
-
-    .bl-table-wrap { overflow-x:auto;
-                     border:0.5px solid rgba(0,0,0,.09); border-radius:8px; }
-    .bl-table { border-collapse:collapse; font-size:12px; min-width:100%; }
-    .bl-th    { padding:7px 10px; font-weight:500; font-size:11px;
-                background:#f8f8f8; color:#666;
-                border-bottom:0.5px solid rgba(0,0,0,.08);
-                text-align:center; white-space:nowrap; }
-    .bl-th--trim  { background:#EBF3FC; color:#0C447C; }
-    .bl-td        { padding:6px 10px; border-bottom:0.5px solid rgba(0,0,0,.05);
-                    vertical-align:middle; }
-    .bl-td--name   { font-weight:500; }
-    .bl-td--center { text-align:center; }
-    .bl-td--trim   { background:#EBF3FC; }
-    .bl-tr:last-child .bl-td { border-bottom:none; }
-    .bl-tr:hover   .bl-td    { background:rgba(0,0,0,.012); }
-    .bl-tr--sel    .bl-td    { background:#EBF3FC !important; }
-
-    .bl-mention       { font-size:11px; padding:2px 7px; border-radius:99px;
-                        display:inline-block; }
-    .bl-mention--warn { background:#FAEEDA; color:#633806; }
-    .bl-mention--bad  { background:#FCEBEB; color:#791F1F; }
-    .bl-mention--info { background:#EBF3FC; color:#0C447C; }
-
-    .bl-icon-btn { width:28px; height:28px; padding:0;
-                   border:0.5px solid rgba(0,0,0,.12); background:white;
-                   cursor:pointer; border-radius:5px;
-                   display:inline-flex; align-items:center;
-                   justify-content:center; color:#555; }
-    .bl-icon-btn:hover { background:#EBF3FC; color:#185FA5; border-color:#B5D4F4; }
-
-    .bl-foot      { display:flex; justify-content:space-between;
-                    align-items:center; flex-wrap:wrap; gap:8px; }
-    .bl-foot-info { font-size:11px; color:#aaa; }
-    .bl-empty     { text-align:center; padding:40px; color:#ccc; font-size:13px; }
-  `],
+  // Zéro style local — tout Bootstrap
 })
 export class InsolvablesListComponent implements OnInit {
 
-  private cache  = inject(CacheService);
-  private data   = inject(DataService);
-  private wa     = inject(WhatsappService);
-  private pdf    = inject(InsolvablesPdfService);
-  private snack  = inject(MatSnackBar);
-  private cdr    = inject(ChangeDetectorRef);
+  private cache = inject(CacheService);
+  private data = inject(DataService);
+  private wa = inject(WhatsappService);
+  private pdf = inject(InsolvablesPdfService);
+  private snack = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
+  private fasSvc = inject(FamilleService);
 
-  // ── FormControl → toSignal() pour que computed() réagisse ────────
-  ctrlSeuil      = new FormControl<number | null>(null);
+  // ── Pagination ───────────────────────────────────────────────────
+  readonly pageSize = 15;
+  private _debut = signal(0);
+  private _fin = signal(this.pageSize);
+
+  pageCourante = computed(() => this.filtered().slice(this._debut(), this._fin()));
+
+  onPage(e: { debut: number; fin: number }): void {
+    this._debut.set(e.debut);
+    this._fin.set(e.fin);
+  }
+
+  // ── FormControls → signals réactifs ─────────────────────────────
+  ctrlSeuil = new FormControl<number | null>(null);
   ctrlMaxRestant = new FormControl<number | null>(null);
-  ctrlDateRef    = new FormControl<string>('');
+  ctrlDateRef = new FormControl<string>('');
 
-  private seuil$      = toSignal(this.ctrlSeuil.valueChanges,
+  private seuil$ = toSignal(this.ctrlSeuil.valueChanges,
     { initialValue: this.ctrlSeuil.value });
   private maxRestant$ = toSignal(this.ctrlMaxRestant.valueChanges,
     { initialValue: this.ctrlMaxRestant.value });
-  private dateRef$    = toSignal(this.ctrlDateRef.valueChanges,
+  private dateRef$ = toSignal(this.ctrlDateRef.valueChanges,
     { initialValue: this.ctrlDateRef.value ?? '' });
 
-  seuil         = computed<number>(() => +(this.seuil$()      ?? 0));
-  maxRestant    = computed<number>(() => +(this.maxRestant$()  ?? 0));
-  dateRefSignal = computed<string>(() =>   this.dateRef$()     ?? '');
+  seuil = computed<number>(() => +(this.seuil$() ?? 0));
+  maxRestant = computed<number>(() => +(this.maxRestant$() ?? 0));
+  dateRefSignal = computed<string>(() => this.dateRef$() ?? '');
 
-  // ── Filtres signal purs ───────────────────────────────────────────
-  filtreClasse   = signal('');
+  // ── Filtres ──────────────────────────────────────────────────────
+  filtreClasse = signal('');
   templateChoisi = signal<MsgTemplate | null>(null);
-  selection      = signal<Set<string>>(new Set());
+  selection = signal<Set<string>>(new Set());
 
-  setClasse(v: string)        { this.filtreClasse.set(v); }
+  setClasse(v: string) { this.filtreClasse.set(v); }
   setTemplate(t: MsgTemplate) { this.templateChoisi.set(t); }
 
-  // ── Données ───────────────────────────────────────────────────────
-  classes   = computed(() => this.cache.getClasses());
+  // ── Données brutes ───────────────────────────────────────────────
+  classes = computed(() => this.cache.getClasses());
   templates = computed(() => this.data.getTemplates());
+
+  /** Liste enrichie par élève — calculée une fois à l'init */
+  elevesData = signal<EleveData[]>([]);
 
   ngOnInit(): void {
     this.data.loadTemplates().then(() => {
@@ -352,162 +352,179 @@ export class InsolvablesListComponent implements OnInit {
       if (rappel) this.templateChoisi.set(rappel);
       this.cdr.markForCheck();
     });
+    this.elevesData.set(this._construireElevesData());
   }
 
-  // ── Liste filtrée ─────────────────────────────────────────────────
-  filtered = computed<Famille[]>(() => {
-    const seuil      = this.seuil();
-    const maxRestant = this.maxRestant();
-    const dateRef    = this.dateRefSignal();
-    const classe     = this.filtreClasse();
+  /** Transforme chaque famille → un EleveData par élève actif */
+  private _construireElevesData(): EleveData[] {
+    const aujourd = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const result: EleveData[] = [];
 
-    // Au moins un filtre actif
+    for (const famille of this.data.getFamilles()) {
+      // const elevesActifs = (famille.eleves ?? []).filter((e: { statut: string; }) => e.statut === 'ACTIF');
+      const elevesActifs = (famille.eleves ?? [])
+
+      const nb_enfants_famille = elevesActifs.length;
+      if (nb_enfants_famille === 0) continue;
+
+      const anneeSvc = this.fasSvc.anneeSvcEncours(famille.annee_scolaires);
+      const attendu_famille = this.fasSvc.attentu(anneeSvc);
+      const verse_famille = this.fasSvc.verse(famille.paiements ?? []);
+      const restant_famille = this.fasSvc.restant(attendu_famille, verse_famille);
+
+      // Moratoire dépassé : dernier moratoire non réglé avec date_fin < aujourd'hui
+      const moratoire_depasse = (famille.moratoires ?? [])
+        .filter((m: { regler: any; }) => !m.regler)
+        .some((m: { date_fin: any; }) => m.date_fin && m.date_fin < aujourd);
+
+      // Imputation du versement élève par élève (ordre d'inscription)
+      let reste_a_imputer = verse_famille;
+
+      elevesActifs.forEach((eleve: EleveData, i: number) => {
+        const pension = eleve.classe?.prix ?? 0;
+        let montant_par_enfant: number;
+
+        const estDernier = i === nb_enfants_famille - 1;
+        if (estDernier) {
+          // Dernier élève reçoit ce qui reste
+          montant_par_enfant = Math.max(0, reste_a_imputer);
+        } else {
+          const quote_part = verse_famille / nb_enfants_famille;
+          montant_par_enfant = Math.min(pension, quote_part);
+        }
+        reste_a_imputer -= montant_par_enfant;
+
+        result.push({
+          ...eleve,
+          nb_enfants_famille,
+          montant_par_enfant,
+          reste_par_enfant: Math.max(0, pension - montant_par_enfant),
+          verse_famille,
+          attendu_famille,
+          restant_famille,
+          moratoire_depasse,
+        });
+      });
+    }
+    console.log('result', result)
+    return result;
+  }
+
+  // ── Liste filtrée ────────────────────────────────────────────────
+  filtered = computed<EleveData[]>(() => {
+    const seuil = this.seuil();
+    const maxRestant = this.maxRestant();
+    const dateRef = this.dateRefSignal();
+    const classe = this.filtreClasse();
+
     if (seuil <= 0 && maxRestant <= 0) return [];
 
-    return this.cache.getFamilles().filter(f => {
-      const verse = this.totalVerse(f);
-      const rest  = this.restant(f);
-
-      // Filtre 1 — versé inférieur au seuil
-      if (seuil > 0 && verse >= seuil) return false;
-
-      // Filtre 2 — restant inférieur au max (ex : familles qui doivent < 50 000)
-      if (maxRestant > 0 && rest >= maxRestant) return false;
-
-      // Filtre 3 — exclure si RDV futur après dateRef
+    return this.elevesData().filter(e => {
+      if (seuil > 0 && e.montant_par_enfant >= seuil) return false;
+      if (maxRestant > 0 && e.reste_par_enfant >= maxRestant) return false;
       if (dateRef) {
-        const rdv = this.dernierRdv(f);
+        const rdv = _dernierRdvFamille(e.famille);
         if (rdv && rdv > dateRef) return false;
       }
-
-      //TODO
-      // Filtre 4 — classe
-      if (classe) {
-        // const ok = (f.eleves ?? [])
-        //   .some(e => e.id_classe === classe && e.statut === 'actif');
-        // if (!ok) return false;
-      }
-
+      if (classe && e.classe?.id_classe !== classe) return false;
       return true;
     });
   });
 
-  // ── Sélection ─────────────────────────────────────────────────────
-  estSelectionne(id: string) { return this.selection().has(id); }
+  // ── Sélection (par id_eleve) ─────────────────────────────────────
+  estSelectionne(idEleve: string): boolean { return this.selection().has(idEleve); }
 
   toutSelectionne = computed(() =>
     this.filtered().length > 0 &&
-    this.filtered().every(f => this.selection().has(f.id_famille))
+    this.filtered().every(e => this.selection().has(e.id_eleve))
   );
   selectionPartielle = computed(() =>
     this.selection().size > 0 && !this.toutSelectionne()
   );
 
-  cibles = computed<Famille[]>(() =>
+  toggleLigne(idEleve: string, evt: Event): void {
+    const checked = (evt.target as HTMLInputElement).checked;
+    this.selection.update(s => {
+      const n = new Set(s);
+      checked ? n.add(idEleve) : n.delete(idEleve);
+      return n;
+    });
+  }
+
+  toggleTout(evt: Event): void {
+    const checked = (evt.target as HTMLInputElement).checked;
+    this.selection.set(
+      checked ? new Set(this.filtered().map(e => e.id_eleve)) : new Set()
+    );
+  }
+
+  viderSelection(): void { this.selection.set(new Set()); }
+
+  /**
+   * Cibles pour PDF / WhatsApp.
+   * - PDF  → liste d'EleveData (exportée par élève)
+   * - WA   → familles dédupliquées (un message par famille)
+   */
+  cibles = computed<EleveData[]>(() =>
     this.selection().size > 0
-      ? this.filtered().filter(f => this.selection().has(f.id_famille))
+      ? this.filtered().filter(e => this.selection().has(e.id_eleve))
       : this.filtered()
   );
+
+  /** Familles dédupliquées pour WhatsApp */
+  famillesCibles = computed<Famille[]>(() => {
+    const seen = new Set<string>();
+    return this.cibles()
+      .filter(e => e.famille && !seen.has(e.id_famille) && seen.add(e.id_famille))
+      .map(e => e.famille!);
+  });
 
   labelCibles(): string {
     const n = this.cibles().length;
     return this.selection().size > 0 ? `(${n} sél.)` : `(${n})`;
   }
 
-  toggleLigne(id: string, e: Event): void {
-    const checked = (e.target as HTMLInputElement).checked;
-    this.selection.update(s => {
-      const n = new Set(s);
-      checked ? n.add(id) : n.delete(id);
-      return n;
-    });
-  }
-
-  toggleTout(e: Event): void {
-    const checked = (e.target as HTMLInputElement).checked;
-    this.selection.set(
-      checked ? new Set(this.filtered().map(f => f.id_famille)) : new Set()
-    );
-  }
-
-  viderSelection() { this.selection.set(new Set()); }
-
-  // ── Stats ─────────────────────────────────────────────────────────
+  // ── Stats ────────────────────────────────────────────────────────
   resumeSous = computed(() => {
-    const n   = this.filtered().length;
-    const sel = this.selection().size;
     if (this.seuil() <= 0 && this.maxRestant() <= 0)
       return 'Saisissez un seuil pour filtrer';
+    const n = this.filtered().length;
+    const sel = this.selection().size;
     return sel > 0
-      ? `${n} famille(s) · ${sel} sélectionné(s)`
-      : `${n} famille(s) en retard`;
+      ? `${n} élève(s) · ${sel} sélectionné(s)`
+      : `${n} élève(s) en retard`;
   });
 
   totalRestantGlobal = computed(() =>
-    this.filtered().reduce((s, f) => s + this.restant(f), 0)
+    this.filtered().reduce((s, e) => s + e.reste_par_enfant, 0)
   );
 
-  // ── Actions ───────────────────────────────────────────────────────
-
+  // ── Actions ──────────────────────────────────────────────────────
   exportPdf(): void {
-    const annee = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
     this.pdf.genererListeInsolvables(
-      this.cibles(), this.seuil(), annee,
-      this.dateRefSignal() || undefined
+      this.cibles(),
+      this.seuil(),
+      ANNEE_SCOLAIRE,
+      this.dateRefSignal() || undefined,
     );
   }
 
-  /** Masse — ouvre WA pour chaque cible via WhatsappService */
   envoyerRappels(): void {
-    const n = this.wa.ouvrirWAMasse(this.cibles(), this.templateChoisi());
+    const n = this.wa.ouvrirWAMasse(this.famillesCibles(), this.templateChoisi());
     this.snack.open(`${n} message(s) ouvert(s) dans WhatsApp`, 'OK', { duration: 4000 });
   }
 
-  /** Individuel — délègue à WhatsappService */
-  waIndividuel(f: Famille): void {
-    if (!this.wa.choisirTel(f)) {
+  waIndividuel(f: FamilleEnrichi | undefined): void {
+    if (!f || !this.wa.choisirTel(f)) {
       this.snack.open('Aucun numéro pour cette famille', '', { duration: 2500 });
       return;
     }
     this.wa.ouvrirWA(f, this.templateChoisi());
   }
 
-  // ── Helpers données ───────────────────────────────────────────────
-  montantAttendu(f: Famille): number {
-    return +(f.montant_total_attendu ?? 0) - +(f.montant_reduction ?? 0);
+  prochainRdv(f: FamilleEnrichi | undefined): string | null {
+    const r = _dernierRdvFamille(f);
+    return r ? _fmtDate(r) : null;
   }
-  totalVerse(f: Famille): number {
-    return (f.paiements ?? []).reduce((s, p) => s + +(p.montant_verse ?? 0), 0);
-  }
-  restant(f: Famille): number {
-    return Math.max(0, this.montantAttendu(f) - this.totalVerse(f));
-  }
-  nbEnfants(f: Famille): number {
-    return (f.eleves ?? []).filter(e => e.statut === 'actif').length;
-  }
-  nomsClasses(f: Famille): string {
-    const ids = [...new Set(
-      (f.eleves ?? []).filter(e => e.statut === 'actif').map(e => e.id_classe)
-    )];
-    return ids.map(id => this.cache.classesMap().get(id)?.nom_classe ?? id).join(', ');
-  }
-  private dernierRdv(f: Famille): string | null {
-    const rdvs = (f.paiements ?? [])
-      .map(p => p.date_prochain_rdv).filter(Boolean) as string[];
-    return rdvs.length ? rdvs.sort().at(-1)! : null;
-  }
-  prochainRdv(f: Famille): string | null {
-    const r = this.dernierRdv(f);
-    return r ? this.fmtDate(r) : null;
-  }
-  fmt(n: number): string {
-    return new Intl.NumberFormat('fr-FR').format(Math.round(n));
-  }
-  fmtDate(iso: string): string {
-    if (!iso) return '—';
-    try {
-      return new Date(iso).toLocaleDateString('fr-FR',
-        { day:'2-digit', month:'short', year:'numeric' });
-    } catch { return iso; }
-  }
+
 }

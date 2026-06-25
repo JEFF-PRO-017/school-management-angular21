@@ -130,7 +130,7 @@ export class DataService {
   // ── Getters ────────────────────────────────────────────────────
 
   getClasses(): Classe[] { return this.cache.getClasses(); }
-  getFamilles(): Famille[] { return this.cache.getFamilles(); }
+  getFamilles(): any[] { return this.cache.getFamilles(); }
   getEleves(): Eleve[] { return this.cache.getEleves(); }
   getMatieres(): MatiereConfig[] { return this.cache.getMatieres(); }
   getFrais(): FraisConfig[] { return this.cache.getFrais(); }

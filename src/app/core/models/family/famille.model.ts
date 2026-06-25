@@ -18,7 +18,7 @@ export interface FamilleEnrichi extends Famille {
     eleves?: EleveEnrichi[];
     paiements?: Paiement[];
     annee_scolaires: AnneeScolaireFamille[];
-    moratoires?: moratoire[];
+    moratoires?: Moratoire[];
 }
 export interface AnneeScolaireFamille {
     id_annee_scolaire: string;
@@ -31,7 +31,7 @@ export interface AnneeScolaireFamille {
     anciennete: number;
 }
 
-export interface moratoire {
+export interface Moratoire {
     id_moratoire: string;
     id_famille: string;
     id_annee_scolaire: string;
@@ -42,12 +42,12 @@ export interface moratoire {
     regler: boolean;
 }
 
-export interface MoratoireEnrichi extends moratoire {
+export interface MoratoireEnrichi extends Moratoire {
     famille?: Famille;
     annee_scolaire?: AnneeScolaireFamille;
 }
 export interface EleveEnrichi extends Eleve {
-    famille?: Famille;
+    famille?: FamilleEnrichi;
     classe?: Classe;
     sequences?: { sequence: Sequence; notes_eleve: Note[] }[];
 }
