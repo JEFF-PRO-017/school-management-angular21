@@ -73,7 +73,7 @@ export class CacheService {
     console.log('eleve enrichis')
     return this._eleves().map(e => ({
       ...e,
-      classe:classe.filter(c => c.id_classe ===e.id_classe)[0],
+      classe:classe.find(c => c.id_classe ===e.id_classe),
       famille:   famMap.get(e.id_famille),
       sequences: SEQUENCES.map((seq: Sequence) => ({
         sequence:    seq,

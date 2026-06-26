@@ -1,12 +1,11 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService }  from '../../../core/services/data.service';
 import { StatutEleve } from '../../../core/models/shared';
-import { FamilleEnrichi } from '../../../core/models/family';
+import { AnneeScolaireFamille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
 import { Eleve } from '../../../core/models/academic';
 
 export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }
@@ -108,9 +107,8 @@ export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }
   <div class="d-flex justify-content-end gap-2 px-3 py-2 border-top">
     <button class="btn btn-sm btn-outline-secondary" mat-dialog-close>Annuler</button>
     <button class="btn btn-sm btn-primary"
-            (click)="save()" [disabled]="form.invalid || saving()">
-      @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
-      {{ saving() ? 'Enregistrement…' : (isEdit ? 'Modifier' : 'Ajouter élève') }}
+            (click)="save()" >
+ {{(isEdit ? 'Modifier' : 'Ajouter élève')}}
     </button>
   </div>
 
@@ -121,15 +119,13 @@ export class EleveModalComponent implements OnInit {
 
   readonly data     = inject<EleveModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<EleveModalComponent>);
-  private cache     = inject(CacheService);
   private dataSvc   = inject(DataService);
-  private snack     = inject(MatSnackBar);
+  private fas       = inject(FamilleService)
 
   isEdit  = false;
-  saving  = signal(false);
   private eleveId: string | null = null;
 
-  classes = computed(() => this.cache.getClasses() ?? []);
+  classes = computed(() => this.dataSvc.getClasses() ?? []);
 
   form = new FormGroup({
     nom:            new FormControl('', Validators.required),
@@ -158,7 +154,8 @@ export class EleveModalComponent implements OnInit {
 
   async save(): Promise<void> {
     if (this.form.invalid) return;
-    // this.saving.set(true);
+    const classe   = this.classes().find(c => c.id_classe ===this.form.value.id_classe)
+    if(!classe) return
 
     const eleve: Eleve = {
       id_eleve:         this.eleveId ?? `ELV-${Date.now()}`,
@@ -173,11 +170,15 @@ export class EleveModalComponent implements OnInit {
       matricule:        this.form.value.matricule || undefined,
     };
 
+    const anneeUpdate =this.fas.upateAnneeSvc(this.data.famille,eleve,classe) 
+    if(!anneeUpdate) return
+    
     if (this.isEdit) await this.dataSvc.updateEleve(eleve);
     else             await this.dataSvc.addEleve(eleve);
 
-    // this.saving.set(false);
-    // this.snack.open(`Élève ${this.isEdit ? 'modifié' : 'ajouté'}`, 'OK', { duration: 3000 });
+    console.log('anneeUpdate',anneeUpdate);
+    this.dataSvc.updateAnneeSvc(anneeUpdate)
+
     this.dialogRef.close({ success: true, eleve });
   }
 }

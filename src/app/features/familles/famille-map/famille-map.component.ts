@@ -163,9 +163,8 @@ export class FamilleMapComponent implements OnInit, OnDestroy {
       console.log('latLng', latLng)
       this.allBounds.push(latLng);
 
-      const totalVerse = this.fas.verse(f.paiements ?? [])
-      const anneesvc = this.fas.anneeSvcEncours(f.annee_scolaires);
-      const attendu = this.fas.attentu(anneesvc)
+      const totalVerse = this.fas.montantVerse(f)
+      const attendu = this.fas.montantAttentu(f)
       const aDette = attendu > 0 && totalVerse < attendu;
 
       const popup = this.ms.buildPopupFamille(f, totalVerse, attendu);

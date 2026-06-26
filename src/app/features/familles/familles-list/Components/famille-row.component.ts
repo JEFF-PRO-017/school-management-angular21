@@ -5,9 +5,10 @@
 import {
   Component, Input, Output, EventEmitter,
   ChangeDetectionStrategy,
+  inject,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FamilleEnrichi } from '../../../../core/models/family';
+import { FamilleEnrichi, FamilleService } from '../../../../core/models/family';
 
 export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprimer';
 
@@ -151,6 +152,7 @@ export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprime
   `],
 })
 export class FamilleRowComponent {
+  private fas = inject(FamilleService)
 
   @Input({ required: true }) f!: FamilleEnrichi;
   @Input() classesMap: Map<string, { nom_classe: string }> = new Map();
@@ -181,16 +183,14 @@ export class FamilleRowComponent {
   }
 
   get montantAttendu(): number {
-    return 0
-    // return (this.f.montant_total_attendu ?? 0) - (this.f.montant_reduction ?? 0);
-    
+    return this.fas.montantAttentu(this.f)
   }
 
   get totalVerse(): number {
-    return (this.f.paiements ?? []).reduce((s, p) => s + (+p.montant_verse), 0);
+    return this.fas.montantVerse(this.f)
   }
 
-  get restant(): number { return Math.max(0, this.montantAttendu - this.totalVerse); }
+  get restant(): number { return this.fas.montantRestant(this.montantAttendu , this.totalVerse); }
   get aDette(): boolean { return this.restant > 0 && this.montantAttendu > 0; }
   get isOk(): boolean   { return this.restant === 0 && this.montantAttendu > 0; }
   get isSolde(): boolean { return this.totalVerse >= this.montantAttendu && this.montantAttendu > 0; }

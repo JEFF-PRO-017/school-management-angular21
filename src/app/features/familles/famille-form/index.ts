@@ -119,9 +119,8 @@ export class FamilleModalComponent implements OnInit {
 
     // Récupère l'AnneeScolaireFamille si FamilleEnrichi
     if (isFamilleEnrichi(this.data.famille)) {
-      const annees = this.data.famille.annee_scolaires ?? [];
       // Prend celle de l'année courante si elle existe
-      this.anneeScolaireExistante =this.fas.anneeSvcEncours(annees)
+      this.anneeScolaireExistante =this.fas.anneeSvcEncours(this.data.famille)
     }
   }
 

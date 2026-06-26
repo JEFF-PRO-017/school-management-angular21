@@ -108,18 +108,20 @@ export class FamilleDetailComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private fas = inject(FamilleService);
 
-  famille = signal<FamilleEnrichi | null>(null);
+  // famille = signal<FamilleEnrichi | null>(null);
+  id = signal<string>('')
+  famille = computed(() => {
+    console.log('fresh famille')
+    return this.cache.getFamilles().find(f => f.id_famille === this.id());
+  })
   annee = ANNEE_SCOLAIRE;
 
   // ── Computed via FamilleService ──────────────────────────────
 
-  private anneeSvc = computed(() =>
-    this.fas.anneeSvcEncours(this.famille()?.annee_scolaires ?? [])
-  );
 
-  attendu = computed(() => this.fas.attentu(this.anneeSvc()));
-  verse = computed(() => this.fas.verse(this.paiements()));
-  restant = computed(() => this.fas.restant(this.attendu(), this.verse()));
+  attendu = computed(() => this.fas.montantAttentu(this.famille()));
+  verse = computed(() => this.fas.montantVerse(this.famille()));
+  restant = computed(() => this.fas.montantRestant(this.attendu(), this.verse()));
   progression = computed(() => {
     if (this.attendu() <= 0) return 100;
     return Math.min(100, Math.round((this.verse() / this.attendu()) * 100));
@@ -153,21 +155,15 @@ export class FamilleDetailComponent implements OnInit {
 
   // ── Init ────────────────────────────────────────────────────
 
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) { this.router.navigate(['/familles']); return; }
-
-    this.getFamille(id)
-
+    this.id.set(id)
   }
 
   getFamille(id: string) {
-    console.log('fresh famille')
-    const cached = this.cache.getFamilles().find(f => f.id_famille === id);
-    if (cached) {
-      this.famille.set(cached);
-    }
-    console.log('this.famille', this.famille())
+        this.id.set(this.id())
   }
 
   // ── Actions ─────────────────────────────────────────────────
@@ -198,7 +194,7 @@ export class FamilleDetailComponent implements OnInit {
     this.dialog.open(EleveModalComponent, {
       data: { famille: f as any } satisfies EleveModalData,
       width: '460px', maxWidth: '96vw',
-    }).afterClosed().subscribe(r => { this.getFamille(f.id_famille)});
+    }).afterClosed().subscribe(r => { this.getFamille(f.id_famille) });
   }
 
   ouvrirModifEleve(e: Eleve): void {

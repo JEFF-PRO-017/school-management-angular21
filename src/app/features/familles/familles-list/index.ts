@@ -46,7 +46,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
             <th class="fw-medium text-secondary" style="font-size:11px">Famille</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Téléphones</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Enfants</th>
-            <th class="fw-medium text-secondary text-center" style="font-size:11px">Pension</th>
+            <th class="fw-medium text-secondary text-center" style="font-size:11px">Attendu</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Versé</th>
             <th class="fw-medium text-center"
                 style="font-size:11px;background:#EBF3FC;color:#0C447C">Restant</th>
@@ -161,10 +161,9 @@ export class FamillesListComponent implements OnInit {
              && !f.tel_pere?.includes(q)
              && !f.tel_mere?.includes(q)) return false;
 
-      const anneesvc = this.fas.anneeSvcEncours(f.annee_scolaires ?? []);
-      const attendu  = this.fas.attentu(anneesvc);
-      const verse    = this.fas.verse(f.paiements ?? []);
-      const restant  = this.fas.restant(attendu, verse);
+      const attendu  = this.fas.montantAttentu(f);
+      const verse    = this.fas.montantVerse(f);
+      const restant  = this.fas.montantRestant(attendu, verse);
 
       if (etat === 'solde'    && !(restant > 0 && attendu > 0)) return false;
       if (etat === 'sans-gps' && !!(f.latitude && f.longitude)) return false;
@@ -192,9 +191,9 @@ export class FamillesListComponent implements OnInit {
   // ── Totaux globaux (liste filtrée entière) ───────────────────
   totalEleves        = computed(() => this.filtered().reduce((s, f) => s + (f.eleves ?? []).length, 0));
   totalAttenduGlobal = computed(() => this.filtered().reduce((s, f) =>
-    s + this.fas.attentu(this.fas.anneeSvcEncours(f.annee_scolaires ?? [])), 0));
+    s + this.fas.montantAttentu(f),0));
   totalVerseGlobal   = computed(() => this.filtered().reduce((s, f) =>
-    s + this.fas.verse(f.paiements ?? []), 0));
+    s + this.fas.montantVerse(f), 0));
   totalRestantGlobal = computed(() => Math.max(0, this.totalAttenduGlobal() - this.totalVerseGlobal()));
 
   ngOnInit(): void { this.cache.getClasses(); }
@@ -212,12 +211,12 @@ export class FamillesListComponent implements OnInit {
   }
 
   private montantAttendu(f: FamilleEnrichi): number {
-    return this.fas.attentu(this.fas.anneeSvcEncours(f.annee_scolaires ?? []));
+    return this.fas.montantAttentu(f);
   }
 
   ouvrirModalPaiement(f: FamilleEnrichi): void {
     this.dialog.open(PaiementModalComponent, {
-      data: { famille: f as any, totalVerse: this.fas.verse(f.paiements ?? []), montantAttendu: this.montantAttendu(f) } satisfies PaiementModalData,
+      data: { famille: f as any, totalVerse: this.fas.montantVerse(f), montantAttendu: this.montantAttendu(f) } satisfies PaiementModalData,
       width: '460px', maxWidth: '96vw',
     }).afterClosed().subscribe(r => { if (r?.success) this.cdr.markForCheck(); });
   }

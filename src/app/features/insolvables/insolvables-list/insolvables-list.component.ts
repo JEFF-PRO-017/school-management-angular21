@@ -231,7 +231,7 @@ export interface EleveData extends EleveEnrichi {
     <span class="badge"
           [class.text-bg-danger]="e.moratoire_depasse"
           [class.text-bg-warning]="!e.moratoire_depasse">
-      {{ e.reste_par_enfant | number }} FCFA
+      {{ e.restant_famille | number }} FCFA
     </span>
   </td>
 
@@ -278,7 +278,7 @@ export interface EleveData extends EleveEnrichi {
     <div class="d-flex justify-content-between flex-wrap gap-2">
       <span class="text-muted" style="font-size:11px">
         {{ filtered().length }} élève(s) en retard
-        · Total restant : {{ totalRestantGlobal() | number }} FCFA
+        <!-- · Total restant : {{ totalRestantGlobal() | number }} FCFA -->
       </span>
       <span class="text-muted" style="font-size:11px">
         @if (seuil() > 0)      { Versé &lt; {{ seuil() | number }} · }
@@ -367,10 +367,9 @@ export class InsolvablesListComponent implements OnInit {
       const nb_enfants_famille = elevesActifs.length;
       if (nb_enfants_famille === 0) continue;
 
-      const anneeSvc = this.fasSvc.anneeSvcEncours(famille.annee_scolaires);
-      const attendu_famille = this.fasSvc.attentu(anneeSvc);
-      const verse_famille = this.fasSvc.verse(famille.paiements ?? []);
-      const restant_famille = this.fasSvc.restant(attendu_famille, verse_famille);
+      const attendu_famille = this.fasSvc.montantAttentu(famille);
+      const verse_famille = this.fasSvc.montantVerse(famille);
+      const restant_famille = this.fasSvc.montantRestant(attendu_famille, verse_famille);
 
       // Moratoire dépassé : dernier moratoire non réglé avec date_fin < aujourd'hui
       const moratoire_depasse = (famille.moratoires ?? [])
