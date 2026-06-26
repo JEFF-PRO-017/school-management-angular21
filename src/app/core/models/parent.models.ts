@@ -3,7 +3,7 @@
 // Étend les modèles principaux avec les tables tampon
 // et les types spécifiques à l'espace parent.
 
-import { Famille, Eleve, Paiement, Absence, Note, Sequence } from '../models';
+import { Famille, Eleve, Paiement, Absence, Note, Sequence } from './last_index';
 
 // ── Session parent ────────────────────────────────────────────────
 

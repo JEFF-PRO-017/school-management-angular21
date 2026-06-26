@@ -23,7 +23,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DataService } from '../../../core/services/data.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Note, Sequence, Eleve, MatiereConfig, SEQUENCES } from '../../../core/models';
+import { Note, Sequence, Eleve, MatiereConfig, SEQUENCES } from '../../../core/models/last_index';
 import { TransfertEleveDialogComponent } from '../transfert-eleve-dialog/transfert-eleve-dialog.component';
 
 // ── Types internes ─────────────────────────────────────────────────────────

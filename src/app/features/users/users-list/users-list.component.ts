@@ -5,7 +5,7 @@ import {
 } from '@angular/core';
 import { MatDialog }   from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { AppUser, PERMISSIONS, PermissionId } from '../../../core/models';
+import { AppUser, PERMISSIONS, PermissionId } from '../../../core/models/last_index';
 import { UserModalData, UserModalComponent } from '../modal/user-modal.component';
 import { DataService } from '../../../core/services/data.service';
 

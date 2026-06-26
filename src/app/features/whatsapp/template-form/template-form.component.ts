@@ -10,7 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { SheetsQueueServiceService } from '../../../core/services/sheets-queue.service';
-import { MsgTemplate } from '../../../core/models';
+import { MsgTemplate } from '../../../core/models/last_index';
 import { DataService } from '../../../core/services/data.service';
 
 export interface TemplateModalData { template?: MsgTemplate; }

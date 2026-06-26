@@ -1,4 +1,6 @@
- export function _dernierRdvFamille(f: any): string | null {
+import { FamilleEnrichi } from "../../models";
+
+ export function _dernierRdvFamille(f: FamilleEnrichi|any): string | null {
     if (!f) return null;
     const rdvs = (f.moratoires ?? [])
       .filter((m: any) => !m.regler && m.date_fin)

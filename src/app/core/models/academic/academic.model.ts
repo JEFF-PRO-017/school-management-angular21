@@ -41,6 +41,11 @@ export interface Enseignant {
   classes_assignees: string;
 }
 
+export interface EnseignantEnrichie extends Enseignant {
+  classes_assignees_infos: Classe,
+  matieres: MatiereConfig[]
+}
+
 export interface MatiereConfig {
   id_matiere: string;
   nom_matiere: string;
@@ -50,6 +55,7 @@ export interface MatiereConfig {
   groupe?: string;
   niveau?: any;
   id_enseignant: string;
+  classe?:Classe
 }
 
 // note
@@ -71,8 +77,26 @@ export interface Absence {
   id_enfant: string;   // id_eleve
   id_famille: string;
   id_classe: string;
+  id_pointage:string;
   date: string;   // YYYY-MM-DD
   heure: string;   // HH:MM
   justifie: boolean;
   motif?: string;
+}
+
+export interface PointageModalData {
+  id_classe   : string;
+  nom_classe  : string;
+  date        : string;   // YYYY-MM-DD
+  heure_debut : string;   // HH:mm — pré-rempli depuis ctrlHeure
+  nb_absents  : number;
+}
+
+export interface PointageResult {
+  id_pointage    : string
+  id_matiere     : string;
+  id_enseignants : string;
+  date_debut     : string;  // ISO
+  date_fin       : string;  // ISO
+  duree          : number;  // minutes
 }

@@ -1,6 +1,6 @@
 // bulletin.models.ts — tous les types du système bulletins
 
-import { MatiereConfig, Sequence, Eleve } from "../../../core/models";
+import { MatiereConfig, Sequence, Eleve } from "../../../core/models/last_index";
 
 export interface GroupeMatiere {
   nom: string;

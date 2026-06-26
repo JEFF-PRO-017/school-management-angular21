@@ -5,9 +5,10 @@ import {
   MatiereConfig, SoldeSnap, BulletinSnap,
   Note, Sequence, SEQUENCES, Paiement, Absence,
   MsgTemplate, LogAlerte, AppUser, PermissionId
-} from '../models';
+} from '../models/last_index';
 import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
+import { PointageResult } from '../models';
 
 
 @Injectable({ providedIn: 'root' })
@@ -29,6 +30,7 @@ export class CacheService {
   private _logs        = signal<LogAlerte[]>([]);
   private _users       = signal<AppUser[]>([]);
   private _anneeSvc    = signal<AnneeScolaireFamille[]>([])
+  private _pointages  = signal<PointageResult[]>([])
 
   // ── Signaux tampon (espace parent — données en attente) ────────
   private _famillesTampon  = signal<FamilleTampon[]>([]);
@@ -165,6 +167,7 @@ export class CacheService {
   setNotes(d: Note[])               { this._notes.set(d); }
   setPaiements(d: Paiement[])       { this._paiements.set(d); }
   setAnneeSvc(a:AnneeScolaireFamille[]){this._anneeSvc.set(a);}
+  setPointages(p:PointageResult[]) {this._pointages.set(p)}
 
   // ── Upsert / remove ───────────────────────────────────────────
   upsertFamille(f: Famille)   { this._familles.update(l => upsert(l, f, 'id_famille')); }
@@ -188,6 +191,7 @@ export class CacheService {
   setAbsences(d: Absence[])       { this._absences.set(d); }
   addAbsence(a: Absence)          { this._absences.update(l => [a, ...l]); }
   addAbsencesBatch(abs: Absence[]){ this._absences.update(l => [...abs, ...l]); }
+  addPointage(p:PointageResult){this._pointages.update(l => [p,...l])}
 
   // ── Templates ─────────────────────────────────────────────────────
   getTemplates():            MsgTemplate[]  { return this._templates(); }

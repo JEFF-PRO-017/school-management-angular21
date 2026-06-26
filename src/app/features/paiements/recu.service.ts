@@ -16,7 +16,7 @@
 // Dépendance : npm install jspdf
 // ─────────────────────────────────────────────────────────────────
 import { Injectable } from '@angular/core';
-import { Paiement, Famille } from '../../core/models';
+import { Paiement, Famille } from '../../core/models/last_index';
 
 // Infos personnalisables de l'établissement
 export interface InfosEcole {

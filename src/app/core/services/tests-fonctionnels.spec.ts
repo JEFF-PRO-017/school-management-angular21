@@ -36,7 +36,7 @@ import { authGuard, permGuard, adminGuard } from '../guards/auth.guard';
 // Modèles
 import {
   Famille, Eleve, Classe, AppUser, PermissionId, Absence
-} from '../models';
+} from '../models/last_index';
 
 // Utilitaires
 import { concatStrings, deconcatString } from './data.service';

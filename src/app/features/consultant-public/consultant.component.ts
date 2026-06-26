@@ -7,7 +7,7 @@ import {
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { toSignal }   from '@angular/core/rxjs-interop';
 import { MatDialog }  from '@angular/material/dialog';
-import { Famille, Eleve } from '../../core/models';
+import { Famille, Eleve } from '../../core/models/last_index';
 import { FamilleTampon, EleveTampon, PensionTampon, DemandePaiement, SHEET_TAMPON } from '../../core/models/parent.models';
 import { GoogleSheetsService } from '../../core/services/@google-sheets/google-sheets.service';
 import { CacheService } from '../../core/services/cache.service';

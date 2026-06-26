@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Eleve } from '../../../core/models';
+import { Eleve } from '../../../core/models/last_index';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 export interface TransfertDialogData {

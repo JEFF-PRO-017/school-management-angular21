@@ -19,7 +19,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
-import { Eleve } from '../../../core/models';
+import { Eleve } from '../../../core/models/last_index';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EleveModalComponent, EleveModalData } from '../modal/eleve-modal.component';
 

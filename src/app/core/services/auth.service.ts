@@ -1,10 +1,10 @@
 // auth.service.ts
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Router }      from '@angular/router';
-import { AppUser, PermissionId, Section } from '../models';
+import { Router } from '@angular/router';
 import { CacheService } from './cache.service';
-import { DataService }  from './data.service';
-import { compare }      from 'bcryptjs';
+import { DataService } from './data.service';
+import { compare } from 'bcryptjs';
+import { AppUser, AppUserEnrichi, PermissionId, Section } from '../models';
 
 const STORAGE_KEY = 'app_user';
 const SECTION_KEY = 'app_section';
@@ -12,20 +12,20 @@ const SECTION_KEY = 'app_section';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
-  private cache  = inject(CacheService);
-  private data   = inject(DataService);
+  private cache = inject(CacheService);
+  private data = inject(DataService);
   private router = inject(Router);   // injecté ici, pas dans logout()
 
   // ── State ─────────────────────────────────────────────────────────
-  private _user    = signal<AppUser | null>(null);
+  private _user = signal<AppUserEnrichi | null>(null);
   private _section = signal<Section>(
     (localStorage.getItem(SECTION_KEY) as Section) ?? 'secondaire'
   );
 
-  readonly user     = this._user.asReadonly();
-  readonly section  = this._section.asReadonly();
+  readonly user = this._user.asReadonly();
+  readonly section = this._section.asReadonly();
   readonly isLogged = computed(() => this._user() !== null);
-  readonly isAdmin  = computed(() => this._user()?.is_admin === true);
+  readonly isAdmin = computed(() => this._user()?.is_admin === true);
 
   // ── Section ───────────────────────────────────────────────────────
 
@@ -97,10 +97,10 @@ export class AuthService {
 
   // ── Helpers privés ────────────────────────────────────────────────
 
-  // private loadUser(): AppUser | null {
-  //   try {
-  //     const raw = localStorage.getItem(STORAGE_KEY);
-  //     return raw ? JSON.parse(raw) : null;
-  //   } catch { return null; }
-  // }
+  private loadUser(): AppUserEnrichi | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
 }

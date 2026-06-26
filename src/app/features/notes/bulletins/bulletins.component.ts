@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { DataService }     from '../../../core/services/data.service';
 import { AuthService }     from '../../../core/services/auth.service';
 import { WhatsappService } from '../../../core/services/whatsapp.service';
-import { Eleve, MatiereConfig, Sequence, EleveEnrichi } from '../../../core/models';
+import { Eleve, MatiereConfig, Sequence, EleveEnrichi } from '../../../core/models/last_index';
 import { BulletinConfigModal } from '../helper/bulletin-config.modal';
 import {
   BulletinConfig, GroupeMatiere, BulletinData,

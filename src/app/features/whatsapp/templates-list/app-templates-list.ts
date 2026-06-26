@@ -10,7 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DataService } from '../../../core/services/data.service';
-import { MsgTemplate } from '../../../core/models';
+import { MsgTemplate } from '../../../core/models/last_index';
 import { TemplateFormComponent, TemplateModalData } from '../template-form/template-form.component';
 
 

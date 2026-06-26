@@ -9,7 +9,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { inject } from '@angular/core';
 import { CanActivateFn, ActivatedRouteSnapshot, Router } from '@angular/router';
-import { PermissionId } from '../models';
+import { PermissionId } from '../models/last_index';
 import { AuthService } from '../services/auth.service';
 
 // ── Guard : connecté ─────────────────────────────────────────────

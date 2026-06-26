@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
-import { Eleve } from '../../../core/models';
+import { Eleve } from '../../../core/models/last_index';
 
 @Component({
   selector: 'app-eleve-form',

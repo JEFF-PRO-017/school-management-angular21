@@ -12,7 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DataService }  from '../../../core/services/data.service';
 import { CacheService } from '../../../core/services/cache.service';
-import { MatiereConfig } from '../../../core/models';
+import { MatiereConfig } from '../../../core/models/last_index';
 
 export interface MatiereModalData { matiere?: MatiereConfig; }
 

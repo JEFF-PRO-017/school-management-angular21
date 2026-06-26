@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthService }               from '../../../core/services/auth.service';
 import { DataService }               from '../../../core/services/data.service';
 import { SheetsQueueServiceService } from '../../../core/services/sheets-queue.service';
-import { Section }                   from '../../../core/models';
+import { Section }                   from '../../../core/models/last_index';
 import { titleApp } from '../../../app.component';
 
 @Component({

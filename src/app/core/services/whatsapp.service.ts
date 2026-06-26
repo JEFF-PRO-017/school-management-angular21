@@ -29,7 +29,7 @@ import { DataService }   from './data.service';
 import { CacheService }  from './cache.service';
 import {
   Famille, EleveEnrichi, MsgTemplate, LogAlerte
-} from '../models';
+} from '../models/last_index';
 import { environment } from '../../../environments/environment';
 
 // ── Type unifié retourné par toutes les méthodes d'envoi auto ────

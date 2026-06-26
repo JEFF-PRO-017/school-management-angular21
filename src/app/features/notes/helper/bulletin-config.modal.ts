@@ -6,7 +6,7 @@ import { Component, Inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { BulletinConfig } from './bulletin.models';
-import { Sequence, SEQUENCES } from '../../../core/models';
+import { Sequence, SEQUENCES } from '../../../core/models/last_index';
 
 @Component({
   selector: 'app-bulletin-config-modal',

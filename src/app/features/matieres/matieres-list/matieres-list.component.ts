@@ -6,7 +6,7 @@ import {
 import { MatDialog }    from '@angular/material/dialog';
 import { DataService }  from '../../../core/services/data.service';
 import { CacheService } from '../../../core/services/cache.service';
-import { MatiereConfig } from '../../../core/models';
+import { MatiereConfig } from '../../../core/models/last_index';
 import { MatiereModalComponent, MatiereModalData } from '../matieres-modal/matiere-modal.component';
 
 @Component({

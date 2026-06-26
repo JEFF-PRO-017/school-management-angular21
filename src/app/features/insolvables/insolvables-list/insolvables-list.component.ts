@@ -11,11 +11,9 @@ import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
 import { WhatsappService } from '../../../core/services/whatsapp.service';
 import { InsolvablesPdfService } from '../../../core/services/@insolvables/insolvables-pdf.service';
-import { EleveEnrichi, Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
-import { MsgTemplate } from '../../../core/models/communication';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
-import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 import { _dernierRdvFamille, _fmtDate } from '../../../core/services/@insolvables';
+import { EleveEnrichi, FamilleService, Famille, FamilleEnrichi, MsgTemplate, ANNEE_SCOLAIRE, POURCENT_PENSION } from '../../../core/models';
 
 // ── Modèle enrichi par élève ──────────────────────────────────────
 export interface EleveData extends EleveEnrichi {
@@ -26,6 +24,7 @@ export interface EleveData extends EleveEnrichi {
   attendu_famille: number;   // total attendu pour la famille
   restant_famille: number;   // restant global de la famille
   moratoire_depasse: boolean;  // dernier RDV de moratoire dépassé aujourd'hui
+  insolvable: boolean
 }
 
 @Component({
@@ -352,62 +351,10 @@ export class InsolvablesListComponent implements OnInit {
       if (rappel) this.templateChoisi.set(rappel);
       this.cdr.markForCheck();
     });
-    this.elevesData.set(this._construireElevesData());
+    this.elevesData.set(this.fasSvc.construireElevesDataAvecFamille(this.data.getFamilles()));
   }
 
   /** Transforme chaque famille → un EleveData par élève actif */
-  private _construireElevesData(): EleveData[] {
-    const aujourd = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const result: EleveData[] = [];
-
-    for (const famille of this.data.getFamilles()) {
-      // const elevesActifs = (famille.eleves ?? []).filter((e: { statut: string; }) => e.statut === 'ACTIF');
-      const elevesActifs = (famille.eleves ?? [])
-
-      const nb_enfants_famille = elevesActifs.length;
-      if (nb_enfants_famille === 0) continue;
-
-      const attendu_famille = this.fasSvc.montantAttentu(famille);
-      const verse_famille = this.fasSvc.montantVerse(famille);
-      const restant_famille = this.fasSvc.montantRestant(attendu_famille, verse_famille);
-
-      // Moratoire dépassé : dernier moratoire non réglé avec date_fin < aujourd'hui
-      const moratoire_depasse = (famille.moratoires ?? [])
-        .filter((m: { regler: any; }) => !m.regler)
-        .some((m: { date_fin: any; }) => m.date_fin && m.date_fin < aujourd);
-
-      // Imputation du versement élève par élève (ordre d'inscription)
-      let reste_a_imputer = verse_famille;
-
-      elevesActifs.forEach((eleve: EleveData, i: number) => {
-        const pension = eleve.classe?.prix ?? 0;
-        let montant_par_enfant: number;
-
-        const estDernier = i === nb_enfants_famille - 1;
-        if (estDernier) {
-          // Dernier élève reçoit ce qui reste
-          montant_par_enfant = Math.max(0, reste_a_imputer);
-        } else {
-          const quote_part = verse_famille / nb_enfants_famille;
-          montant_par_enfant = Math.min(pension, quote_part);
-        }
-        reste_a_imputer -= montant_par_enfant;
-
-        result.push({
-          ...eleve,
-          nb_enfants_famille,
-          montant_par_enfant,
-          reste_par_enfant: Math.max(0, pension - montant_par_enfant),
-          verse_famille,
-          attendu_famille,
-          restant_famille,
-          moratoire_depasse,
-        });
-      });
-    }
-    console.log('result', result)
-    return result;
-  }
 
   // ── Liste filtrée ────────────────────────────────────────────────
   filtered = computed<EleveData[]>(() => {
@@ -416,7 +363,7 @@ export class InsolvablesListComponent implements OnInit {
     const dateRef = this.dateRefSignal();
     const classe = this.filtreClasse();
 
-    if (seuil <= 0 && maxRestant <= 0) return [];
+    if (seuil <= 0 && maxRestant <= 0 && !dateRef && !classe) return this.elevesData();
 
     return this.elevesData().filter(e => {
       if (seuil > 0 && e.montant_par_enfant >= seuil) return false;

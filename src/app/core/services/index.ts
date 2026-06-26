@@ -1,0 +1,6 @@
+export * from './@insolvables'
+export * from './auth.service'
+export * from './bulletin-pdf.service'
+export * from './data.service'
+export * from './parent.service'
+export * from './whatsapp.service'

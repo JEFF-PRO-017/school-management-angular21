@@ -11,7 +11,7 @@ import { toSignal }   from '@angular/core/rxjs-interop';
 import { CacheService }    from '../../../core/services/cache.service';
 import { DataService }     from '../../../core/services/data.service';
 import { WhatsappService } from '../../../core/services/whatsapp.service';
-import { Absence, EleveEnrichi } from '../../../core/models';
+import { Absence, EleveEnrichi } from '../../../core/models/last_index';
 
 // Type interne — ligne agrégée par élève
 interface LigneAbsence {

@@ -9,7 +9,7 @@ import { RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
 import { DataService } from '../../../core/services/data.service';
-import { LogAlerte } from '../../../core/models';
+import { LogAlerte } from '../../../core/models/last_index';
 import { TemplateFormComponent } from '../template-form/template-form.component';
 
 // Valeurs possibles des filtres

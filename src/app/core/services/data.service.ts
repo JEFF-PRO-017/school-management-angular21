@@ -7,9 +7,10 @@ import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
   MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note,
   MsgTemplate, Absence, LogAlerte, AppUser, PermissionId
-} from '../models';
+} from '../models/last_index';
 import { FamilleTampon, SHEET_TAMPON, H_TAMPON, EleveTampon, PensionTampon, DemandePaiement } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
+import { PointageResult } from '../models';
 
 
 // ── Helpers sérialisation permissions (tableau ↔ chaîne CSV) ──────
@@ -38,6 +39,7 @@ export const SHEET = {
   absences: 'F13_ABSENCES',
   users: 'F14_USERS',
   anneesvc: 'F15_ANNEESVC',
+  pointages: 'F16_pointages'
 } as const;
 
 export const H = {
@@ -47,7 +49,7 @@ export const H = {
   eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance',
     'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule'],
   classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire',
-    'effectif_max', 'enseignant_principal','prix'],
+    'effectif_max', 'enseignant_principal', 'prix'],
   paiements: ['id_paiement', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement',
     'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier',
     'statut_alerte_whatsapp'],
@@ -66,9 +68,10 @@ export const H = {
     'langue', 'destinataire'],
   logs: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest',
     'date_envoi', 'statut', 'hash_dedup'],
-  absences: ['id', 'id_enfant', 'id_famille', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
+  absences: ['id', 'id_enfant', 'id_famille','id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
   users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions'],
-  anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete']
+  anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete'],
+  pointages:['id_pointage','id_matiere','id_enseignants','date_debut','date_fin','duree']
 } as const;
 
 @Injectable({ providedIn: 'root' })
@@ -88,20 +91,22 @@ export class DataService {
     await this.ensureSheets();
 
     // Groupe A — données statiques (batchGet)
-    const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn] = await this.batchFetch([
+    const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn,rawPoi] = await this.batchFetch([
       `${SHEET.familles}!A:L`,
       `${SHEET.classes}!A:H`,
       `${SHEET.frais}!A:I`,
       `${SHEET.enseignants}!A:F`,
       `${SHEET.matieres}!A:H`,
       `${SHEET.anneesvc}!A:H`,
+      `${SHEET.pointages}!A:F`,
     ]);
     this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
     this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
     this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
     this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
     this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
-    this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc))
+    this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc));
+    this.cache.setPointages(this.parse<PointageResult>(rawPoi,H.pointages));
 
     // Groupe B — élèves + soldes
     const [rawElv, rawSol] = await this.batchFetch([
@@ -351,6 +356,13 @@ export class DataService {
     ));
   }
 
+  async addPointage(a: PointageResult): Promise<void> {
+    this.cache.addPointage(a);
+    this.queue.enqueue(
+      { sheetName: SHEET.pointages, rowData: this.toRow(a, H.pointages) },
+      'addRow'
+    )
+  }
   // ── Templates ─────────────────────────────────────────────────
 
   async loadTemplates(): Promise<void> {

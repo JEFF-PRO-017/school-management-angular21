@@ -12,7 +12,7 @@
 //   sectionRecap      rH 4.5→4.3, sigH 4→3.5
 
 import jsPDF from 'jspdf';
-import { Sequence, MatiereConfig } from '../../../../core/models';
+import { Sequence, MatiereConfig } from '../../../../core/models/last_index';
 import { BulletinData, PVData, FicheSaisieData } from '../../helper/bulletin.models';
 import { RGB, BLANC, NOIR, cell, toFloat, toNote, moyenneSimple, ROUGE, fmt, VERT } from '../../helper/pdf-helpers';
 

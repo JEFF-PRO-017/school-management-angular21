@@ -10,7 +10,7 @@ import {
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { AppUser, PERMISSIONS, PermissionId, Role, Section } from '../../../core/models';
+import { AppUser, PERMISSIONS, PermissionId, Role, Section } from '../../../core/models/last_index';
 import { DataService } from '../../../core/services/data.service';
 import { hash } from 'bcryptjs';
 

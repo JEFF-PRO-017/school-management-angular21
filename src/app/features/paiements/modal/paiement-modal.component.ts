@@ -12,7 +12,7 @@ import { NgxMaskDirective, provideNgxMask } from 'ngx-mask';
 
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
-import { Famille, Paiement, ModePaiement } from '../../../core/models';
+import { Famille, Paiement, ModePaiement } from '../../../core/models/last_index';
 import { RecuService } from '../recu.service';
 
 export interface PaiementModalData {
