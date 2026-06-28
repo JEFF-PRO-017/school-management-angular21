@@ -4,11 +4,11 @@ import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
   MatiereConfig, SoldeSnap, BulletinSnap,
   Note, Sequence, SEQUENCES, Paiement, Absence,
-  MsgTemplate, LogAlerte, AppUser, PermissionId
+  MsgTemplate, LogAlerte, PermissionId
 } from '../models/last_index';
 import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
-import { PointageResult } from '../models';
+import { AppUser, AppUserEnrichi, PointageResult } from '../models';
 
 
 @Injectable({ providedIn: 'root' })
@@ -124,13 +124,28 @@ export class CacheService {
     const section = this._section();
 
     return this._classes()
-      .filter(c => section === 'all' || c.cycle === section)
+      // .filter(c => section === 'all' || c.cycle === section)
       .map(c => ({
         ...c,
         eleves:   elevs.filter(e => e.id_classe === c.id_classe),
         matieres: mats.filter(m => m.id_classe === c.id_classe),
       }));
   });
+
+  private _usersEnrichies = computed<AppUserEnrichi[]| any[]>(() => {
+
+      console.log('user-enrichies')
+      const mats    = this._matieresEnrichies(); 
+      const cls     = this._classesEnrichies();
+
+      return this._users()
+        .map (u =>({
+          ...u,
+          classes_assignees_infos:cls.find(c => c.enseignant_principal ===u.id),
+          matieres:mats.filter(m => m.id_enseignant ===u.id)
+        }))
+
+  })
 
   // ── Maps O(1) publiques ───────────────────────────────────────
   readonly famillesMap = computed(() =>
@@ -208,7 +223,7 @@ export class CacheService {
   }
 
   // ── Utilisateurs ──────────────────────────────────────────────────
-  getUsers():                AppUser[]      { return this._users(); }
+  getUsers():                AppUser[]      { return this._usersEnrichies(); }
   setUsers(d: AppUser[])                    { this._users.set(d); }
   upsertUser(u: AppUser)                    {
     this._users.update(l => upsert(l, u, 'id'));

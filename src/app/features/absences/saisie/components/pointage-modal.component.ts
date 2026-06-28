@@ -188,6 +188,8 @@ export class PointageModalComponent {
     const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     return toMin(f) - toMin(d);
   });
+  
+  //TODO INSERER LES MESSAGES D'ORIENTATION POUR EVITER LES BUGS (les validateurs )
 
   // ── Validation ───────────────────────────────────────────────────
   valide = computed(() =>

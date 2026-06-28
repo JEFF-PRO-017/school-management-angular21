@@ -1,11 +1,9 @@
-// user-modal.component.ts — création et modification d'utilisateur
-// Modal MatDialog — style bl-* cohérent avec le reste de l'app
-// Gestion des permissions par checkboxes, section, rôle, mot de passe
 import {
-  Component, inject, signal, computed, OnInit
+  Component, inject, signal, OnInit
 } from '@angular/core';
 import {
-  FormGroup, FormControl, ReactiveFormsModule, Validators, AbstractControl
+  FormGroup, FormControl, ReactiveFormsModule,
+  Validators, ValidatorFn, AbstractControl, ValidationErrors
 } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -14,9 +12,7 @@ import { AppUser, PERMISSIONS, PermissionId, Role, Section } from '../../../core
 import { DataService } from '../../../core/services/data.service';
 import { hash } from 'bcryptjs';
 
-export interface UserModalData {
-  user?: AppUser;   // undefined = création, défini = modification
-}
+export interface UserModalData { user?: AppUser; }
 
 const ROLES: { val: Role; label: string }[] = [
   { val: 'admin',       label: 'Administrateur' },
@@ -30,154 +26,114 @@ const ROLES: { val: Role; label: string }[] = [
   standalone: true,
   imports: [ReactiveFormsModule, MatDialogModule],
   styles: [`
-    /* ── Layout modal ── */
-    .host  { display:flex; flex-direction:column; width:100%;
-             max-width:520px; font-size:13px; }
-    .head  { display:flex; align-items:center; justify-content:space-between;
-             padding:14px 18px 12px;
-             border-bottom:0.5px solid rgba(0,0,0,.09); }
-    .head-title { font-size:14px; font-weight:500; }
-    .body  { padding:16px 18px; display:flex; flex-direction:column; gap:13px;
-             max-height:72vh; overflow-y:auto; }
-    .foot  { display:flex; justify-content:flex-end; gap:8px;
-             padding:11px 18px 14px;
-             border-top:0.5px solid rgba(0,0,0,.09); }
-
-    /* ── Champs ── */
-    .row2  { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .field { display:flex; flex-direction:column; gap:3px; }
-    label  { font-size:11px; color:#888; font-weight:500; }
-    .fi    { height:34px; padding:0 10px; font-size:13px;
-             border:0.5px solid rgba(0,0,0,.18); border-radius:6px;
-             background:white; outline:none; color:#333; width:100%;
-             transition:border-color .15s; }
-    .fi:focus   { border-color:#185FA5; }
-    .fi.err     { border-color:#A32D2D; }
-    select.fi   { cursor:pointer; }
-    .hint       { font-size:10px; color:#A32D2D; }
-
-    /* ── Toggle actif ── */
-    .tog-row  { display:flex; align-items:center; gap:8px;
-                padding:6px 0; cursor:pointer; }
-    .tog      { width:30px; height:17px; border-radius:9px; background:#ccc;
-                position:relative; cursor:pointer; transition:background .2s;
-                display:inline-block; flex-shrink:0; }
-    .tog.on   { background:#185FA5; }
+    /* Toggle switch — pas d'équivalent Bootstrap natif */
+    .tog { width:30px; height:17px; border-radius:9px; background:#ccc;
+           position:relative; cursor:pointer; transition:background .2s;
+           display:inline-block; flex-shrink:0; }
+    .tog.on { background:#185FA5; }
     .tog::after { content:''; position:absolute; top:2px; left:2px;
                   width:13px; height:13px; background:white; border-radius:50%;
                   transition:transform .2s; }
     .tog.on::after { transform:translateX(13px); }
-    .tog-label { font-size:12px; color:#555; user-select:none; }
-
-    /* ── Permissions ── */
-    .perms-head { display:flex; align-items:center; justify-content:space-between;
-                  margin-bottom:6px; }
-    .perms-title{ font-size:11px; color:#888; font-weight:500; }
-    .perms-grid { display:grid;
-                  grid-template-columns:repeat(auto-fill, minmax(155px, 1fr));
-                  gap:5px; }
-    .perm-item  { display:flex; align-items:center; gap:7px; padding:5px 8px;
-                  border-radius:5px; border:0.5px solid rgba(0,0,0,.09);
-                  cursor:pointer; background:white; transition:all .12s; }
-    .perm-item:hover { border-color:#B5D4F4; background:#f5f9ff; }
-    .perm-item.on { background:#EBF3FC; border-color:#B5D4F4; }
-    .perm-chk   { width:13px; height:13px; accent-color:#185FA5;
-                  cursor:pointer; flex-shrink:0; }
-    .perm-label { font-size:11px; color:#444; user-select:none; }
-
-    /* ── Mot de passe ── */
-    .pwd-wrap { position:relative; }
-    .pwd-eye  { position:absolute; right:8px; top:50%; transform:translateY(-50%);
-                background:none; border:none; cursor:pointer; color:#aaa;
-                display:flex; align-items:center; padding:2px; }
+    /* Bouton œil dans le champ password */
+    .pwd-eye { position:absolute; right:8px; top:50%; transform:translateY(-50%);
+               background:none; border:none; cursor:pointer; color:#aaa;
+               display:flex; align-items:center; padding:2px; }
     .pwd-eye:hover { color:#555; }
-
-    /* ── Boutons ── */
-    .btn  { height:32px; padding:0 14px; border-radius:6px; font-size:13px;
-            cursor:pointer; display:inline-flex; align-items:center; gap:5px;
-            border:0.5px solid rgba(0,0,0,.18); background:white; color:#333; }
-    .btn:disabled { opacity:.35; cursor:default; }
-    .btn:not(:disabled):hover { background:#f5f5f5; }
-    .btn-p  { background:#185FA5; color:#fff; border:none; }
-    .btn-p:not(:disabled):hover { opacity:.88; }
-    .btn-del{ background:#FCEBEB; color:#A32D2D; border-color:#F09595; }
-    .btn-del:hover { opacity:.88; }
-    .close  { width:28px; height:28px; border:0.5px solid rgba(0,0,0,.12);
-              background:white; border-radius:5px; cursor:pointer;
-              display:flex; align-items:center; justify-content:center; color:#555; }
-    .close:hover { background:#FCEBEB; color:#A32D2D; }
-    .spinner{ width:13px; height:13px; border-radius:50%;
-              border:2px solid rgba(255,255,255,.3); border-top-color:#fff;
-              animation:sp .7s linear infinite; display:inline-block; }
+    /* Spinner bouton save */
+    .spinner { width:13px; height:13px; border-radius:50%;
+               border:2px solid rgba(255,255,255,.3); border-top-color:#fff;
+               animation:sp .7s linear infinite; display:inline-block; }
     @keyframes sp { to { transform:rotate(360deg); } }
-
-    /* ── Séparateur ── */
-    .divider { height:0.5px; background:rgba(0,0,0,.07); margin:2px 0; }
-
-    /* ── Admin badge ── */
-    .admin-warn { background:#FFF8E1; border:0.5px solid #FFD54F;
-                  border-radius:6px; padding:8px 10px; font-size:11px;
-                  color:#5D4037; display:flex; align-items:flex-start; gap:6px; }
+    /* Hauteur max du corps scrollable */
+    .modal-body { max-height:72vh; overflow-y:auto; }
+    /* Perm hover */
+    .perm-item:hover { border-color:#B5D4F4 !important; background:#f5f9ff !important; }
+    .perm-item.on    { background:#EBF3FC !important; border-color:#B5D4F4 !important; }
   `],
   template: `
-<div class="host">
+<div class="d-flex flex-column" style="width:100%;max-width:540px">
 
   <!-- En-tête -->
-  <div class="head">
-    <span class="head-title">
-      {{ isEdit ? "Modifier l\'utilisateur" : "Nouvel utilisateur" }}
+  <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+    <span class="fw-semibold small">
+      {{ isEdit ? "Modifier l'utilisateur" : "Nouvel utilisateur" }}
     </span>
-    <button class="close" mat-dialog-close>✕</button>
+    <button class="btn btn-sm btn-outline-secondary px-2 py-0" mat-dialog-close>✕</button>
   </div>
 
-  <div class="body">
+  <!-- Corps -->
+  <div class="modal-body px-3 py-3">
     <form [formGroup]="form">
 
-      <!-- Nom + Identifiant -->
-      <div class="row2">
-        <div class="field">
-          <label>Nom complet *</label>
-          <input class="fi" [class.err]="fc.nom.invalid && fc.nom.touched"
+      <!-- Nom + Username -->
+      <div class="row g-2 mb-2">
+        <div class="col-6">
+          <label class="form-label small text-muted fw-semibold mb-1">Nom complet *</label>
+          <input class="form-control form-control-sm"
+                 [class.is-invalid]="fc.nom.invalid && fc.nom.touched"
+                 [class.is-valid]="fc.nom.valid && fc.nom.touched"
                  formControlName="nom" placeholder="ex: Marie Dupont">
-          @if (fc.nom.invalid && fc.nom.touched) {
-            <div class="hint">Requis</div>
-          }
+          <div class="invalid-feedback">Requis — min. 2 caractères</div>
         </div>
-        <div class="field">
-          <label>Identifiant (login) *</label>
-          <input class="fi" [class.err]="fc.username.invalid && fc.username.touched"
+        <div class="col-6">
+          <label class="form-label small text-muted fw-semibold mb-1">
+            Identifiant *
+            @if (isEdit) {
+              <span class="fw-normal text-muted">(non modifiable)</span>
+            }
+          </label>
+          <input class="form-control form-control-sm"
+                 [class.is-invalid]="fc.username.invalid && fc.username.touched"
+                 [class.is-valid]="fc.username.valid && fc.username.touched"
                  formControlName="username" placeholder="ex: m.dupont"
                  [readOnly]="isEdit" [style.opacity]="isEdit ? '.6' : '1'">
-          @if (fc.username.invalid && fc.username.touched) {
-            <div class="hint">Requis — min. 3 caractères</div>
+          @if (fc.username.errors?.['taken'] && fc.username.touched) {
+            <div class="invalid-feedback d-block">Identifiant déjà utilisé.</div>
+          } @else if (fc.username.invalid && fc.username.touched) {
+            <div class="invalid-feedback">Requis — min. 3 caractères</div>
+          }
+          @if (fc.username.valid && fc.username.touched && !isEdit) {
+            <div class="valid-feedback d-block">✔ Identifiant disponible</div>
           }
         </div>
       </div>
 
+      <!-- Téléphone -->
+      <div class="mb-2">
+        <label class="form-label small text-muted fw-semibold mb-1">Téléphone</label>
+        <input class="form-control form-control-sm"
+               [class.is-invalid]="fc.tel.invalid && fc.tel.touched"
+               formControlName="tel" placeholder="ex: 6XXXXXXXX" type="tel">
+        <div class="invalid-feedback">Format invalide (8 à 15 chiffres)</div>
+        <div class="form-text" style="font-size:10px">
+          Utilisé pour les notifications et la récupération de compte.
+        </div>
+      </div>
+
       <!-- Mot de passe -->
-      <div class="field">
-        <label>
+      <div class="mb-2">
+        <label class="form-label small text-muted fw-semibold mb-1">
           Mot de passe
-          @if (isEdit) { <span style="color:#aaa;font-weight:400">
-            (laisser vide pour conserver l'actuel)</span>
-          } @else { <span style="color:#A32D2D">*</span> }
+          @if (isEdit) {
+            <span class="fw-normal text-muted">(vide = conserver l'actuel)</span>
+          } @else {
+            <span class="text-danger">*</span>
+          }
         </label>
-        <div class="pwd-wrap">
-          <input class="fi"
-                 [class.err]="fc.password.invalid && fc.password.touched"
+        <div class="position-relative">
+          <input class="form-control form-control-sm pe-5"
+                 [class.is-invalid]="fc.password.invalid && fc.password.touched"
                  [type]="showPwd() ? 'text' : 'password'"
                  formControlName="password"
-                 [placeholder]="isEdit ? '••••••••' : 'Minimum 6 caractères'"
-                 style="padding-right:36px">
-          <button type="button" class="pwd-eye"
-                  (click)="showPwd.set(!showPwd())">
+                 [placeholder]="isEdit ? '••••••••' : 'Minimum 6 caractères'">
+          <button type="button" class="pwd-eye" (click)="showPwd.set(!showPwd())">
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
               @if (showPwd()) {
                 <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"
                       stroke="currentColor" stroke-width="1.3"/>
                 <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/>
-                <path d="M2 2l12 12" stroke="currentColor" stroke-width="1.3"
-                      stroke-linecap="round"/>
+                <path d="M2 2l12 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
               } @else {
                 <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"
                       stroke="currentColor" stroke-width="1.3"/>
@@ -185,28 +141,26 @@ const ROLES: { val: Role; label: string }[] = [
               }
             </svg>
           </button>
-        </div>
-        @if (fc.password.invalid && fc.password.touched) {
-          <div class="hint">
+          <div class="invalid-feedback">
             @if (!isEdit) { Requis — minimum 6 caractères }
             @else { Minimum 6 caractères si vous souhaitez changer }
           </div>
-        }
+        </div>
       </div>
 
       <!-- Rôle + Section -->
-      <div class="row2">
-        <div class="field">
-          <label>Rôle *</label>
-          <select class="fi" formControlName="role" (change)="onRoleChange()">
+      <div class="row g-2 mb-2">
+        <div class="col-6">
+          <label class="form-label small text-muted fw-semibold mb-1">Rôle *</label>
+          <select class="form-select form-select-sm" formControlName="role" (change)="onRoleChange()">
             @for (r of ROLES; track r.val) {
               <option [value]="r.val">{{ r.label }}</option>
             }
           </select>
         </div>
-        <div class="field">
-          <label>Section</label>
-          <select class="fi" formControlName="section">
+        <div class="col-6">
+          <label class="form-label small text-muted fw-semibold mb-1">Section</label>
+          <select class="form-select form-select-sm" formControlName="section">
             <option value="primaire">Primaire</option>
             <option value="secondaire">Secondaire</option>
           </select>
@@ -215,41 +169,45 @@ const ROLES: { val: Role; label: string }[] = [
 
       <!-- Avertissement admin -->
       @if (fc.role.value === 'admin') {
-        <div class="admin-warn">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px">
-            <path d="M8 2L1 13h14L8 2z" stroke="#F57F17" stroke-width="1.3"
-                  stroke-linejoin="round"/>
-            <path d="M8 6v4M8 11v.5" stroke="#F57F17" stroke-width="1.3"
-                  stroke-linecap="round"/>
+        <div class="alert alert-warning py-2 px-3 d-flex gap-2 align-items-start small mb-2">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:2px">
+            <path d="M8 2L1 13h14L8 2z" stroke="#F57F17" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M8 6v4M8 11v.5" stroke="#F57F17" stroke-width="1.3" stroke-linecap="round"/>
           </svg>
-          Un administrateur a accès à <strong>toutes les fonctionnalités</strong>
+          Un administrateur a accès à <strong>&nbsp;toutes les fonctionnalités&nbsp;</strong>
           sans restriction de permissions.
         </div>
       }
 
-      <div class="divider"></div>
+      <hr class="my-2">
 
       <!-- Permissions -->
       @if (fc.role.value !== 'admin') {
         <div>
-          <div class="perms-head">
-            <span class="perms-title">Permissions accordées</span>
-            <div style="display:flex;gap:6px">
-              <button type="button" class="btn" style="height:26px;font-size:11px;padding:0 10px"
-                      (click)="toutCocher()">Tout cocher</button>
-              <button type="button" class="btn" style="height:26px;font-size:11px;padding:0 10px"
-                      (click)="toutDecocher()">Tout décocher</button>
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="form-label small text-muted fw-semibold mb-0">Permissions accordées</span>
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                      style="font-size:11px" (click)="toutCocher()">Tout cocher</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                      style="font-size:11px" (click)="toutDecocher()">Tout décocher</button>
             </div>
           </div>
+          <p class="text-muted mb-2" style="font-size:10px">
+            Cochez les modules auxquels cet utilisateur aura accès.
+          </p>
 
-          <div class="perms-grid">
+          <div class="row row-cols-2 g-1">
             @for (p of PERMISSIONS; track p.id) {
-              <label class="perm-item" [class.on]="aPermission(p.id)">
-                <input type="checkbox" class="perm-chk"
-                       [checked]="aPermission(p.id)"
-                       (change)="togglePerm(p.id, $event)">
-                <span class="perm-label">{{ p.label }}</span>
-              </label>
+              <div class="col">
+                <label class="perm-item d-flex align-items-center gap-2 p-2 rounded border w-100 cursor-pointer"
+                       [class.on]="aPermission(p.id)" style="font-size:11px;color:#444">
+                  <input type="checkbox" class="form-check-input mt-0 flex-shrink-0"
+                         [checked]="aPermission(p.id)"
+                         (change)="togglePerm(p.id, $event)">
+                  {{ p.label }}
+                </label>
+              </div>
             }
           </div>
         </div>
@@ -259,16 +217,14 @@ const ROLES: { val: Role; label: string }[] = [
   </div>
 
   <!-- Pied -->
-  <div class="foot">
+  <div class="d-flex align-items-center gap-2 px-3 py-2 border-top">
     @if (isEdit) {
-      <button class="btn btn-del" (click)="supprimer()">
-        Supprimer
-      </button>
+      <button class="btn btn-sm btn-outline-danger" (click)="supprimer()">Supprimer</button>
     }
-    <span style="flex:1"></span>
-    <button class="btn" mat-dialog-close>Annuler</button>
-    <button class="btn btn-p" (click)="sauvegarder()"
-            [disabled]="form.invalid || saving()">
+    <span class="flex-grow-1"></span>
+    <button class="btn btn-sm btn-outline-secondary" mat-dialog-close>Annuler</button>
+    <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1"
+            (click)="sauvegarder()" [disabled]="form.invalid || saving()">
       @if (saving()) { <span class="spinner"></span> }
       {{ saving() ? 'Enregistrement…' : (isEdit ? 'Mettre à jour' : 'Créer') }}
     </button>
@@ -279,10 +235,10 @@ const ROLES: { val: Role; label: string }[] = [
 })
 export class UserModalComponent implements OnInit {
 
-  readonly data     = inject<UserModalData>(MAT_DIALOG_DATA);
-  private dialogRef = inject(MatDialogRef<UserModalComponent>);
-  private snack     = inject(MatSnackBar);
-  private DataService = inject(DataService);
+  readonly data       = inject<UserModalData>(MAT_DIALOG_DATA);
+  private dialogRef   = inject(MatDialogRef<UserModalComponent>);
+  private snack       = inject(MatSnackBar);
+  private dataService = inject(DataService);
 
   readonly PERMISSIONS = PERMISSIONS;
   readonly ROLES       = ROLES;
@@ -290,71 +246,61 @@ export class UserModalComponent implements OnInit {
   isEdit  = false;
   saving  = signal(false);
   showPwd = signal(false);
-
-  // Signal pour les permissions — évite FormControl dans computed()
-  perms = signal<Set<PermissionId>>(new Set());
+  perms   = signal<Set<PermissionId>>(new Set());
 
   form = new FormGroup({
     nom:      new FormControl('', [Validators.required, Validators.minLength(2)]),
-    username: new FormControl('', [Validators.required, Validators.minLength(3)]),
-    password: new FormControl(''),  // validé dynamiquement dans ngOnInit
+    username: new FormControl('', {
+      validators: [Validators.required, Validators.minLength(3), this.usernameUnique()],
+      updateOn: 'blur',
+    }),
+    tel:      new FormControl('', [Validators.pattern(/^\d{8,15}$/)]),
+    password: new FormControl(''),
     role:     new FormControl<Role>('enseignant'),
     section:  new FormControl<Section>('secondaire'),
   });
 
   get fc() { return this.form.controls; }
 
+  private usernameUnique(): ValidatorFn {
+    return (ctrl: AbstractControl): ValidationErrors | null => {
+      const taken = this.dataService?.getUsers().some(u =>
+        u.username === ctrl.value && u.id !== this.data?.user?.id
+      );
+      return taken ? { taken: true } : null;
+    };
+  }
+
   ngOnInit(): void {
     const u = this.data?.user;
-
     if (u) {
-      // ── Mode modification ──────────────────────────────────────
       this.isEdit = true;
-      this.form.patchValue({
-        nom:     u.nom,
-        username: u.username,
-        role:    u.role,
-        section: u.section,
-      });
-      // Mot de passe optionnel en modification
-      this.fc.password.setValidators([]);
+      this.form.patchValue({ nom: u.nom, username: u.username, role: u.role, section: u.section, tel: u.tel ?? '' });
+      this.fc.username.clearValidators();
+      this.fc.username.updateValueAndValidity();
+      this.fc.password.clearValidators();
       this.fc.password.updateValueAndValidity();
-      // Permissions depuis l'utilisateur existant
       this.perms.set(new Set(u.permissions));
     } else {
-      // ── Mode création ──────────────────────────────────────────
       this.fc.password.setValidators([Validators.required, Validators.minLength(6)]);
       this.fc.password.updateValueAndValidity();
-      // Permissions par défaut selon le rôle initial
       this._permissionsParDefaut('enseignant');
     }
   }
 
-  // ── Permissions ───────────────────────────────────────────────────
+  aPermission(p: PermissionId) { return this.perms().has(p); }
 
-  aPermission(p: PermissionId): boolean { return this.perms().has(p); }
-
-  togglePerm(p: PermissionId, event: Event): void {
+  togglePerm(p: PermissionId, event: Event) {
     const checked = (event.target as HTMLInputElement).checked;
-    this.perms.update(s => {
-      const n = new Set(s);
-      checked ? n.add(p) : n.delete(p);
-      return n;
-    });
+    this.perms.update(s => { const n = new Set(s); checked ? n.add(p) : n.delete(p); return n; });
   }
 
-  toutCocher(): void {
-    this.perms.set(new Set(PERMISSIONS.map(p => p.id)));
-  }
+  toutCocher()   { this.perms.set(new Set(PERMISSIONS.map(p => p.id))); }
+  toutDecocher() { this.perms.set(new Set()); }
 
-  toutDecocher(): void { this.perms.set(new Set()); }
+  onRoleChange() { this._permissionsParDefaut(this.fc.role.value as Role); }
 
-  /** Quand le rôle change, pré-sélectionne les permissions cohérentes */
-  onRoleChange(): void {
-    this._permissionsParDefaut(this.fc.role.value as Role);
-  }
-
-  private _permissionsParDefaut(role: Role): void {
+  private _permissionsParDefaut(role: Role) {
     const map: Record<Role, PermissionId[]> = {
       admin:       PERMISSIONS.map(p => p.id),
       caissier:    ['insolvables', 'familles'],
@@ -364,49 +310,46 @@ export class UserModalComponent implements OnInit {
     this.perms.set(new Set(map[role] ?? []));
   }
 
-  // ── Sauvegarde ────────────────────────────────────────────────────
-
   async sauvegarder(): Promise<void> {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
     this.saving.set(true);
-
     const isAdmin = this.fc.role.value === 'admin';
     const hashedPassword = this.fc.password.value?.trim()
       ? await hash(this.fc.password.value.trim(), 5)
       : (this.data?.user?.mot_de_passe ?? '');
 
     const user: AppUser = {
-      id:          this.data?.user?.id ?? `USR-${Date.now()}`,
-      username:    this.fc.username.value!,
+      id:           this.data?.user?.id ?? `USR-${Date.now()}`,
+      username:     this.fc.username.value!,
       mot_de_passe: hashedPassword,
-      nom:         this.fc.nom.value!,
-      role:        this.fc.role.value as Role,
-      is_admin:    isAdmin,
-      section:     this.fc.section.value as Section,
-      permissions: isAdmin
-        ? PERMISSIONS.map(p => p.id)
-        : [...this.perms()],
+      nom:          this.fc.nom.value!,
+      tel:          this.fc.tel.value ?? '',
+      role:         this.fc.role.value as Role,
+      is_admin:     isAdmin,
+      section:      this.fc.section.value as Section,
+      permissions:  isAdmin ? PERMISSIONS.map(p => p.id) : [...this.perms()],
     };
 
-    if(this.isEdit) {
-      await this.DataService.updateUser(user);
+    if (this.isEdit) {
+      await this.dataService.updateUser(user);
     } else {
-      await this.DataService.addUser(user);
+      await this.dataService.addUser(user);
     }
-    
+
     this.saving.set(false);
     this.snack.open(
-      this.isEdit ? 'Utilisateur mis à jour' : 'Utilisateur créé',
-      'OK',
-      { duration: 3000 }
+      this.isEdit ? 'Utilisateur mis à jour ✔' : 'Utilisateur créé ✔',
+      'OK', { duration: 3000 }
     );
     this.dialogRef.close({ success: true, user });
   }
 
-  supprimer(): void {
+  supprimer() {
+    if(!this.data || !this.data.user || !this.data.user.id) return
     if (!confirm(`Supprimer ${this.data?.user?.nom} ? Cette action est irréversible.`)) return;
+    this.dataService.deleteUser(this.data?.user?.id)
     this.dialogRef.close({ deleted: true, userId: this.data?.user?.id });
   }
 }

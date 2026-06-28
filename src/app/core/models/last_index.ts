@@ -34,6 +34,7 @@ export interface AppUser {
   is_admin: boolean;
   section: Section;
   permissions: PermissionId[];  // liste des permissions accordées
+  tel:string
 }
 
 /** Élève enrichi avec jointures (construit côté app depuis le cache) */
