@@ -16,7 +16,7 @@ import { EleveModalComponent, EleveModalData } from '../../eleves/modal/eleve-mo
 import { PaiementModalComponent, PaiementModalData } from '../../paiements/modal/paiement-modal.component';
 import { FamilleModalComponent, FamilleModalData } from '../famille-form';
 
-import { FamilleEnrichi, FamilleService } from '../../../core/models/family';
+import { FamilleService } from '../../../core/models/family';
 import { Eleve } from '../../../core/models/academic';
 import { DetailBarComponent } from './components/detail-bar.component';
 import { DetailStatsComponent } from './components/detail-stats.component';
@@ -54,10 +54,7 @@ import { DetailPaiementsComponent } from './components/detail-paiements.componen
     <div class="row g-3">
       <div class="col-12 col-md-7">
         <app-detail-stats
-          [attendu]="attendu()"
-          [verse]="verse()"
-          [restant]="restant()"
-          [progression]="progression()"
+          [f]="famille()!"
           [annee]="annee">
         </app-detail-stats>
       </div>
@@ -121,11 +118,6 @@ export class FamilleDetailComponent implements OnInit {
 
   attendu = computed(() => this.fas.montantAttentu(this.famille()));
   verse = computed(() => this.fas.montantVerse(this.famille()));
-  restant = computed(() => this.fas.montantRestant(this.attendu(), this.verse()));
-  progression = computed(() => {
-    if (this.attendu() <= 0) return 100;
-    return Math.min(100, Math.round((this.verse() / this.attendu()) * 100));
-  });
 
   enfants = computed<Eleve[]>(() => this.famille()?.eleves ?? []);
 
@@ -214,10 +206,10 @@ export class FamilleDetailComponent implements OnInit {
       if (!ok) return;
       // Toggle statut using the same casing as Eleve.statut values
       const statut = e.statut === 'ACTIF' ? 'ARCHIVE' : 'ACTIF';
-      this.data.updateEleve({ ...e, statut }).then(() => {
-        this.snack.open(`Élève ${statut === 'ACTIF' ? 'réactivé' : 'archivé'}`, 'OK', { duration: 3000 });
-      })
-      this.getFamille(e.id_famille)
+      // this.data.updateEleve({ ...e, statut }).then(() => {
+      //   this.snack.open(`Élève ${statut === 'ACTIF' ? 'réactivé' : 'archivé'}`, 'OK', { duration: 3000 });
+      // })
+      // this.getFamille(e.id_famille)
     });
   }
 

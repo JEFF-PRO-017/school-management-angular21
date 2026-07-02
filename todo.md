@@ -13,3 +13,25 @@
 - PAGE CREATION DES FAMILLES ,  FAIRE QUE LE MODAL DE LA CARTE SOI PLUS GRANDE DONC POSSIBILITE D'AGRANDIR LE CARDE COMME FAIT YOUTUBE AVEC LES VIDEOS 
 - PAGE DETAIL FAMILLE : LES ENFANTS NE S'AFFICHE PAS DIRECTEMENT QUAND ONT LES CREE
 - LISTE DES FAMILLES : FAIRE LE FITRE EN FOCNTION DES SECTION
+
+- #
+verifier le bon focntionnemnt de la page day1
+-famille,
+-eleves,
+-classes,
+-matieres,
+-insolvables,
+-absences,
+-historiques absences,
+-users
+
+verifier le bon fonctionnenment de day2
+-notes,
+-bulletins,
+-communication whatsapp,
+-espace famille
+
+verifier le bon focntionnemnt de day3
+-espace famille
+-inscription tampon
+-paiement a distance

@@ -1,8 +1,10 @@
 // famille-modal.component.ts — orchestrateur
 // Zéro ViewChild — tout passe par @Input / @Output
 // Supporte Famille et FamilleEnrichi (récupère annee_scolaires[0] si présent)
+// Validation : Angular Validators + FormGroup.invalid (pas de message HTML statique)
+// Feedback utilisateur : MatSnackBar (service Angular, pas de bandeau HTML fait main)
 
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -11,11 +13,13 @@ import { DataService } from '../../../core/services/data.service';
 
 import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 
-import { FamilleFormComponent } from './components/famille-form.component';
+import { FamilleFormComponent, TEL_PATTERN } from './components/famille-form.component';
 import { FamilleFraisComponent, FraisFormValue } from './components/famille-frais.component';
 import { AnneeScolaireFamille, creerAnneeScolaire, Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
 
 export interface FamilleModalData { famille: Famille | FamilleEnrichi | null; }
+
+const SNACKBAR_DURATION = 3000;
 
 /** Vérifie si la donnée est un FamilleEnrichi */
 function isFamilleEnrichi(f: Famille | FamilleEnrichi): f is FamilleEnrichi {
@@ -67,10 +71,9 @@ function isFamilleEnrichi(f: Famille | FamilleEnrichi): f is FamilleEnrichi {
       Annuler
     </button>
     <button class="btn btn-sm btn-primary"
+            [disabled]="enregistrementEnCours"
             (click)="save()">
-
-        {{ isEdit ? 'Modifier' : 'Créer famille' }}
-      
+        {{ isEdit ? 'Enregistrer les modifications' : 'Créer la famille' }}
     </button>
   </div>
 
@@ -82,9 +85,12 @@ export class FamilleModalComponent implements OnInit {
   readonly data = inject<FamilleModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<FamilleModalComponent>);
   private svc = inject(DataService);
-  private fas = inject(FamilleService)
+  private fas = inject(FamilleService);
+  private snackBar = inject(MatSnackBar);
+
   isEdit = false;
   familleId = '';
+  enregistrementEnCours = false;
 
   // GPS — mis à jour via Output de FamilleFormComponent
   private lat: number | null = null;
@@ -93,6 +99,7 @@ export class FamilleModalComponent implements OnInit {
   // Frais — mis à jour via Output de FamilleFraisComponent
   private fraisValue: FraisFormValue = {
     actif: false,
+    valide: true,
     montant_reduction_special: 0,
     commentaire: '',
   };
@@ -101,9 +108,9 @@ export class FamilleModalComponent implements OnInit {
   anneeScolaireExistante: AnneeScolaireFamille | undefined = undefined;
 
   form = new FormGroup({
-    nom_famille: new FormControl('', Validators.required),
-    tel_pere: new FormControl('', Validators.required),
-    tel_mere: new FormControl(''),
+    nom_famille: new FormControl('', [Validators.required, Validators.minLength(2)]),
+    tel_mere: new FormControl('', [Validators.required, Validators.pattern(TEL_PATTERN)]),
+    tel_pere: new FormControl('', [Validators.pattern(TEL_PATTERN)]),
     tel_autre: new FormControl(''),
     adresse_texte: new FormControl(''),
   });
@@ -120,7 +127,7 @@ export class FamilleModalComponent implements OnInit {
     // Récupère l'AnneeScolaireFamille si FamilleEnrichi
     if (isFamilleEnrichi(this.data.famille)) {
       // Prend celle de l'année courante si elle existe
-      this.anneeScolaireExistante =this.fas.anneeSvcEncours(this.data.famille)
+      this.anneeScolaireExistante = this.fas.anneeSvcEncours(this.data.famille);
     }
   }
 
@@ -138,43 +145,73 @@ export class FamilleModalComponent implements OnInit {
   // ── Sauvegarde ────────────────────────────────────────────────
 
   async save(): Promise<void> {
-    if (this.form.invalid) return;
+    // 1. Formulaire identité : état natif Angular (form.invalid)
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.snackBar.open('Veuillez corriger les champs en rouge avant de continuer', 'OK', {
+        duration: SNACKBAR_DURATION,
+      });
+      return;
+    }
 
-    const idFamille = this.familleId || `FAM-${Date.now()}`;
+    // 2. Sous-formulaire frais : validité remontée via l'Output (fraisValue.valide)
+    if (!this.fraisValue.valide) {
+      this.snackBar.open('Veuillez corriger le montant ou le motif de la réduction', 'OK', {
+        duration: SNACKBAR_DURATION,
+      });
+      return;
+    }
 
-    // 1. Famille
-    const famille: Famille = {
-      id_famille: idFamille,
-      nom_famille: this.form.value.nom_famille!,
-      tel_pere: this.form.value.tel_pere!,
-      tel_mere: this.form.value.tel_mere ?? '',
-      tel_autre: this.form.value.tel_autre ?? '',
-      adresse_texte: this.form.value.adresse_texte ?? '',
-      latitude: this.lat ?? undefined,
-      longitude: this.lng ?? undefined,
-      status: 'ACTIF'
-    };
+    this.enregistrementEnCours = true;
 
-    if (this.isEdit)  this.svc.updateFamille(famille);
-    else  this.svc.addFamille(famille);
+    try {
+      const idFamille = this.familleId || `FAM-${Date.now()}`;
 
-    // 2. AnneeScolaireFamille — si section active
-    // 2. AnneeScolaireFamille
-    debugger
-    const base = this.anneeScolaireExistante ?? creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
+      // Famille
+      const famille: Famille = {
+        id_famille: idFamille,
+        nom_famille: this.form.value.nom_famille!,
+        tel_pere: this.form.value.tel_pere ?? '',
+        tel_mere: this.form.value.tel_mere ?? '',
+        tel_autre: this.form.value.tel_autre ?? '',
+        adresse_texte: this.form.value.adresse_texte ?? '',
+        latitude: this.lat ?? undefined,
+        longitude: this.lng ?? undefined,
+        status: 'ACTIF'
+      };
 
-    const annee: AnneeScolaireFamille = {
-      ...base,
-      ...(this.fraisValue.actif && {
-        montant_reduction_special: this.fraisValue.montant_reduction_special,
-        commentaire: this.fraisValue.commentaire,
-      }),
-    };
+      if (this.isEdit) this.svc.updateFamille(famille);
+      else this.svc.addFamille(famille);
 
-    this.anneeScolaireExistante
-      ? this.svc.updateAnneeSvc(annee)
-      :  this.svc.addAnneeSvc(annee);
+      // AnneeScolaireFamille — si section active
+      const base = this.anneeScolaireExistante ?? creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
 
-    this.dialogRef.close({ success: true, famille });
+      const annee: AnneeScolaireFamille = {
+        ...base,
+        ...(this.fraisValue.actif && {
+          montant_reduction_special: this.fraisValue.montant_reduction_special,
+          commentaire: this.fraisValue.commentaire,
+        }),
+      };
+
+      this.anneeScolaireExistante
+        ? this.svc.updateAnneeSvc(annee)
+        : this.svc.addAnneeSvc(annee);
+
+      this.snackBar.open(
+        this.isEdit ? 'Famille modifiée avec succès' : 'Famille créée avec succès',
+        'OK',
+        { duration: SNACKBAR_DURATION }
+      );
+
+      this.dialogRef.close({ success: true, famille });
+
+    } catch (err) {
+      this.snackBar.open('Une erreur est survenue lors de l\'enregistrement', 'OK', {
+        duration: SNACKBAR_DURATION,
+      });
+    } finally {
+      this.enregistrementEnCours = false;
+    }
   }
 }

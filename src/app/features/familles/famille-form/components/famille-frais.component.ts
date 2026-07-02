@@ -2,17 +2,21 @@
 // Saisie de montant_reduction_special + commentaire
 // Supporte création ET édition (reçoit AnneeScolaireFamille existante via @Input)
 // Communique vers le parent uniquement via @Output
+// Validation gérée via Angular Validators + FormControl.hasError()
 
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
-import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
+import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { NgxMaskDirective, provideNgxMask } from 'ngx-mask';
 import { AnneeScolaireFamille } from '../../../../core/models/family';
 import { ANNEE_SCOLAIRE } from '../../../../core/models/shared';
 
+const MONTANT_MAX = 10_000_000;
+const COMMENTAIRE_MAX_LEN = 200;
 
 export interface FraisFormValue {
   actif: boolean;
+  valide: boolean;
   montant_reduction_special: number;
   commentaire: string;
 }
@@ -32,7 +36,7 @@ export interface FraisFormValue {
       Frais pension — {{ annee }}
     </span>
     <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
-      <label class="form-check-label small text-muted">Configurer</label>
+      <label class="form-check-label small text-muted">Réduction spéciale</label>
       <input class="form-check-input" type="checkbox" role="switch"
              [checked]="actif"
              (change)="toggleActif()">
@@ -45,41 +49,49 @@ export interface FraisFormValue {
       <!-- Réduction spéciale -->
       <div>
         <label class="form-label small mb-1">
-          Réduction spéciale (FCFA)
-          <span class="text-muted fw-normal">— optionnel</span>
+          Montant de la réduction (FCFA)
         </label>
         <div class="input-group input-group-sm">
           <input class="form-control"
                  formControlName="montant_reduction_special"
                  mask="separator.0"
                  thousandSeparator=" "
-                 separatorLimit="10000000"
+                 [separatorLimit]="montantMax.toString()"
                  [dropSpecialCharacters]="true"
                  placeholder="0"
+                 [class.is-invalid]="isInvalid('montant_reduction_special')"
                  (input)="emitChange()">
           <span class="input-group-text">FCFA</span>
         </div>
+        @if (isInvalid('montant_reduction_special')) {
+          <div class="invalid-feedback d-block">{{ getError('montant_reduction_special') }}</div>
+        }
       </div>
 
       <!-- Commentaire -->
       <div>
-        <label class="form-label small mb-1">Motif</label>
+        <label class="form-label small mb-1">Motif de la réduction</label>
         <input class="form-control form-control-sm"
                formControlName="commentaire"
-               placeholder="ex: 3 enfants inscrits"
+               placeholder="Ex : 3 enfants inscrits cette année"
+               [class.is-invalid]="isInvalid('commentaire')"
                (input)="emitChange()">
+        @if (isInvalid('commentaire')) {
+          <div class="invalid-feedback">{{ getError('commentaire') }}</div>
+        }
       </div>
 
       <!-- Rappel valeurs auto -->
       <div class="alert alert-info py-1 px-2 small mb-0">
-        <strong>Auto :</strong> montant total = 0, réduction = 0, ancienneté = 0.
-        Mis à jour automatiquement par le service dédié.
+        Les autres frais (pension, ancienneté…) seront calculés automatiquement.
       </div>
 
     </div>
   } @else {
     <div class="card-body py-2 px-3">
-      <p class="small text-muted mb-0">Configurable depuis la fiche famille.</p>
+      <p class="small text-muted mb-0">
+        Aucune réduction spéciale pour cette famille. Activez le switch pour en ajouter une.
+      </p>
     </div>
   }
 
@@ -96,11 +108,19 @@ export class FamilleFraisComponent implements OnChanges {
 
   annee = ANNEE_SCOLAIRE;
   actif = false;
+  montantMax = MONTANT_MAX;
 
   form = new FormGroup({
-    montant_reduction_special: new FormControl('0'),
-    commentaire:               new FormControl(''),
+    montant_reduction_special: new FormControl('0', [
+      Validators.required,
+      Validators.max(MONTANT_MAX),
+    ]),
+    commentaire: new FormControl('', [
+      Validators.maxLength(COMMENTAIRE_MAX_LEN),
+    ]),
   });
+
+  get fc() { return this.form.controls; }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['anneeScolaire'] && this.anneeScolaire) {
@@ -113,14 +133,42 @@ export class FamilleFraisComponent implements OnChanges {
     }
   }
 
+  /** true si le contrôle est invalide ET a été touché/modifié — utilise l'état natif du FormControl */
+  isInvalid(controlName: string): boolean {
+    const control = this.fc[controlName as keyof typeof this.fc];
+    return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  /** Message d'erreur dérivé directement des erreurs du FormControl (control.errors) */
+  getError(controlName: string): string {
+    const control = this.fc[controlName as keyof typeof this.fc];
+    if (!control || !control.errors) return '';
+
+    if (control.errors['required']) {
+      return 'Le montant est requis (indiquez 0 si aucune réduction)';
+    }
+    if (control.errors['max']) {
+      return `Le montant ne peut pas dépasser ${this.montantMax.toLocaleString('fr-FR')} FCFA`;
+    }
+    if (control.errors['maxlength']) {
+      const limite = control.errors['maxlength'].requiredLength;
+      return `Le motif ne doit pas dépasser ${limite} caractères`;
+    }
+    return 'Champ invalide';
+  }
+
   toggleActif(): void {
     this.actif = !this.actif;
+    if (!this.actif) {
+      this.form.reset({ montant_reduction_special: '0', commentaire: '' });
+    }
     this.emitChange();
   }
 
   emitChange(): void {
     this.fraisChange.emit({
       actif: this.actif,
+      valide: !this.actif || this.form.valid,
       montant_reduction_special: +(this.form.value.montant_reduction_special ?? 0),
       commentaire:               this.form.value.commentaire ?? '',
     });

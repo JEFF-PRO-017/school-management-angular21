@@ -34,8 +34,8 @@ export class FamilleService {
 
     }
 
-    anneeSvcEncours(f: FamilleEnrichi): AnneeScolaireFamille | undefined {
-        const a = f.annee_scolaires
+    anneeSvcEncours(f: FamilleEnrichi|null): AnneeScolaireFamille | undefined {
+        const a = f?.annee_scolaires
         return a ? a.find(a => a.annee_scolaire === ANNEE_SCOLAIRE) : undefined
     }
 
@@ -58,7 +58,7 @@ export class FamilleService {
 
         const eleves = (f.eleves ?? []).filter(el => el.id_eleve !== e.id_eleve)
         // Prix des élèves existants + prix de la nouvelle classe
-        const attendu = eleves.reduce((s, el) => s + Number(el.classe?.prix ?? 0), 0); + c.prix;
+        const attendu = eleves.reduce((s, el) => s + Number(el.classe?.prix ?? 0), 0) + Number(c.prix ?? 0);
 
         // Réduction si plus de 2 enfants (existants + le nouveau)
         const nbTotal = eleves.length + 1;
@@ -97,6 +97,7 @@ export class FamilleService {
             .map((m: any) => m.date_fin as string);
         return rdvs.length ? rdvs.sort().at(-1)! : null;
     }
+
     construireElevesDataAvecFamille(familles: FamilleEnrichi[]): EleveData[] {
         const aujourd = new Date().toISOString().slice(0, 10);
         const result: EleveData[] = [];

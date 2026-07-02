@@ -1,11 +1,13 @@
 // detail-stats.component.ts
-import { Component, Input } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
+import { FamilleEnrichi, FamilleService } from '../../../../core/models';
 
 @Component({
   selector: 'app-detail-stats',
   standalone: true,
   template: `
 <div class="card border-0 shadow-sm h-100">
+  @if(f){
   <div class="card-header bg-light d-flex align-items-center justify-content-between py-2">
     <span class="small fw-semibold text-secondary">Pension — {{ annee }}</span>
     <span class="badge rounded-pill"
@@ -38,6 +40,18 @@ import { Component, Input } from '@angular/core';
           <div class="text-muted" style="font-size:9px">Restant</div>
         </div>
       </div>
+      <div class="col-4">
+        <div class="bg-light rounded-2 p-2 text-center">
+          <div class="fw-semibold">{{ fmt(reductionSpecial) }}</div>
+          <div class="text-muted" style="font-size:9px">Réduction Spéciale</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="bg-light rounded-2 p-2 text-center">
+          <div class="fw-semibold">{{ fmt(reductionPourcentage) }}%</div>
+          <div class="text-muted" style="font-size:9px">Réduction %</div>
+        </div>
+      </div>
     </div>
 
     <!-- Barre progression -->
@@ -54,7 +68,7 @@ import { Component, Input } from '@angular/core';
     </div>
 
     <!-- Prochain RDV -->
-    <!-- @if (prochainRdv) {
+    @if (prochainRdv) {
       <div class="alert alert-warning d-flex align-items-center gap-2 py-1 px-2 mb-0 small">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
           <rect x="2" y="3" width="12" height="11" rx="2"
@@ -64,19 +78,29 @@ import { Component, Input } from '@angular/core';
         </svg>
         Prochain RDV : <strong>{{ prochainRdv }}</strong>
       </div>
-    } -->
+    }
 
-  </div>
+  </div>} @else {
+    <div class="card-body text-center text-muted py-4 small">Famille introuvable</div>
+  } 
 </div>
   `
 })
 export class DetailStatsComponent {
-  @Input({ required: true }) attendu     = 0;
-  @Input({ required: true }) verse       = 0;
-  @Input({ required: true }) restant     = 0;
-  @Input({ required: true }) progression = 0;
-//   @Input() prochainRdv: string | null    = null;
   @Input() annee = '';
+  @Input() f: FamilleEnrichi | null = null;
+
+  private fas = inject(FamilleService);
+  get prochainRdv(): string | null { return this.fas.dernierRdvFamille(this.f) }
+  get attendu(): number { return this.fas.montantAttentu(this.f) }
+  get verse(): number { return this.fas.montantVerse(this.f) }
+  get restant(): number { return this.fas.montantRestant(this.attendu, this.verse) }
+  get progression(): number {
+    if (this.attendu <= 0) return 100;
+    return Math.min(100, Math.round((this.verse / this.attendu) * 100));
+  }
+  get reductionSpecial(): number { return this.fas.anneeSvcEncours(this.f)?.montant_reduction_special ?? 0; }
+  get reductionPourcentage(): number { return this.fas.anneeSvcEncours(this.f)?.montant_reduction ?? 0; }
 
   fmt(n: number): string {
     return new Intl.NumberFormat('fr-FR').format(Math.round(+n));

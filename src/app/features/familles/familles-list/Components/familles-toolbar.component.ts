@@ -9,7 +9,7 @@ import {
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-export type FiltreEtat = 'tous' | 'solde' | 'sans-gps';
+export type FiltreEtat = 'tous' | 'solde' | 'sans-gps'|'no-solde';
 export type FiltreEnfants = 0 | 1 | 2 | 3;
 
 export interface ClasseOpt { id: string; nom: string; }
@@ -24,7 +24,7 @@ export interface ClasseOpt { id: string; nom: string; }
 <div class="d-flex align-items-center flex-wrap gap-2 pb-3 border-bottom">
 
   <input [formControl]="search"
-         placeholder="Nom, téléphone…"
+         placeholder="Nom, téléphone ,Nom enfants…"
          class="form-control form-control-sm"
          style="width:180px"
          (input)="setSearch()"
@@ -132,7 +132,8 @@ export class FamillesToolbarComponent {
 
   optsEtat: { val: FiltreEtat; lbl: string }[] = [
     { val: 'tous', lbl: 'Toutes' },
-    { val: 'solde', lbl: 'Solde dû' },
+    { val: 'solde', lbl: 'Soldé' },
+    { val: 'no-solde', lbl: 'Non Soldé' },
     { val: 'sans-gps', lbl: 'Sans GPS' },
   ];
 

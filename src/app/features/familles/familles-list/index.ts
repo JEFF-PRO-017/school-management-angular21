@@ -46,6 +46,8 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
             <th class="fw-medium text-secondary" style="font-size:11px">Famille</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Téléphones</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Enfants</th>
+            <th class="fw-medium text-secondary text-center" style="font-size:11px">Reduction Special</th>
+            <th class="fw-medium text-secondary text-center" style="font-size:11px">Reduction %Enfants</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Attendu</th>
             <th class="fw-medium text-secondary text-center" style="font-size:11px">Versé</th>
             <th class="fw-medium text-center"
@@ -80,6 +82,8 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
         {{ filtered().length }} famille(s) · {{ totalEleves() }} élève(s) · {{ anneeScolaire }}
       </span>
       <span class="text-muted" style="font-size:11px">
+        Reduction Spectial: <strong>{{ fmt(totalReductionSpecial()) }}</strong> FCFA ·
+        Reduction %Enfants: <strong>{{ fmt(totalReduction()) }}</strong> FCFA ·
         Attendu : <strong>{{ fmt(totalAttenduGlobal()) }}</strong> FCFA ·
         Versé : <strong>{{ fmt(totalVerseGlobal()) }}</strong> FCFA ·
         Restant :
@@ -156,16 +160,19 @@ export class FamillesListComponent implements OnInit {
     const cls    = this._classe();
     const nbEnf  = this._enfants();
 
-    return (this.cache.getFamilles() ?? []).filter((f: FamilleEnrichi) => {
+    return (this.data.getFamilles() ?? []).filter((f: FamilleEnrichi) => {
       if (q && !f.nom_famille.toLowerCase().includes(q)
              && !f.tel_pere?.includes(q)
-             && !f.tel_mere?.includes(q)) return false;
+             && !f.tel_mere?.includes(q)
+             && !(f.eleves ?? []).some(e => e.nom.toLowerCase().includes(q) || e.prenom.toLowerCase().includes(q))
+            ) return false;
 
       const attendu  = this.fas.montantAttentu(f);
       const verse    = this.fas.montantVerse(f);
       const restant  = this.fas.montantRestant(attendu, verse);
 
-      if (etat === 'solde'    && !(restant > 0 && attendu > 0)) return false;
+      if (etat === 'no-solde'    && !(restant > 0 && attendu > 0)) return false;
+      if (etat === 'solde'    && !(restant === 0 && attendu > 0)) return false;
       if (etat === 'sans-gps' && !!(f.latitude && f.longitude)) return false;
       if (cls && !(f.eleves ?? []).some(e => e.id_classe === cls)) return false;
 
@@ -190,10 +197,10 @@ export class FamillesListComponent implements OnInit {
 
   // ── Totaux globaux (liste filtrée entière) ───────────────────
   totalEleves        = computed(() => this.filtered().reduce((s, f) => s + (f.eleves ?? []).length, 0));
-  totalAttenduGlobal = computed(() => this.filtered().reduce((s, f) =>
-    s + this.fas.montantAttentu(f),0));
-  totalVerseGlobal   = computed(() => this.filtered().reduce((s, f) =>
-    s + this.fas.montantVerse(f), 0));
+  totalReduction     = computed(() => this.filtered().reduce((s, f) => s + +(this.fas.anneeSvcEncours(f)?.montant_reduction ?? 0), 0));
+  totalReductionSpecial = computed(() => this.filtered().reduce((s, f) => s + +(this.fas.anneeSvcEncours(f)?.montant_reduction_special ?? 0), 0));
+  totalAttenduGlobal = computed(() => this.filtered().reduce((s, f) => s + this.fas.montantAttentu(f),0));
+  totalVerseGlobal   = computed(() => this.filtered().reduce((s, f) => s + this.fas.montantVerse(f), 0));
   totalRestantGlobal = computed(() => Math.max(0, this.totalAttenduGlobal() - this.totalVerseGlobal()));
 
   ngOnInit(): void { this.cache.getClasses(); }
@@ -240,8 +247,7 @@ export class FamillesListComponent implements OnInit {
       data: { title: 'Supprimer la famille', message: `Supprimer "${f.nom_famille}" ?`, confirm: 'Supprimer' }
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
-      this.cache.removeFamille(f.id_famille);
-      this.data.deleteFamille(f.id_famille);
+      // this.data.deleteFamille(f.id_famille);
       this.snack.open('Famille supprimée', 'OK', { duration: 3000 });
       this.cdr.markForCheck();
     });

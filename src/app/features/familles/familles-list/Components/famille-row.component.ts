@@ -49,6 +49,12 @@ export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprime
   }
 </td>
 
+<!-- reduction spectial -->
+<td class="text-center" style="font-size:12px;font-weight:500"> {{ fmt(reductionSpecial) }}</td>
+
+<!-- reduction % enfant -->
+<td class="text-center" style="font-size:12px;font-weight:500"> {{ fmt(reductionPourcentage) }}</td>
+
 <!-- Pension attendue -->
 <td class="text-center text-secondary" style="font-size:12px">{{ fmt(montantAttendu) }}</td>
 
@@ -176,6 +182,12 @@ export class FamilleRowComponent {
       this.classesMap.get(e.id_classe)?.nom_classe ?? e.id_classe
     ))];
   }
+  get reductionSpecial(): number {
+    return this.fas.anneeSvcEncours(this.f)?.montant_reduction_special ?? 0;
+  }
+  get reductionPourcentage(): number {
+    return this.fas.anneeSvcEncours(this.f)?.montant_reduction ?? 0;
+  }
 
   get nbEnfantsLabel(): string {
     const n = (this.f.eleves ?? []).length;
@@ -190,12 +202,10 @@ export class FamilleRowComponent {
     return this.fas.montantVerse(this.f)
   }
 
-  get restant(): number { return this.fas.montantRestant(this.montantAttendu , this.totalVerse); }
+  get restant(): number { return this.fas.montantRestant(this.montantAttendu, this.totalVerse); }
   get aDette(): boolean { return this.restant > 0 && this.montantAttendu > 0; }
-  get isOk(): boolean   { return this.restant === 0 && this.montantAttendu > 0; }
+  get isOk(): boolean { return this.restant === 0 && this.montantAttendu > 0; }
   get isSolde(): boolean { return this.totalVerse >= this.montantAttendu && this.montantAttendu > 0; }
-
-
 
   fmt(n: number): string { return new Intl.NumberFormat('fr-FR').format(Math.round(n)); }
 }

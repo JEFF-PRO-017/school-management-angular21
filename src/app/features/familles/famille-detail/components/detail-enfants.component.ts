@@ -27,7 +27,6 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
             <th class="text-center">Sexe</th>
             <th class="text-center">Naissance</th>
             <th class="text-center">Statut</th>
-            <th class="text-center table-primary">Solde pension</th>
             <th class="text-center">Actions</th>
           </tr>
         </thead>
@@ -61,13 +60,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
                   {{ e.statut }}
                 </span>
               </td>
-              <td class="text-center table-primary">
-                <span class="badge"
-                      [class.text-bg-success]="solde(e.id_eleve) === 0"
-                      [class.text-bg-warning]="solde(e.id_eleve) > 0">
-                  {{ soldeLabel(e.id_eleve) }}
-                </span>
-              </td>
+
               <td class="text-center">
                 <div class="d-flex gap-1 justify-content-center">
                   <button class="btn btn-sm btn-outline-secondary p-0"
