@@ -1,5 +1,5 @@
 // shared/pagination.component.ts — réutilisable sur tous les tableaux
-import { Component, Input, Output, EventEmitter, computed, signal, OnChanges } from '@angular/core';
+import { Component, Output, EventEmitter, computed, signal, OnChanges, input } from '@angular/core';
 
 @Component({
   selector: 'app-pagination',
@@ -33,15 +33,15 @@ import { Component, Input, Output, EventEmitter, computed, signal, OnChanges } f
   `
 })
 export class PaginationComponent implements OnChanges {
-  @Input() total    = 0;
-  @Input() pageSize = 10;
+  total    = input<number>(0);
+  pageSize = input<number>(10);
   @Output() pageChange = new EventEmitter<{ debut: number; fin: number }>();
 
   page       = signal(1);
-  totalPages = computed(() => Math.max(1, Math.ceil(this.total / this.pageSize)));
-  debut      = computed(() => (this.page() - 1) * this.pageSize);
-  fin        = computed(() => Math.min(this.total, this.page() * this.pageSize));
-
+  totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
+  debut      = computed(() => (this.page() - 1) * this.pageSize());
+  fin        = computed(() => Math.min(this.total() , this.page() * this.pageSize()));
+  
   pages = computed(() => {
     const t = this.totalPages(), p = this.page();
     const range = (a: number, b: number) =>

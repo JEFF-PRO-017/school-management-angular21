@@ -262,4 +262,24 @@ export class GoogleSheetsService {
   async findSheetId(sheetName: string): Promise<number> {
     return this.getSheetId(sheetName);
   }
+
+  /**
+   * LIT UN BLOC DE LIGNES — utilisé par DataService pour charger 100 lignes à la fois.
+   * Exemple de plage : 'SM_TICKETS_2026_05!A2:Z101'
+   * Retourne un tableau vide si la plage est vide (fin des données).
+   */
+  async getRange(range: string): Promise<any[][]> {
+    const hdrs = await this.headers();
+    // La plage contient déjà le nom de la feuille — on l'encode correctement
+    const parts    = range.split('!');                      // ['SM_TICKETS_2026_05', 'A2:Z101']
+    const feuille  = this.enc(parts[0]);
+    const cellules = parts[1] ?? 'A:Z';
+    const res: any = await firstValueFrom(
+      this.http.get(
+        this.url(`/values/${feuille}!${cellules}`),
+        { headers: hdrs }
+      )
+    );
+    return res.values ?? []; // tableau vide = plus rien à lire
+  }
 }

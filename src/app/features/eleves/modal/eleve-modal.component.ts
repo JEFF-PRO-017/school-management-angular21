@@ -2,10 +2,9 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 
-import { CacheService } from '../../../core/services/cache.service';
 import { DataService }  from '../../../core/services/data.service';
 import { StatutEleve } from '../../../core/models/shared';
-import { AnneeScolaireFamille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
+import { FamilleEnrichi, FamilleService } from '../../../core/models/family';
 import { Eleve } from '../../../core/models/academic';
 
 export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }

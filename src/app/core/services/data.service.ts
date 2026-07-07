@@ -42,6 +42,8 @@ export const SHEET = {
   pointages: 'F16_pointages'
 } as const;
 
+const BLOC = 1000;
+
 export const H = {
   familles: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre',
     'latitude', 'longitude', 'adresse_texte',
@@ -68,10 +70,10 @@ export const H = {
     'langue', 'destinataire'],
   logs: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest',
     'date_envoi', 'statut', 'hash_dedup'],
-  absences: ['id', 'id_enfant', 'id_famille','id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
-  users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions','tel'],
+  absences: ['id', 'id_enfant', 'id_famille', 'id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
+  users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions', 'tel'],
   anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete'],
-  pointages:['id_pointage','id_matiere','id_enseignants','date_debut','date_fin','duree']
+  pointages: ['id_pointage', 'id_matiere', 'id_enseignants', 'date_debut', 'date_fin', 'duree']
 } as const;
 
 @Injectable({ providedIn: 'root' })
@@ -87,50 +89,154 @@ export class DataService {
 
   // ── Démarrage ──────────────────────────────────────────────────
 
+  // ── Lance plusieurs chargements en arrière-plan avec une concurrence limitée ──
+  // Évite de saturer l'API Google Sheets (quota par minute) si on a beaucoup de feuilles.
+  private async chargerToutesEnArrierePlan(
+    taches: Array<() => Promise<void>>,
+    concurrence = 3
+  ): Promise<void> {
+    let index = 0;
+
+    const suivant = async (): Promise<void> => {
+      if (index >= taches.length) return;
+      const i = index++;
+      await taches[i]();
+      return suivant();
+    };
+
+    await Promise.all(
+      Array.from({ length: concurrence }, () => suivant())
+    );
+  }
+
+  // ── initAppData : toutes les feuilles en arrière-plan, par blocs ──
   async initAppData(): Promise<void> {
     await this.ensureSheets();
 
-    // Groupe A — données statiques (batchGet)
-    const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn,rawPoi] = await this.batchFetch([
-      `${SHEET.familles}!A:L`,
-      `${SHEET.classes}!A:H`,
-      `${SHEET.frais}!A:I`,
-      `${SHEET.enseignants}!A:F`,
-      `${SHEET.matieres}!A:H`,
-      `${SHEET.anneesvc}!A:H`,
-      `${SHEET.pointages}!A:F`,
-    ]);
-    this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
-    this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
-    this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
-    this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
-    this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
-    this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc));
-    this.cache.setPointages(this.parse<PointageResult>(rawPoi,H.pointages));
+    await this.loadTemplates();
+    await this.loadLogs();
+    await this.loadUsers();
 
-    // Groupe B — élèves + soldes
-    const [rawElv, rawSol] = await this.batchFetch([
-      `${SHEET.eleves}!A:K`,
-      `${SHEET.soldes}!A:H`,
-    ]);
-    this.cache.setEleves(this.parse<Eleve>(rawElv, H.eleves));
-    this.cache.setSoldes(this.parse<SoldeSnap>(rawSol, H.soldes));
+    const taches: Array<() => Promise<void>> = [
+      () => this.chargerEnArrierePlan(SHEET.familles, H.familles,
+        rows => this.cache.setFamilles(this.parse<Famille>(rows, H.familles))),
 
-    // Groupe C — en arrière-plan (pas bloquant)
-    this.sheets.fetchRaw(SHEET.notes).then(r =>
-      this.cache.setNotes(this.parse<Note>(r, H.notes))
-    );
-    this.sheets.fetchRaw(SHEET.paiements).then(r =>
-      this.cache.setPaiements(this.parse<Paiement>(r, H.paiements))
-    );
+      () => this.chargerEnArrierePlan(SHEET.classes, H.classes,
+        rows => this.cache.setClasses(this.parse<Classe>(rows, H.classes))),
 
-    // Groupe D — meta
-    await Promise.all([
-      this.loadTemplates(),
-      this.loadLogs(),
-      this.loadUsers(),
-    ]);
+      // () => this.chargerEnArrierePlan(SHEET.frais, H.frais,
+      //   rows => this.cache.setFrais(this.parse<FraisConfig>(rows, H.frais))),
+
+      // () => this.chargerEnArrierePlan(SHEET.enseignants, H.enseignants,
+      //   rows => this.cache.setEnseignants(this.parse<Enseignant>(rows, H.enseignants))),
+
+      () => this.chargerEnArrierePlan(SHEET.matieres, H.matieres,
+        rows => this.cache.setMatieres(this.parse<MatiereConfig>(rows, H.matieres))),
+
+      () => this.chargerEnArrierePlan(SHEET.anneesvc, H.anneesvc,
+        rows => this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rows, H.anneesvc))),
+
+      () => this.chargerEnArrierePlan(SHEET.pointages, H.pointages,
+        rows => this.cache.setPointages(this.parse<PointageResult>(rows, H.pointages))),
+
+      () => this.chargerEnArrierePlan(SHEET.eleves, H.eleves,
+        rows => this.cache.setEleves(this.parse<Eleve>(rows, H.eleves))),
+
+      () => this.chargerEnArrierePlan(SHEET.soldes, H.soldes,
+        rows => this.cache.setSoldes(this.parse<SoldeSnap>(rows, H.soldes))),
+
+      // () => this.chargerEnArrierePlan(SHEET.notes, H.notes,
+      //   rows => this.cache.setNotes(this.parse<Note>(rows, H.notes))),
+
+      // () => this.chargerEnArrierePlan(SHEET.paiements, H.paiements,
+      //   rows => this.cache.setPaiements(this.parse<Paiement>(rows, H.paiements))),
+    ];
+
+    for (const tache of taches) {
+       tache();
+    }
+    // this.chargerToutesEnArrierePlan(taches, 3);
+
+    // Groupe D — meta, léger, on peut se permettre d'attendre
+
   }
+  // ── Chargement d'une feuille par blocs, avec retry sur latence/erreur réseau ──
+  // ── Chargement d'une feuille par blocs ──
+  // Le retry sur 429 est géré globalement par le RateLimitInterceptor,
+  // donc plus besoin de boucle de tentatives ici.
+  private async chargerEnArrierePlan(
+    feuille: string,
+    headers: readonly string[],
+    onBloc: (rows: any[][]) => void
+  ): Promise<void> {
+    let debut = 2; // ligne 1 = en-têtes, on commence à la ligne 2
+
+    while (true) {
+      const plage = `${feuille}!A${debut}:Z${debut + BLOC - 1}`;
+
+      let lignes: any[][] | null;
+      try {
+        lignes = await this.sheets.getRange(plage);
+      } catch (err) {
+        console.error(`[${feuille}] bloc à partir de ${debut} abandonné`, err);
+        return; // erreur non gérée par l'interceptor (ex: réseau HS) → on arrête cette feuille
+      }
+
+      if (!lignes?.length) break;       // plus rien → terminé
+      onBloc(lignes);                   // alimente le cache avec ce bloc
+      if (lignes.length < BLOC) break;  // bloc incomplet → c'était le dernier
+      debut += BLOC;                    // passe au bloc suivant
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+
+  // async initAppData(): Promise<void> {
+  //   await this.ensureSheets();
+
+  //   // Groupe A — données statiques (batchGet)
+  //   const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn,rawPoi] = await this.batchFetch([
+  //     `${SHEET.familles}!A:L`,
+  //     `${SHEET.classes}!A:H`,
+  //     `${SHEET.frais}!A:I`,
+  //     `${SHEET.enseignants}!A:F`,
+  //     `${SHEET.matieres}!A:H`,
+  //     `${SHEET.anneesvc}!A:H`,
+  //     `${SHEET.pointages}!A:F`,
+  //   ]);
+  //   this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
+  //   this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
+  //   this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
+  //   this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
+  //   this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
+  //   this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc));
+  //   this.cache.setPointages(this.parse<PointageResult>(rawPoi,H.pointages));
+
+  //   // Groupe B — élèves + soldes
+  //   const [rawElv, rawSol] = await this.batchFetch([
+  //     `${SHEET.eleves}!A:K`,
+  //     `${SHEET.soldes}!A:H`,
+  //   ]);
+  //   this.cache.setEleves(this.parse<Eleve>(rawElv, H.eleves));
+  //   this.cache.setSoldes(this.parse<SoldeSnap>(rawSol, H.soldes));
+
+  //   // Groupe C — en arrière-plan (pas bloquant)
+  //   this.sheets.fetchRaw(SHEET.notes).then(r =>
+  //     this.cache.setNotes(this.parse<Note>(r, H.notes))
+  //   );
+  //   this.sheets.fetchRaw(SHEET.paiements).then(r =>
+  //     this.cache.setPaiements(this.parse<Paiement>(r, H.paiements))
+  //   );
+
+  //   // Groupe D — meta
+  //   await Promise.all([
+  //     this.loadTemplates(),
+  //     this.loadLogs(),
+  //     this.loadUsers(),
+  //   ]);
 
   // ── Getters ────────────────────────────────────────────────────
 
@@ -427,7 +533,7 @@ export class DataService {
     );
   }
 
-  getUsers(): AppUser[] |any[] {
+  getUsers(): AppUser[] | any[] {
     return this.cache.getUsers();
   }
 
@@ -701,7 +807,7 @@ export class DataService {
     );
   }
 
-  async addMatiere(m: MatiereConfig): Promise<void> {
+  async addMatiere(m: MatiereConfig | any): Promise<void> {
     this.cache.upsertMatiere(m);
     this.queue.enqueue(
       { sheetName: SHEET.matieres, rowData: this.toRow(m, H.matieres) },
@@ -709,7 +815,7 @@ export class DataService {
     );
   }
 
-  async updateMatiere(m: MatiereConfig): Promise<void> {
+  async updateMatiere(m: MatiereConfig | any): Promise<void> {
     this.cache.upsertMatiere(m);
     const row = await this.sheets.findRowById(SHEET.matieres, m.id_matiere);
     if (row === -1) return this.addMatiere(m);

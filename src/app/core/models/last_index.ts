@@ -91,7 +91,7 @@ export interface Eleve {
   date_naissance?: string;
   lieu_naissance?: string;
   date_inscription?: string;
-  statut: 'actif' | 'archive';
+  statut:  'archive'|'actif';
   sexe?: 'M' | 'F';
   matricule?: string;
   famille?: Famille;

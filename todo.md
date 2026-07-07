@@ -16,14 +16,17 @@
 
 - #
 verifier le bon focntionnemnt de la page day1
--famille,
--eleves,
--classes,
--matieres,
+-famille -> good,
+-eleves -> good,
+-classes ->good,
+-matieres -> good,
 -insolvables,
 -absences,
 -historiques absences,
--users
+-users,
+(revoir et bien construire cette focntion
+construireElevesDataAvecFamille)
+verifier le bon fonctionnement de tout les attributs
 
 verifier le bon fonctionnenment de day2
 -notes,

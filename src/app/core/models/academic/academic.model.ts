@@ -53,7 +53,7 @@ export interface MatiereConfig {
   coefficient: number | string;
   note_eliminatoire?: number;
   groupe?: string;
-  niveau?: any;
+  niveau?: string;
   id_enseignant: string;
   classe?:Classe
 }

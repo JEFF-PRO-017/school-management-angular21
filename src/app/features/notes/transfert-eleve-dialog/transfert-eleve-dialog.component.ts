@@ -97,7 +97,10 @@ export class TransfertEleveDialogComponent {
 
   effectif(id: string): number {
     return (this.cache.getEleves() ?? [])
-      .filter(e => e.id_classe === id && e.statut === 'actif').length;
+      .filter(e => e.id_classe === id 
+        // TODO: A REMMETTRE
+        // && e.statut === 'ACTIF'
+      ).length;
   }
 
   classeSelectionneeEstPleine = computed(() => {

@@ -94,9 +94,8 @@ export interface ClasseModalData { classe?: Classe; }
   <div class="d-flex justify-content-end gap-2 px-3 py-2 border-top">
     <button class="btn btn-sm btn-outline-secondary" mat-dialog-close>Annuler</button>
     <button class="btn btn-sm btn-primary"
-            (click)="sauvegarder()" [disabled]="form.invalid || saving()">
-      @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
-      {{ saving() ? 'Enregistrement…' : (isEdit ? 'Mettre à jour' : 'Créer') }}
+            (click)="sauvegarder()" [disabled]="form.invalid">
+  {{ (isEdit ? 'Mettre à jour' : 'Créer') }}
     </button>
   </div>
 
@@ -111,7 +110,6 @@ export class ClasseModalComponent implements OnInit {
   private snack     = inject(MatSnackBar);
 
   isEdit  = false;
-  saving  = signal(false);
   private classeId: string | null = null;
 
   enseignants = () => this.dataService.getEnseignants() ?? [];
@@ -142,7 +140,7 @@ export class ClasseModalComponent implements OnInit {
 
   setCycle(s: Section): void { this.fc.cycle.setValue(s); }
 
-  async sauvegarder(): Promise<void> {
+   sauvegarder(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
@@ -157,8 +155,8 @@ export class ClasseModalComponent implements OnInit {
       annee_scolaire: ''
     };
 
-    if (this.isEdit) await this.dataService.updateClasse(classe);
-    else             await this.dataService.addClasse(classe);
+    if (this.isEdit)  this.dataService.updateClasse(classe);
+    else              this.dataService.addClasse(classe);
 
     this.snack.open(this.isEdit ? 'Classe modifiée' : 'Classe créée', 'OK', { duration: 3000 });
     this.dialogRef.close({ success: true, classe });

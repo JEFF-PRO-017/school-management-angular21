@@ -116,7 +116,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 
               <!-- Actions -->
               <td class="text-center align-middle">
-                <!-- <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center"
+                 <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center"
                         style="width:28px;height:28px;padding:0"
                         title="Modifier"
                         (click)="ouvrirModal(c)">
@@ -125,7 +125,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
                           stroke="currentColor" stroke-width="1.3"
                           stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                </button> -->
+                </button> 
               </td>
             </tr>
           }
@@ -183,7 +183,7 @@ export class ClassesListComponent {
     return ['Tous', ...cycles];
   });
 
-  classes  = computed(() => this.data.getClasses() ?? []);
+  classes  = computed(() => this.data.getClasses() as Classe[] ?? []);
   filtered = computed(() => {
     const cycle = this.filtreCycle();
     return cycle === 'Tous'
@@ -228,7 +228,10 @@ export class ClassesListComponent {
   // ── Helpers effectif ──────────────────────────────────────────────
   effectif(id: string): number {
     return (this.data.getEleves() ?? [])
-      .filter(e => e.id_classe === id && e.statut === 'actif').length;
+      .filter(e => e.id_classe === id 
+        // TODO: A REMMETTRE
+        // && e.statut === 'ACTIF'   
+        ).length;
   }
   tauxPct(id: string, max: number): number {
     if (!max) return 0;
