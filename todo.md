@@ -28,6 +28,8 @@ verifier le bon focntionnemnt de la page day1
 construireElevesDataAvecFamille)
 verifier le bon fonctionnement de tout les attributs
 
+inserer sur le header le pourcentage insolvable: POURCENT_PENSION
+
 verifier le bon fonctionnenment de day2
 -notes,
 -bulletins,

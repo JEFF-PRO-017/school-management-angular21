@@ -25,4 +25,4 @@ export type PermissionId = typeof PERMISSIONS[number]['id'];
 export const ANNEE_SCOLAIRE = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`
 export const ANNEE_EN_COURS = new Date().getFullYear()
 
-export const POURCENT_PENSION = 100
+export const POURCENT_PENSION = 50
