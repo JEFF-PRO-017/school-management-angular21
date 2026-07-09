@@ -69,7 +69,7 @@ export class FamilleService {
     montantAttentu(f: FamilleEnrichi | null): number {
         if (!f) return 0;
         const a = this.anneeSvcEncours(f);
-        return (a?.montant_total_attendu ?? 0) - (a?.montant_reduction ?? 0) - (a?.montant_reduction_special ?? 0);
+        return +(a?.montant_total_attendu ?? 0) - +(a?.montant_reduction ?? 0) - +(a?.montant_reduction_special ?? 0);
     }
 
     /** Somme de tous les paiements de la famille. */
@@ -88,7 +88,8 @@ export class FamilleService {
     reductionTotal(f: FamilleEnrichi | any): number {
         if (!f) return 0;
         const a = this.anneeSvcEncours(f);
-        return (a?.montant_reduction ?? 0) + (a?.montant_reduction_special ?? 0);
+        if (!a) return 0;
+        return +(a.montant_reduction ?? 0) + +(a.montant_reduction_special ?? 0);
     }
 
     /** Date d'échéance la plus récente parmi les moratoires non réglés. */
@@ -169,7 +170,7 @@ export class FamilleService {
         for (const famille of familles) {
             result.push(...this.construireDonneesPourFamille(famille, aujourdhui));
         }
-
+        console.log('construireElevesDataAvecFamille', result);
         return result;
     }
 
@@ -178,7 +179,12 @@ export class FamilleService {
         return new Date().toISOString().slice(0, 10);
     }
 
-    /** Construit les fiches de tous les élèves d'une même famille. */
+    /**
+     * Construit les fiches de tous les élèves d'une même famille.
+     * La réduction est répartie en premier (plafonnée au prix de chaque classe),
+     * puis le versement est réparti sur la capacité restante (prix - réduction déjà reçue),
+     * pour ne jamais créditer un enfant au-delà de ce qu'il doit réellement.
+     */
     private construireDonneesPourFamille(famille: FamilleEnrichi, aujourdhui: string): EleveData[] {
         const elevesActifs = famille.eleves ?? [];
         const nbEnfantsFamille = elevesActifs.length;
@@ -188,19 +194,21 @@ export class FamilleService {
         const moratoireDepasse = this.estMoratoireDepasse(fs.dernierRdvFamille, aujourdhui);
         const insolvable = this.estInsolvable(fs.montantAttentu, fs.montantVerse);
 
-        // Prix de la classe de chaque enfant (utilisé pour calculer son reste à payer).
+        // Prix de la classe de chaque enfant : sert de plafond pour la réduction.
         const montantDuParEleve = elevesActifs.map(e => Number(e.classe?.prix ?? 0));
 
-        const reductionsParEleve = this.repartirMontantIntelligent(fs.reductionTotal, nbEnfantsFamille);
-        const versementsParEleve = this.repartirMontantIntelligent(fs.montantVerse, nbEnfantsFamille);
+        const reductionsParEleve = this.repartirMontantIntelligent(fs.reductionTotal, montantDuParEleve);
+
+        // Capacité restante après réduction : sert de plafond pour le versement.
+        const capaciteRestante = montantDuParEleve.map((prix, i) => prix - reductionsParEleve[i]);
+        const versementsParEleve = this.repartirMontantIntelligent(fs.montantVerse, capaciteRestante);
 
         const contexte: ContexteEleve = {
             nbEnfantsFamille, fs, moratoireDepasse, insolvable,
             reductionsParEleve, versementsParEleve, montantDuParEleve
         };
-        const eleves = elevesActifs.map((eleve, index) => this.construireEleveData(eleve, index, contexte));
-        console.log('eleves', eleves)
-        return eleves;
+
+        return elevesActifs.map((eleve, index) => this.construireEleveData(eleve, index, contexte));
     }
 
     /** Vrai si la date d'échéance du moratoire est déjà passée. */
@@ -234,21 +242,28 @@ export class FamilleService {
     }
 
     // =========================================================================
-    // 4. RÉPARTITION D'UN MONTANT ENTRE PLUSIEURS ENFANTS
+    // 4. RÉPARTITION PROPORTIONNELLE D'UN MONTANT ENTRE PLUSIEURS ENFANTS
     // =========================================================================
 
     /**
-     * Répartit un montant entre N enfants en évitant les montants bizarres.
-     * La somme des parts renvoyées est toujours égale à `montantTotal`.
+     * Répartit un montant à parts égales entre les enfants, sans jamais
+     * dépasser le plafond de chacun (ex : prix de sa classe). Le surplus dû
+     * aux arrondis (ou à un enfant dont le plafond est déjà atteint) est
+     * redistribué aux enfants qui ont encore de la marge.
+     *
+     * @param montantTotal      Montant à répartir
+     * @param plafondsParEnfant Plafond maximum que chaque enfant peut recevoir
      */
-    repartirMontantIntelligent(montantTotal: number, nombreEnfants: number): number[] {
+    repartirMontantIntelligent(montantTotal: number, plafondsParEnfant: number[]): number[] {
+        const nombreEnfants = plafondsParEnfant.length;
         if (nombreEnfants === 0) return [];
 
+        // Part égale de départ, arrondie et jamais au-delà du plafond de l'enfant.
         const montantBase = Math.floor(montantTotal / nombreEnfants);
         const montantArrondi = this.arrondirMontantParEnfant(montantBase);
+        const repartition = plafondsParEnfant.map(plafond => Math.min(montantArrondi, plafond));
 
-        const repartition = new Array(nombreEnfants).fill(montantArrondi);
-        this.distribuerLeReste(montantTotal, repartition);
+        this.distribuerLeReste(montantTotal, repartition, plafondsParEnfant);
 
         return repartition;
     }
@@ -262,23 +277,34 @@ export class FamilleService {
             : Math.floor(montantBase / 500) * 500;
     }
 
-    /** Distribue le reliquat de l'arrondi, enfant par enfant, par paquets ronds. */
-    private distribuerLeReste(montantTotal: number, repartition: number[]): void {
+    /** Distribue le reliquat aux enfants qui ont encore de la marge (plafond non atteint). */
+    private distribuerLeReste(montantTotal: number, repartition: number[], plafonds: number[]): void {
         let reste = montantTotal - repartition.reduce((somme, m) => somme + m, 0);
-        let index = 0;
 
         while (reste > 0) {
-            const ajout = this.calculerMontantAAjouter(reste);
-            repartition[index % repartition.length] += ajout;
+            const candidat = this.trouverMeilleurCandidat(repartition, plafonds);
+            if (!candidat) break; // plus personne n'a de marge : on s'arrête pour ne pas dépasser les plafonds
+
+            const ajout = this.calculerMontantAAjouter(reste, candidat.capaciteRestante);
+            repartition[candidat.index] += ajout;
             reste -= ajout;
-            index++;
         }
     }
 
-    /** Taille du prochain paquet à ajouter : 1000, puis 500, puis le solde. */
-    private calculerMontantAAjouter(reste: number): number {
-        if (reste >= 1000) return 1000;
-        if (reste >= 500) return 500;
-        return reste;
+    /** Trouve l'enfant ayant le plus de marge restante (plafond - montant déjà reçu). */
+    private trouverMeilleurCandidat(repartition: number[], plafonds: number[]): { index: number; capaciteRestante: number } | null {
+        const candidats = repartition
+            .map((montant, index) => ({ index, capaciteRestante: plafonds[index] - montant }))
+            .filter(c => c.capaciteRestante > 0)
+            .sort((a, b) => b.capaciteRestante - a.capaciteRestante);
+
+        return candidats[0] ?? null;
+    }
+
+    /** Taille du prochain paquet à ajouter : 1000, puis 500, puis le solde (sans dépasser la marge). */
+    private calculerMontantAAjouter(reste: number, capaciteRestante: number): number {
+        if (reste >= 1000 && capaciteRestante >= 1000) return 1000;
+        if (reste >= 500 && capaciteRestante >= 500) return 500;
+        return Math.min(reste, capaciteRestante);
     }
 }

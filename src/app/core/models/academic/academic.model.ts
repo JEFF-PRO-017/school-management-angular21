@@ -74,7 +74,7 @@ export interface Note {
 // Absence
 export interface Absence {
   id: string;
-  id_enfant: string;   // id_eleve
+  id_eleve: string;   // id_eleve
   id_famille: string;
   id_classe: string;
   id_pointage:string;

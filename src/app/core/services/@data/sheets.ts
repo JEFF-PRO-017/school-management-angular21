@@ -1,0 +1,52 @@
+export const SHEET = {
+    familles: 'F1_FAMILLES',
+    eleves: 'F2_ELEVES',
+    classes: 'F3_CLASSES',
+    paiements: 'F4_PAIEMENTS',
+    frais: 'F5_FRAIS_CONFIG',
+    notes: `F6_${new Date().getFullYear()}`,
+    templates: 'F7_MSG_TEMPLATES',
+    logs: 'F8_LOG_ALERTES',
+    soldes: 'F9_SNAP',
+    enseignants: 'F10_ENSEIGNANTS',
+    bulletins: 'F11_SNAP',
+    matieres: 'F12_MATIERES_CONFIG',
+    absences: 'F13_ABSENCES',
+    users: 'F14_USERS',
+    anneesvc: 'F15_ANNEESVC',
+    pointages: 'F16_POINTAGES'
+} as const;
+
+export const H = {
+    familles: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre',
+        'latitude', 'longitude', 'adresse_texte',
+        'montant_total_attendu', 'annee_scolaire', 'montant_reduction', 'commentaire'],
+    eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance',
+        'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule'],
+    classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire',
+        'effectif_max', 'enseignant_principal', 'prix'],
+    paiements: ['id_paiement', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement',
+        'periode_concernee', 'date_prochain_rdv', 'recu_numero', 'notes_caissier',
+        'statut_alerte_whatsapp'],
+    frais: ['id_frais', 'id_famille', 'id_classe', 'type_frais', 'montant_total_attendu',
+        'montant_reduction', 'seuil_insolvable', 'annee_scolaire', 'commentaire'],
+    notes: ['id_note', 'id_eleve', 'id_classe', 'matiere', 'id_enseignant', 'sequence',
+        'note_obtenue', 'note_sur', 'annee_scolaire'],
+    enseignants: ['id_enseignant', 'nom', 'prenom', 'tel', 'email', 'classes_assignees'],
+    matieres: ['id_matiere', 'nom_matiere', 'id_classe', 'coefficient', 'note_eliminatoire',
+        'groupe', 'niveau', 'id_enseignant'],
+    soldes: ['id_eleve', 'id_famille', 'total_verse', 'montant_attendu', 'reste_a_payer',
+        'statut_insolvable', 'dernier_paiement', 'nb_enfants_famille'],
+    bulletins: ['id_eleve', 'id_classe', 'sequence', 'moy_ponderee', 'rang', 'premier',
+        'dernier', 'mention', 'moy_classe'],
+    templates: ['id_template', 'type', 'objet', 'contenu', 'variables_dynamiques', 'actif',
+        'langue', 'destinataire'],
+    logs: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest',
+        'date_envoi', 'statut', 'hash_dedup'],
+    absences: ['id', 'id_eleve', 'id_famille', 'id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
+    users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions', 'tel'],
+    anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete'],
+    pointages: ['id_pointage', 'id_matiere', 'id_enseignants', 'date_debut', 'date_fin', 'duree']
+} as const;
+
+export const BLOC = 1000;

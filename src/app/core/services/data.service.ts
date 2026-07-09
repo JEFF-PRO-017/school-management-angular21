@@ -5,12 +5,12 @@ import { SheetsQueueServiceService } from './sheets-queue.service';
 import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
-  MatiereConfig, SoldeSnap, BulletinSnap, Paiement, Note,
-  MsgTemplate, Absence, LogAlerte, AppUser, PermissionId
+  MatiereConfig, SoldeSnap, BulletinSnap, Note,
+  MsgTemplate, LogAlerte, AppUser, PermissionId
 } from '../models/last_index';
 import { FamilleTampon, SHEET_TAMPON, H_TAMPON, EleveTampon, PensionTampon, DemandePaiement } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
-import { PointageResult } from '../models';
+import { Absence,Paiement, PointageResult } from '../models';
 
 
 // ── Helpers sérialisation permissions (tableau ↔ chaîne CSV) ──────
@@ -39,7 +39,7 @@ export const SHEET = {
   absences: 'F13_ABSENCES',
   users: 'F14_USERS',
   anneesvc: 'F15_ANNEESVC',
-  pointages: 'F16_pointages'
+  pointages: 'F16_POINTAGES'
 } as const;
 
 const BLOC = 1000;
@@ -70,7 +70,7 @@ export const H = {
     'langue', 'destinataire'],
   logs: ['id_log', 'id_eleve', 'id_famille', 'id_template', 'numero_dest',
     'date_envoi', 'statut', 'hash_dedup'],
-  absences: ['id', 'id_enfant', 'id_famille', 'id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
+  absences: ['id', 'id_eleve', 'id_famille', 'id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
   users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions', 'tel'],
   anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete'],
   pointages: ['id_pointage', 'id_matiere', 'id_enseignants', 'date_debut', 'date_fin', 'duree']
@@ -144,6 +144,9 @@ export class DataService {
 
       () => this.chargerEnArrierePlan(SHEET.soldes, H.soldes,
         rows => this.cache.setSoldes(this.parse<SoldeSnap>(rows, H.soldes))),
+
+      ()=> this.chargerEnArrierePlan(SHEET.absences, H.absences,
+        rows => this.cache.setAbsences(this.parse<Absence>(rows, H.absences))),
 
       // () => this.chargerEnArrierePlan(SHEET.notes, H.notes,
       //   rows => this.cache.setNotes(this.parse<Note>(rows, H.notes))),
@@ -391,14 +394,14 @@ export class DataService {
     );
   }
 
-  async getPaiementsEleve(idFamille: string): Promise<Paiement[]> {
-    const cached = this.cache.getPaiements();
-    if (cached.length) return cached.filter(p => p.id_famille === idFamille);
-    const raw = await this.sheets.fetchRaw(SHEET.paiements);
-    const all = this.parse<Paiement>(raw, H.paiements);
-    this.cache.setPaiements(all);
-    return all.filter(p => p.id_famille === idFamille);
-  }
+  // async getPaiementsEleve(idFamille: string): Promise<Paiement[]> {
+  //   // const cached = this.cache.getPaiements();
+  //   // if (cached.length) return cached.filter(p => p.id_famille === idFamille);
+  //   // const raw = await this.sheets.fetchRaw(SHEET.paiements);
+  //   // const all = this.parse<Paiement>(raw, H.paiements);
+  //   // this.cache.setPaiements(all);
+  //   // return all.filter(p => p.id_famille === idFamille);
+  // }
 
   // ── Frais ──────────────────────────────────────────────────────
 
@@ -445,14 +448,14 @@ export class DataService {
 
   // ── Absences ──────────────────────────────────────────────────
 
-  async getAbsences(): Promise<Absence[]> {
-    const cached = this.cache.getAbsences();
-    if (cached.length) return cached;
-    const raw = await this.sheets.fetchRaw(SHEET.absences);
-    const abs = this.parse<Absence>(raw, H.absences);
-    this.cache.setAbsences(abs);
-    return abs;
-  }
+  // async getAbsences(): Promise<Absence[]> {
+  //   // const cached = this.cache.getAbsences();
+  //   // if (cached.length) return cached;
+  //   // const raw = await this.sheets.fetchRaw(SHEET.absences);
+  //   // const abs = this.parse<Absence>(raw, H.absences);
+  //   // this.cache.setAbsences(abs);
+  //   // return abs;
+  // }
 
   async addAbsencesBatch(absences: Absence[]): Promise<void> {
     this.cache.addAbsencesBatch(absences);
@@ -734,18 +737,18 @@ export class DataService {
    * Crée un vrai Paiement dans F4_PAIEMENTS et met à jour le statut tampon
    */
   async validerDemandePaiement(d: DemandePaiement): Promise<void> {
-    await this.addPaiement({
-      id_paiement: `PAI-${Date.now()}`,
-      id_famille: d.id_famille,
-      montant_verse: d.montant,
-      date_paiement: new Date().toISOString().slice(0, 10),
-      mode_paiement: d.mode_paiement as any,
-      periode_concernee: '',
-      date_prochain_rdv: '',
-      recu_numero: d.reference ?? '',
-      notes_caissier: d.commentaire ?? '',
-      statut_alerte_whatsapp: 'EN_ATTENTE',
-    });
+    // await this.addPaiement({
+    //   id_paiement: `PAI-${Date.now()}`,
+    //   id_famille: d.id_famille,
+    //   montant_verse: d.montant,
+    //   date_paiement: new Date().toISOString().slice(0, 10),
+    //   mode_paiement: d.mode_paiement as any,
+    //   periode_concernee: '',
+    //   date_prochain_rdv: '',
+    //   recu_numero: d.reference ?? '',
+    //   notes_caissier: d.commentaire ?? '',
+    //   statut_alerte_whatsapp: 'EN_ATTENTE',
+    // });
 
     const row = await this.sheets.findRowById(SHEET_TAMPON.paiements, d.id);
     if (row !== -1) {

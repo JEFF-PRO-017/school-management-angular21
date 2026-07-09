@@ -343,11 +343,11 @@ export class PaiementModalComponent implements OnInit {
   apresVersement(){return this.data.montantAttendu - this.data.totalVerse - this.montantSaisi();}
 
   ngOnInit(): void {
-    const rdv = (this.cache.getPaiements?.() ?? [])
-      .filter(p => p.id_famille === this.data.famille.id_famille)
-      .sort((a, b) => b.date_paiement.localeCompare(a.date_paiement))
-      .find(p => p.date_prochain_rdv)?.date_prochain_rdv;
-    if (rdv) this.form.controls.date_prochain_rdv.setValue(rdv);
+    // const rdv = (this.cache.getPaiements?.() ?? [])
+    //   .filter(p => p.id_famille === this.data.famille.id_famille)
+    //   .sort((a, b) => b.date_paiement.localeCompare(a.date_paiement))
+    //   .find(p => p?.date_prochain_rdv)?.date_prochain_rdv;
+    // if (rdv) this.form.controls.date_prochain_rdv.setValue(rdv);
   }
 
   async save(): Promise<void> {

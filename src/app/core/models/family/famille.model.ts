@@ -1,4 +1,4 @@
-import { Classe, Eleve, Note } from "../academic";
+import { Absence, Classe, Eleve, Note } from "../academic";
 import { Paiement } from "../payment";
 import {  Sequence, StatusFamille } from "../shared";
 
@@ -50,6 +50,7 @@ export interface EleveEnrichi extends Eleve {
     famille?: FamilleEnrichi;
     classe?: Classe;
     sequences?: { sequence: Sequence; notes_eleve: Note[] }[];
+    absences?:Absence[];
 }
 
 // export interface SoldeSnap {

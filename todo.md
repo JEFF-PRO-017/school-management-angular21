@@ -20,7 +20,7 @@ verifier le bon focntionnemnt de la page day1
 -eleves -> good,
 -classes ->good,
 -matieres -> good,
--insolvables,
+-insolvables->good,
 -absences,
 -historiques absences,
 -users,

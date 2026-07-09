@@ -3,12 +3,12 @@ import { Injectable, signal, computed } from '@angular/core';
 import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
   MatiereConfig, SoldeSnap, BulletinSnap,
-  Note, Sequence, SEQUENCES, Paiement, Absence,
+  Note, Sequence, SEQUENCES, 
   MsgTemplate, LogAlerte, PermissionId
 } from '../models/last_index';
 import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
-import { AppUser, AppUserEnrichi, PointageResult } from '../models';
+import { AppUser, AppUserEnrichi, PointageResult,Absence,Paiement } from '../models';
 
 
 @Injectable({ providedIn: 'root' })
@@ -70,13 +70,15 @@ export class CacheService {
   // ── Niveau 2 : élèves enrichis ────────────────────────────────
   private _elevesEnrichis = computed<any[]>(() => {
     const famMap   = new Map(this._familles().map(f => [f.id_famille, f]));
+    const absMap   = this._absences();
     const notesIdx = this._notesIndex();
     const classe = this._classes()
-    console.log('eleve enrichis')
+    console.log('famMAp , absMap, notesIdx',famMap, absMap, notesIdx)
     return this._eleves().map(e => ({
       ...e,
       classe:classe.find(c => c.id_classe ===e.id_classe),
       famille:   famMap.get(e.id_famille),
+      absences:  absMap.filter(a => a.id_eleve === e.id_eleve),
       sequences: SEQUENCES.map((seq: Sequence) => ({
         sequence:    seq,
         notes_eleve: notesIdx.get(`${e.id_eleve}|${seq}|${e.id_classe}`) ?? [],
@@ -89,7 +91,7 @@ export class CacheService {
   //
   // RÈGLE RESPECTÉE : on crée un NOUVEL objet avec { ...f } pour chaque famille
   // On ne mute jamais un objet existant dans un computed()
-  private _famillesEnrichies = computed<Famille[]>(() => {
+  private _famillesEnrichies = computed<Famille[]|any[]>(() => {
     const anneeSvc          = this._anneeSvc() //N3
     const elevesEnrichis    = this._elevesEnrichis();   // N2
     const paiementsParFam   = this._paiementsParFamille(); // N1
