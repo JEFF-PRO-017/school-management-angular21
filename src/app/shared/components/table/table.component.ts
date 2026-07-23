@@ -36,7 +36,7 @@
 import {
   Component, Input, Output, EventEmitter, Directive, TemplateRef,
   ContentChildren, QueryList, AfterContentInit,
-  computed, signal, OnChanges, SimpleChanges,
+  computed, signal
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import * as XLSX from 'xlsx';
@@ -173,11 +173,21 @@ type SortDir = 'asc' | 'desc';
 }
   `,
 })
-export class TableComponent<T = any> implements OnChanges, AfterContentInit {
+export class TableComponent<T = any> implements  AfterContentInit {
   @Input({ required: true }) columns: TableColumn<T>[] = [];
-  @Input({ required: true }) data: T[] = [];
+    // au lieu de : @Input({ required: true }) data: T[] = [];
+  private dataSignal = signal<T[]>([]);
 
-  @Input() isGlobalFilter = false;
+  @Input({ required: true })
+  set data(v: T[]) {
+    this.dataSignal.set(v ?? []);
+    this.range.set({ debut: 0, fin: this.pageSize }); // reset pagination au changement de data
+  }
+  get data(): T[] {
+    return this.dataSignal();
+  }
+
+  @Input() isGlobalFilter =false;
   @Input() searchPlaceholder = 'Rechercher…';
   @Input() isExport = false;
   @Input() exportFilename = 'export';
@@ -223,11 +233,6 @@ export class TableComponent<T = any> implements OnChanges, AfterContentInit {
   private selectedIds = signal<Set<unknown>>(new Set());
   private range = signal({ debut: 0, fin: this.pageSize });
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['data'] || changes['pageSize']) {
-      this.range.set({ debut: 0, fin: this.pageSize });
-    }
-  }
 
   // ── recherche globale ───────────────────────────────────────
   onGlobalFilterInput(e: Event): void {
@@ -269,7 +274,8 @@ export class TableComponent<T = any> implements OnChanges, AfterContentInit {
     const cf = this.columnFilters();
     const sort = this.sortState();
 
-    let rows = this.data;
+    console.log('chargement du filtre',gf,cf,sort)
+    let rows = this.dataSignal();
 
     if (gf) {
       rows = rows.filter(row =>

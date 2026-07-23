@@ -11,6 +11,7 @@ import {
 import { FamilleTampon, SHEET_TAMPON, H_TAMPON, EleveTampon, PensionTampon, DemandePaiement } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
 import { Absence,Paiement, PointageResult } from '../models';
+import { mockDB } from '../../../../public/mocdata';
 
 
 // ── Helpers sérialisation permissions (tableau ↔ chaîne CSV) ──────
@@ -111,53 +112,66 @@ export class DataService {
 
   // ── initAppData : toutes les feuilles en arrière-plan, par blocs ──
   async initAppData(): Promise<void> {
-    await this.ensureSheets();
+    // await this.ensureSheets();
 
-    await this.loadTemplates();
-    await this.loadLogs();
-    await this.loadUsers();
 
-    const taches: Array<() => Promise<void>> = [
-      () => this.chargerEnArrierePlan(SHEET.familles, H.familles,
-        rows => this.cache.setFamilles(this.parse<Famille>(rows, H.familles))),
+     this.loadTemplates();
+    //  this.loadLogs();
+     this.loadUsers();
 
-      () => this.chargerEnArrierePlan(SHEET.classes, H.classes,
-        rows => this.cache.setClasses(this.parse<Classe>(rows, H.classes))),
+    this.cache.setFamilles(mockDB.familles as any[])
+    this.cache.setClasses(mockDB.classes)
+    this.cache.setMatieres(mockDB.matieres)
+    this.cache.setAnneeSvc(mockDB.anneesvc)
+    this.cache.setPointages(mockDB.pointages)
+    this.cache.setEleves(mockDB.eleves as any [])
+    this.cache.setSoldes(mockDB.soldes)
+    this.cache.setAbsences(mockDB.absences as any[])
+    this.cache.setNotes(mockDB.notes)
+    this.cache.setPaiements(mockDB.paiements)
 
-      // () => this.chargerEnArrierePlan(SHEET.frais, H.frais,
-      //   rows => this.cache.setFrais(this.parse<FraisConfig>(rows, H.frais))),
 
-      // () => this.chargerEnArrierePlan(SHEET.enseignants, H.enseignants,
-      //   rows => this.cache.setEnseignants(this.parse<Enseignant>(rows, H.enseignants))),
+    // const taches: Array<() => Promise<void>> = [
+    //   () => this.chargerEnArrierePlan(SHEET.familles, H.familles,
+    //     rows => this.cache.setFamilles(this.parse<Famille>(rows, H.familles))),
 
-      () => this.chargerEnArrierePlan(SHEET.matieres, H.matieres,
-        rows => this.cache.setMatieres(this.parse<MatiereConfig>(rows, H.matieres))),
+    //   () => this.chargerEnArrierePlan(SHEET.classes, H.classes,
+    //     rows => this.cache.setClasses(this.parse<Classe>(rows, H.classes))),
 
-      () => this.chargerEnArrierePlan(SHEET.anneesvc, H.anneesvc,
-        rows => this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rows, H.anneesvc))),
+    //   // () => this.chargerEnArrierePlan(SHEET.frais, H.frais,
+    //   //   rows => this.cache.setFrais(this.parse<FraisConfig>(rows, H.frais))),
 
-      () => this.chargerEnArrierePlan(SHEET.pointages, H.pointages,
-        rows => this.cache.setPointages(this.parse<PointageResult>(rows, H.pointages))),
+    //   // () => this.chargerEnArrierePlan(SHEET.enseignants, H.enseignants,
+    //   //   rows => this.cache.setEnseignants(this.parse<Enseignant>(rows, H.enseignants))),
 
-      () => this.chargerEnArrierePlan(SHEET.eleves, H.eleves,
-        rows => this.cache.setEleves(this.parse<Eleve>(rows, H.eleves))),
+    //   () => this.chargerEnArrierePlan(SHEET.matieres, H.matieres,
+    //     rows => this.cache.setMatieres(this.parse<MatiereConfig>(rows, H.matieres))),
 
-      () => this.chargerEnArrierePlan(SHEET.soldes, H.soldes,
-        rows => this.cache.setSoldes(this.parse<SoldeSnap>(rows, H.soldes))),
+    //   () => this.chargerEnArrierePlan(SHEET.anneesvc, H.anneesvc,
+    //     rows => this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rows, H.anneesvc))),
 
-      ()=> this.chargerEnArrierePlan(SHEET.absences, H.absences,
-        rows => this.cache.setAbsences(this.parse<Absence>(rows, H.absences))),
+    //   () => this.chargerEnArrierePlan(SHEET.pointages, H.pointages,
+    //     rows => this.cache.setPointages(this.parse<PointageResult>(rows, H.pointages))),
 
-      // () => this.chargerEnArrierePlan(SHEET.notes, H.notes,
-      //   rows => this.cache.setNotes(this.parse<Note>(rows, H.notes))),
+    //   () => this.chargerEnArrierePlan(SHEET.eleves, H.eleves,
+    //     rows => this.cache.setEleves(this.parse<Eleve>(rows, H.eleves))),
 
-      // () => this.chargerEnArrierePlan(SHEET.paiements, H.paiements,
-      //   rows => this.cache.setPaiements(this.parse<Paiement>(rows, H.paiements))),
-    ];
+    //   () => this.chargerEnArrierePlan(SHEET.soldes, H.soldes,
+    //     rows => this.cache.setSoldes(this.parse<SoldeSnap>(rows, H.soldes))),
 
-    for (const tache of taches) {
-       tache();
-    }
+    //   ()=> this.chargerEnArrierePlan(SHEET.absences, H.absences,
+    //     rows => this.cache.setAbsences(this.parse<Absence>(rows, H.absences))),
+
+    //   // () => this.chargerEnArrierePlan(SHEET.notes, H.notes,
+    //   //   rows => this.cache.setNotes(this.parse<Note>(rows, H.notes))),
+
+    //   // () => this.chargerEnArrierePlan(SHEET.paiements, H.paiements,
+    //   //   rows => this.cache.setPaiements(this.parse<Paiement>(rows, H.paiements))),
+    // ];
+
+    // for (const tache of taches) {
+    //    tache();
+    // }
     // this.chargerToutesEnArrierePlan(taches, 3);
 
     // Groupe D — meta, léger, on peut se permettre d'attendre
@@ -475,8 +489,9 @@ export class DataService {
   // ── Templates ─────────────────────────────────────────────────
 
   async loadTemplates(): Promise<void> {
-    const raw = await this.sheets.fetchRaw(SHEET.templates);
-    this.cache.setTemplates(this.parse<MsgTemplate>(raw, H.templates));
+    // const raw = await this.sheets.fetchRaw(SHEET.templates);
+    // this.cache.setTemplates(this.parse<MsgTemplate>(raw, H.templates));
+    // this.cache.setTemplates(mockDB.templates)
   }
 
   getTemplates(): MsgTemplate[] {
@@ -524,16 +539,17 @@ export class DataService {
   // ── Utilisateurs ─────────────────────────────────────────────
 
   async loadUsers(): Promise<void> {
-    const raw = await this.sheets.fetchRaw(SHEET.users);
-    this.cache.setUsers(
-      this.parse<AppUser>(raw, H.users).map(u => ({
-        ...u,
-        is_admin: String(u.is_admin) === 'OUI' || u.is_admin === true,
-        permissions: deconcatString(
-          typeof u.permissions === 'string' ? u.permissions : ''
-        ),
-      }))
-    );
+    // const raw = await this.sheets.fetchRaw(SHEET.users);
+    // this.cache.setUsers(
+    //   this.parse<AppUser>(raw, H.users).map(u => ({
+    //     ...u,
+    //     is_admin: String(u.is_admin) === 'OUI' || u.is_admin === true,
+    //     permissions: deconcatString(
+    //       typeof u.permissions === 'string' ? u.permissions : ''
+    //     ),
+    //   }))
+    // );
+    this.cache.setUsers(mockDB.users as AppUser[])
   }
 
   getUsers(): AppUser[] | any[] {

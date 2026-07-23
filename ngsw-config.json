@@ -3,12 +3,12 @@
   "index": "/index.html",
   "assetGroups": [
     {
-      "name": "app-shell",
+      "name": "app",
       "installMode": "prefetch",
-      "updateMode": "prefetch",
       "resources": {
         "files": [
           "/favicon.ico",
+          "/index.csr.html",
           "/index.html",
           "/manifest.webmanifest",
           "/*.css",
@@ -22,23 +22,8 @@
       "updateMode": "prefetch",
       "resources": {
         "files": [
-          "/assets/**",
-          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2|ani|eot)"
+          "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
         ]
-      }
-    }
-  ],
-  "dataGroups": [
-    {
-      "name": "parent-api",
-      "urls": [
-        "https://sheets.googleapis.com/v4/**"
-      ],
-      "cacheConfig": {
-        "maxSize": 50,
-        "maxAge": "10m",
-        "timeout": "5s",
-        "strategy": "freshness"
       }
     }
   ]

@@ -1,5 +1,5 @@
 // app.config.ts
-import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection, isDevMode } from '@angular/core';
 import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -8,6 +8,7 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { rateLimitInterceptor } from './core/interceptors/rate-limit.interceptor';
 import { DataService } from './core/services/data.service';
 import { ParentService } from './core/services/parent.service';
+import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
 
@@ -32,6 +33,9 @@ export const appConfig: ApplicationConfig = {
       setTimeout(async () => {
         await data.ensureSheets();
       }, 600);
-    }),
+    }), provideServiceWorker('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+          }),
   ],
 };

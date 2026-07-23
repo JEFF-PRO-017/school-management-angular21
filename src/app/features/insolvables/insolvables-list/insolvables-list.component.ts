@@ -9,11 +9,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { CacheService } from '../../../core/services/cache.service';
 import { DataService } from '../../../core/services/data.service';
-import { WhatsappService } from '../../../core/services/whatsapp.service';
 import { InsolvablesPdfService } from '../../../core/services/@insolvables/insolvables-pdf.service';
 import { _dernierRdvFamille, _fmtDate } from '../../../core/services/@insolvables';
 import { EleveEnrichi, FamilleService, Famille, FamilleEnrichi, MsgTemplate, ANNEE_SCOLAIRE } from '../../../core/models';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
+import { Message, WhatsappService } from '../../../core/services/@whatsapp/whatsapp.service';
 
 export interface EleveData extends EleveEnrichi {
   nb_enfants_famille: number;
@@ -212,18 +212,18 @@ export class InsolvablesListComponent implements OnInit {
   trackByEleve = (e: EleveData) => e.id_eleve;
 
   columns: TableColumn<EleveData>[] = [
-    { id: 'check',    header: '',              width: '32px', exportable: false },
-    { id: 'eleve',    header: 'Élève',         accessor: e => `${e.nom} ${e.prenom}` },
-    { id: 'famille',  header: 'Famille',       align: 'center' },
-    { id: 'classe',   header: 'Classe',        align: 'center' },
-    { id: 'contact',  header: 'Contact',       align: 'center', exportable: false },
-    { id: 'versePar', header: 'Versé/e',       align: 'center', accessor: e => e.montant_par_enfant },
-    { id: 'restePar', header: 'Reste/e',       align: 'center', accessor: e => e.reste_par_enfant },
-    { id: 'verseFamille', header: 'Versé T',   align: 'center', accessor: e => e.verse_famille },
-    { id: 'attendu',  header: 'Attendu',       align: 'center', accessor: e => e.attendu_famille },
-    { id: 'reste',    header: 'Reste',         align: 'center', accessor: e => e.restant_famille },
-    { id: 'rdv',      header: 'Prochain RDV',  align: 'center', exportable: false },
-    { id: 'wa',       header: 'WA',            align: 'center', exportable: false },
+    { id: 'check', header: '', width: '32px', exportable: false },
+    { id: 'eleve', header: 'Élève', accessor: e => `${e.nom} ${e.prenom}` },
+    { id: 'famille', header: 'Famille', align: 'center' },
+    { id: 'classe', header: 'Classe', align: 'center' },
+    { id: 'contact', header: 'Contact', align: 'center', exportable: false },
+    { id: 'versePar', header: 'Versé/e', align: 'center', accessor: e => e.montant_par_enfant },
+    { id: 'restePar', header: 'Reste/e', align: 'center', accessor: e => e.reste_par_enfant },
+    { id: 'verseFamille', header: 'Versé T', align: 'center', accessor: e => e.verse_famille },
+    { id: 'attendu', header: 'Attendu', align: 'center', accessor: e => e.attendu_famille },
+    { id: 'reste', header: 'Reste', align: 'center', accessor: e => e.restant_famille },
+    { id: 'rdv', header: 'Prochain RDV', align: 'center', exportable: false },
+    { id: 'wa', header: 'WA', align: 'center', exportable: false },
   ];
 
   // ── FormControls → signals ──────────────────────────────────────
@@ -266,8 +266,8 @@ export class InsolvablesListComponent implements OnInit {
     const dateRef = this.dateRefSignal();
     const classe = this.filtreClasse();
 
-   if (seuil <= 0 && maxRestant <= 0 && !dateRef && !classe) return this.elevesData();
-   return this.elevesData().filter(e => {
+    if (seuil <= 0 && maxRestant <= 0 && !dateRef && !classe) return this.elevesData();
+    return this.elevesData().filter(e => {
       if (seuil > 0 && e.montant_par_enfant >= seuil) return false;
       if (maxRestant > 0 && e.reste_par_enfant <= maxRestant) return false;
       if (dateRef) {
@@ -335,8 +335,12 @@ export class InsolvablesListComponent implements OnInit {
   }
 
   envoyerRappels(): void {
-    const n = this.wa.ouvrirWAMasse(this.famillesCibles(), this.templateChoisi());
-    this.snack.open(`${n} message(s) ouvert(s) dans WhatsApp`, 'OK', { duration: 4000 });
+    const messages: Message[] = this.famillesCibles().map(f => ({
+      tel: this.wa.choisirTel(f),
+      msg: this.wa.msgDefautRappel(f)
+    })
+    )
+    this.wa.send_message_bulk(messages);
   }
 
   waIndividuel(f: FamilleEnrichi | undefined): void {
@@ -344,7 +348,11 @@ export class InsolvablesListComponent implements OnInit {
       this.snack.open('Aucun numéro pour cette famille', '', { duration: 2500 });
       return;
     }
-    this.wa.ouvrirWA(f, this.templateChoisi());
+    const message = {
+      tel: this.wa.choisirTel(f),
+      msg: this.wa.msgDefautRappel(f)
+    }
+    this.wa.send_message_bulk([message]);
   }
 
   prochainRdv(f: FamilleEnrichi | undefined): string | null {

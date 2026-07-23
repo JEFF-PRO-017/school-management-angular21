@@ -1,0 +1,40 @@
+{
+  "name": "CSB Berceau du Savoir — Espace Parent",
+  "short_name": "EspaceParent",
+  "description": "Suivez la scolarité de vos enfants",
+  "start_url": "/espace-parent/login",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F0F4F8",
+  "theme_color": "#185FA5",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "assets/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshots/dashboard.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tableau de bord parent"
+    }
+  ]
+}

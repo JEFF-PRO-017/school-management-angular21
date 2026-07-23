@@ -9,4 +9,9 @@ export const environment = {
   callMeBotApiKey: 'VOTRE_CLE_CALLMEBOT',
   whatsappTemplate:
     'Bonjour, le solde scolaire de {nom_eleve} (classe : {classe}) est de {montant} FCFA restant. Merci.',
+  gupshup: {
+    sourceNumber: '+237',
+    appName: 'qwe',
+    apiKey: '',
+  }
 };
