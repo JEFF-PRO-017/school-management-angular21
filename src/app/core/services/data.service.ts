@@ -115,64 +115,64 @@ export class DataService {
     // await this.ensureSheets();
 
 
-     this.loadTemplates();
-    //  this.loadLogs();
-     this.loadUsers();
+    //  this.loadTemplates();
+    // //  this.loadLogs();
+    //  this.loadUsers();
 
-    this.cache.setFamilles(mockDB.familles as any[])
-    this.cache.setClasses(mockDB.classes)
-    this.cache.setMatieres(mockDB.matieres)
-    this.cache.setAnneeSvc(mockDB.anneesvc)
-    this.cache.setPointages(mockDB.pointages)
-    this.cache.setEleves(mockDB.eleves as any [])
-    this.cache.setSoldes(mockDB.soldes)
-    this.cache.setAbsences(mockDB.absences as any[])
-    this.cache.setNotes(mockDB.notes)
-    this.cache.setPaiements(mockDB.paiements)
+    // this.cache.setFamilles(mockDB.familles as any[])
+    // this.cache.setClasses(mockDB.classes)
+    // this.cache.setMatieres(mockDB.matieres)
+    // this.cache.setAnneeSvc(mockDB.anneesvc)
+    // this.cache.setPointages(mockDB.pointages)
+    // this.cache.setEleves(mockDB.eleves as any [])
+    // this.cache.setSoldes(mockDB.soldes)
+    // this.cache.setAbsences(mockDB.absences as any[])
+    // this.cache.setNotes(mockDB.notes)
+    // this.cache.setPaiements(mockDB.paiements)
 
 
-    // const taches: Array<() => Promise<void>> = [
-    //   () => this.chargerEnArrierePlan(SHEET.familles, H.familles,
-    //     rows => this.cache.setFamilles(this.parse<Famille>(rows, H.familles))),
+    const taches: Array<() => Promise<void>> = [
+      () => this.chargerEnArrierePlan(SHEET.familles, H.familles,
+        rows => this.cache.setFamilles(this.parse<Famille>(rows, H.familles))),
 
-    //   () => this.chargerEnArrierePlan(SHEET.classes, H.classes,
-    //     rows => this.cache.setClasses(this.parse<Classe>(rows, H.classes))),
+      () => this.chargerEnArrierePlan(SHEET.classes, H.classes,
+        rows => this.cache.setClasses(this.parse<Classe>(rows, H.classes))),
 
-    //   // () => this.chargerEnArrierePlan(SHEET.frais, H.frais,
-    //   //   rows => this.cache.setFrais(this.parse<FraisConfig>(rows, H.frais))),
+      // () => this.chargerEnArrierePlan(SHEET.frais, H.frais,
+      //   rows => this.cache.setFrais(this.parse<FraisConfig>(rows, H.frais))),
 
-    //   // () => this.chargerEnArrierePlan(SHEET.enseignants, H.enseignants,
-    //   //   rows => this.cache.setEnseignants(this.parse<Enseignant>(rows, H.enseignants))),
+      // () => this.chargerEnArrierePlan(SHEET.enseignants, H.enseignants,
+      //   rows => this.cache.setEnseignants(this.parse<Enseignant>(rows, H.enseignants))),
 
-    //   () => this.chargerEnArrierePlan(SHEET.matieres, H.matieres,
-    //     rows => this.cache.setMatieres(this.parse<MatiereConfig>(rows, H.matieres))),
+      () => this.chargerEnArrierePlan(SHEET.matieres, H.matieres,
+        rows => this.cache.setMatieres(this.parse<MatiereConfig>(rows, H.matieres))),
 
-    //   () => this.chargerEnArrierePlan(SHEET.anneesvc, H.anneesvc,
-    //     rows => this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rows, H.anneesvc))),
+      () => this.chargerEnArrierePlan(SHEET.anneesvc, H.anneesvc,
+        rows => this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rows, H.anneesvc))),
 
-    //   () => this.chargerEnArrierePlan(SHEET.pointages, H.pointages,
-    //     rows => this.cache.setPointages(this.parse<PointageResult>(rows, H.pointages))),
+      () => this.chargerEnArrierePlan(SHEET.pointages, H.pointages,
+        rows => this.cache.setPointages(this.parse<PointageResult>(rows, H.pointages))),
 
-    //   () => this.chargerEnArrierePlan(SHEET.eleves, H.eleves,
-    //     rows => this.cache.setEleves(this.parse<Eleve>(rows, H.eleves))),
+      () => this.chargerEnArrierePlan(SHEET.eleves, H.eleves,
+        rows => this.cache.setEleves(this.parse<Eleve>(rows, H.eleves))),
 
-    //   () => this.chargerEnArrierePlan(SHEET.soldes, H.soldes,
-    //     rows => this.cache.setSoldes(this.parse<SoldeSnap>(rows, H.soldes))),
+      () => this.chargerEnArrierePlan(SHEET.soldes, H.soldes,
+        rows => this.cache.setSoldes(this.parse<SoldeSnap>(rows, H.soldes))),
 
-    //   ()=> this.chargerEnArrierePlan(SHEET.absences, H.absences,
-    //     rows => this.cache.setAbsences(this.parse<Absence>(rows, H.absences))),
+      ()=> this.chargerEnArrierePlan(SHEET.absences, H.absences,
+        rows => this.cache.setAbsences(this.parse<Absence>(rows, H.absences))),
 
-    //   // () => this.chargerEnArrierePlan(SHEET.notes, H.notes,
-    //   //   rows => this.cache.setNotes(this.parse<Note>(rows, H.notes))),
+      () => this.chargerEnArrierePlan(SHEET.notes, H.notes,
+        rows => this.cache.setNotes(this.parse<Note>(rows, H.notes))),
 
-    //   // () => this.chargerEnArrierePlan(SHEET.paiements, H.paiements,
-    //   //   rows => this.cache.setPaiements(this.parse<Paiement>(rows, H.paiements))),
-    // ];
+      // () => this.chargerEnArrierePlan(SHEET.paiements, H.paiements,
+      //   rows => this.cache.setPaiements(this.parse<Paiement>(rows, H.paiements))),
+    ];
 
-    // for (const tache of taches) {
-    //    tache();
-    // }
-    // this.chargerToutesEnArrierePlan(taches, 3);
+    for (const tache of taches) {
+       tache();
+    }
+    this.chargerToutesEnArrierePlan(taches, 3);
 
     // Groupe D — meta, léger, on peut se permettre d'attendre
 

@@ -343,16 +343,21 @@ export class InsolvablesListComponent implements OnInit {
     this.wa.send_message_bulk(messages);
   }
 
-  waIndividuel(f: FamilleEnrichi | undefined): void {
+  async waIndividuel(f: FamilleEnrichi | undefined): Promise<void> {
     if (!f || !this.wa.choisirTel(f)) {
       this.snack.open('Aucun numéro pour cette famille', '', { duration: 2500 });
       return;
     }
+    // const message = {
+    //   tel: this.wa.choisirTel(f),
+    //   msg: this.wa.msgDefautRappel(f)
+    // }
     const message = {
-      tel: this.wa.choisirTel(f),
-      msg: this.wa.msgDefautRappel(f)
+      tel: '+237653477170',
+      msg: 'yo man cest le berceau'
     }
-    this.wa.send_message_bulk([message]);
+    await this.wa.send_message_bulk([message]);
+    console.log('je viens de finir le send message')
   }
 
   prochainRdv(f: FamilleEnrichi | undefined): string | null {
