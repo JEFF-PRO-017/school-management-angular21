@@ -63,7 +63,6 @@ export class ParentService {
   // ── Auth ─────────────────────────────────────────────────────
 
   async login(tel: string): Promise<'ok' | 'introuvable' | 'erreur'> {
-    debugger
     this.chargement.set(true);
     this.erreur.set(null);
     try {

@@ -1,8 +1,9 @@
-import { Injectable } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
 import { ANNEE_SCOLAIRE, POURCENT_PENSION } from "../shared";
 import { AnneeScolaireFamille, EleveEnrichi, FamilleEnrichi } from "./famille.model";
 import { Classe, Eleve } from "../academic";
 import { EleveData } from "../../../features/insolvables/insolvables-list/insolvables-list.component";
+import { CacheService } from "../../services/cache.service";
 
 /** Données financières d'une famille pour l'année scolaire en cours. */
 interface FamilleData {
@@ -35,6 +36,7 @@ const SEUIL_ARRONDI_MILLIER = 5000;
     providedIn: 'root'
 })
 export class FamilleService {
+    private cache = inject(CacheService)
 
     // =========================================================================
     // 1. CALCULS DE BASE SUR UNE FAMILLE
@@ -61,8 +63,9 @@ export class FamilleService {
 
     /** Retourne l'année scolaire en cours pour cette famille, si elle existe. */
     anneeSvcEncours(f: FamilleEnrichi | null): AnneeScolaireFamille | undefined {
-        const annees = f?.annee_scolaires;
-        return annees ? annees.find(a => a.annee_scolaire === ANNEE_SCOLAIRE) : undefined;
+        // J'AI GERE AINSI PARCEQUE CERTAINES TABLES NE SONT PAS TOTALEMEMNT ENRICHIES , DOU L'ABSENCE DE CERTAINES VALEUR EXEMPLE DE ELEVE QUI NE CONTINT PAS LES INOS PRECIS DE FAMILLES
+        const annees = this.cache.getFamilles().find(fa =>fa.id_famille ===f?.id_famille).annee_scolaires;
+        return annees ? annees.find((a: { annee_scolaire: string; }) => a.annee_scolaire === ANNEE_SCOLAIRE) : undefined;
     }
 
     /** Montant réellement dû (attendu moins les réductions). */
@@ -123,6 +126,22 @@ export class FamilleService {
             montant_reduction: reduction,
         };
     }
+    creerAnneeScolaire(
+        idFamille: string,
+        annee: string,
+        reductionSpecial = 0
+    ): AnneeScolaireFamille {
+        return {
+            id_annee_scolaire: `${idFamille}AN_SC`,
+            id_famille: idFamille,
+            annee_scolaire: annee,
+            montant_total_attendu: 0,
+            montant_reduction: 0,
+            montant_reduction_special: reductionSpecial,
+            anciennete: 0,
+        };
+    }
+
 
     /** Recalcule montant attendu + réduction après suppression d'un élève. */
     deleteAnneeSvc(f: FamilleEnrichi, e: Eleve): AnneeScolaireFamille | null {

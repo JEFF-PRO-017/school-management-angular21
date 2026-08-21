@@ -136,7 +136,6 @@ export class ParentLoginComponent {
     ]);
 
     async seConnecter(): Promise<void> {
-      debugger
         this.ctrlTel.markAsTouched();
         if (this.ctrlTel.invalid) return;
         this.erreurMsg.set(null);

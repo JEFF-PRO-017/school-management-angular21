@@ -72,18 +72,18 @@ export interface EleveEnrichi extends Eleve {
 // }
 
 
-export function creerAnneeScolaire(
-    idFamille: string,
-    annee: string,
-    reductionSpecial = 0
-): AnneeScolaireFamille {
-    return {
-        id_annee_scolaire: `${idFamille}AN_SC`,
-        id_famille: idFamille,
-        annee_scolaire: annee,
-        montant_total_attendu: 0,
-        montant_reduction: 0,
-        montant_reduction_special: reductionSpecial,
-        anciennete: 0,
-    };
-}
+// export function creerAnneeScolaire(
+//     idFamille: string,
+//     annee: string,
+//     reductionSpecial = 0
+// ): AnneeScolaireFamille {
+//     return {
+//         id_annee_scolaire: `${idFamille}AN_SC`,
+//         id_famille: idFamille,
+//         annee_scolaire: annee,
+//         montant_total_attendu: 0,
+//         montant_reduction: 0,
+//         montant_reduction_special: reductionSpecial,
+//         anciennete: 0,
+//     };
+// }

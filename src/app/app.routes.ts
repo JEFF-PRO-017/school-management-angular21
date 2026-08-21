@@ -35,6 +35,11 @@ const routes: Routes = [
         loadChildren: () => import('./features/familles/familles.routes').then(m => m.FAMILLES_ROUTES),
       },
       {
+        path: 'eleves',
+        canActivate:[permGuard],data:{perm:'eleves'},
+        loadChildren:()=>import('./features/eleves/eleves.routes').then(m => m.ELEVES_ROUTES)
+      },
+      {
         path: 'classes',
         canActivate: [permGuard], data: { perm: 'classes' },
         loadChildren: () => import('./features/classes/classes.routes').then(m => m.CLASSES_ROUTES),

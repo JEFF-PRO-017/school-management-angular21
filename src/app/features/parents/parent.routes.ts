@@ -7,7 +7,6 @@ import { Router } from '@angular/router';
 import { ParentService } from '../../core/services/parent.service';
 
 export function parentGuard() {
-  debugger
   const svc = inject(ParentService);
   const router = inject(Router);
   if (svc.estConnecte()) return true;

@@ -98,6 +98,12 @@ export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }
           <option value="ARCHIVE">Archivé</option>
         </select>
       </div>
+
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="chkVerifie"
+               formControlName="verifie">
+        <label class="form-check-label small" for="chkVerifie">Dossier vérifié</label>
+      </div>
     }
 
   </div>
@@ -116,68 +122,72 @@ export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }
 })
 export class EleveModalComponent implements OnInit {
 
-  readonly data     = inject<EleveModalData>(MAT_DIALOG_DATA);
+  readonly data = inject<EleveModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<EleveModalComponent>);
-  private fas       = inject(FamilleService)
-    private get = inject(GetServices)
-    private add = inject(AddServices)
-    private patch = inject(PatchServices)
+  private fas = inject(FamilleService)
+  private get = inject(GetServices)
+  private add = inject(AddServices)
+  private patch = inject(PatchServices)
 
-  isEdit  = false;
+  isEdit = false;
   private eleveId: string | null = null;
 
   classes = computed(() => this.get.getClasses() ?? []);
 
   form = new FormGroup({
-    nom:            new FormControl('', Validators.required),
-    prenom:         new FormControl('', Validators.required),
-    id_classe:      new FormControl('', Validators.required),
-    sexe:           new FormControl<'M' | 'F' | ''>(''),
+    nom: new FormControl('', Validators.required),
+    prenom: new FormControl(),
+    id_classe: new FormControl('', Validators.required),
+    sexe: new FormControl<'M' | 'F' | ''>(''),
     date_naissance: new FormControl(''),
-    matricule:      new FormControl(''),
-    statut:         new FormControl<StatutEleve>('ACTIF'),
+    matricule: new FormControl(''),
+    statut: new FormControl<StatutEleve>('ACTIF'),
+    verifie: new FormControl<boolean>(false),
   });
 
   ngOnInit(): void {
+    console.log("this.data",this.data)
     if (!this.data.eleve) return;
-    this.isEdit  = true;
+    this.isEdit = true;
     this.eleveId = this.data.eleve.id_eleve;
     this.form.patchValue({
-      nom:            this.data.eleve.nom,
-      prenom:         this.data.eleve.prenom,
-      id_classe:      this.data.eleve.id_classe,
-      sexe:           this.data.eleve.sexe ?? '',
+      nom: this.data.eleve.nom,
+      prenom: this.data.eleve.prenom,
+      id_classe: this.data.eleve.id_classe,
+      sexe: this.data.eleve.sexe ?? '',
       date_naissance: this.data.eleve.date_naissance,
-      matricule:      this.data.eleve.matricule ?? '',
-      statut:         this.data.eleve.statut,
+      matricule: this.data.eleve.matricule ?? '',
+      statut: this.data.eleve.statut,
+      verifie: this.data.eleve.verifie ?? false,
     });
   }
 
   async save(): Promise<void> {
     if (this.form.invalid) return;
-    const classe   = this.classes().find(c => c.id_classe ===this.form.value.id_classe)
-    if(!classe) return
+    const classe = this.classes().find(c => c.id_classe === this.form.value.id_classe)
+    if (!classe) return
 
     const eleve: Eleve = {
-      id_eleve:         this.eleveId ?? `ELV-${Date.now()}`,
-      id_famille:       this.data.famille.id_famille,
-      id_classe:        this.form.value.id_classe!,
-      nom:              this.form.value.nom!,
-      prenom:           this.form.value.prenom!,
-      date_naissance:   this.form.value.date_naissance ?? '',
+      id_eleve: this.eleveId ?? `ELV-${Date.now()}`,
+      id_famille: this.data.famille.id_famille,
+      id_classe: this.form.value.id_classe!,
+      nom: this.form.value.nom!,
+      prenom: this.form.value.prenom!,
+      date_naissance: this.form.value.date_naissance ?? '',
       date_inscription: new Date().toISOString().split('T')[0],
-      statut:           this.form.value.statut ?? 'ACTIF',
-      sexe:             this.form.value.sexe || undefined,
-      matricule:        this.form.value.matricule || undefined,
+      statut: this.form.value.statut ?? 'ACTIF',
+      sexe: this.form.value.sexe || undefined,
+      matricule: this.form.value.matricule || undefined,
+      verifie: this.isEdit ? (this.form.value.verifie ?? false) : false,
     };
+    debugger
+    const anneeUpdate = this.fas.upateAnneeSvc(this.data.famille, eleve, classe)
+    if (!anneeUpdate) return
 
-    const anneeUpdate =this.fas.upateAnneeSvc(this.data.famille,eleve,classe) 
-    if(!anneeUpdate) return
-    
     if (this.isEdit) await this.patch.updateEleve(eleve);
-    else             await this.add.addEleve(eleve);
+    else await this.add.addEleve(eleve);
 
-    console.log('anneeUpdate',anneeUpdate);
+    console.log('anneeUpdate', anneeUpdate);
     this.patch.updateAnneeSvc(anneeUpdate)
 
     this.dialogRef.close({ success: true, eleve });

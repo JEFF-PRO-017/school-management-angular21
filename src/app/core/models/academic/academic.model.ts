@@ -29,6 +29,7 @@ export interface Eleve {
   statut: StatutEleve;
   sexe?: Sexe;
   matricule?: string;
+  verifie?:boolean
 }
 
 // matiere

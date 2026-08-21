@@ -13,7 +13,7 @@ import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 
 import { FamilleFormComponent, TEL_PATTERN } from './components/famille-form.component';
 import { FamilleFraisComponent, FraisFormValue } from './components/famille-frais.component';
-import { AnneeScolaireFamille, creerAnneeScolaire, Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
+import { AnneeScolaireFamille,  Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
 import { AddServices, PatchServices } from '../../../core/services/@data';
 
 export interface FamilleModalData { famille: Famille | FamilleEnrichi | null; }
@@ -184,7 +184,7 @@ export class FamilleModalComponent implements OnInit {
       else this.add.addFamille(famille);
 
       // AnneeScolaireFamille — si section active
-      const base = this.anneeScolaireExistante ?? creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
+      const base = this.anneeScolaireExistante ?? this.fas.creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
 
       const annee: AnneeScolaireFamille = {
         ...base,

@@ -22,7 +22,7 @@ export const H = {
         'latitude', 'longitude', 'adresse_texte',
         'montant_total_attendu', 'annee_scolaire', 'montant_reduction', 'commentaire'],
     eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance',
-        'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule'],
+        'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule','verifie'],
     classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire',
         'effectif_max', 'enseignant_principal', 'prix'],
     paiements: ['id_paiement', 'id_famille', 'montant_verse', 'date_paiement', 'mode_paiement',

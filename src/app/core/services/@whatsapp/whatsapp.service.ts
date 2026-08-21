@@ -40,57 +40,97 @@ export class WhatsappService {
     );
   }
 
- async  send_message_bulk(msgs: Message[]) {
+  async send_message_bulk(msgs: Message[]) {
     msgs.forEach(element => {
-        this.send_message(element)
+      this.send_message(element)
     });
   }
 
   /** Envoie un texte libre via Gupshup. Seule fonction qui appelle l'API. */
-private async send_message(msg: Message): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  const destination = this.fmtTel(msg.tel).replace('', '');
+  private async send_message(msg: Message): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+    const destination = this.fmtTel(msg.tel).replace('', '');
 
-  const body = new URLSearchParams({
-    channel: 'whatsapp',
-    source: environment.gupshup.sourceNumber,
-    destination,
-    'src.name': environment.gupshup.appName,
-    message: JSON.stringify({ type: 'text', text: msg.msg }),
-  });
+    const body = new URLSearchParams({
+      channel: 'whatsapp',
+      source: environment.gupshup.sourceNumber,
+      destination,
+      'src.name': environment.gupshup.appName,
+      message: JSON.stringify({ type: 'text', text: msg.msg }),
+    });
 
-  try {
-    const reponse = await firstValueFrom(
-      this.http.post<{ status: string; messageId: string }>(
-        GUPSHUP_ENDPOINT,
-        body.toString(),
-        {
-          headers: {
-            apikey: environment.gupshup.apiKey,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
-      )
-    );
+    try {
+      const reponse = await firstValueFrom(
+        this.http.post<{ status: string; messageId: string }>(
+          GUPSHUP_ENDPOINT,
+          body.toString(),
+          {
+            headers: {
+              apikey: environment.gupshup.apiKey,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          }
+        )
+      );
 
-    // "submitted" veut dire accepté par Gupshup, pas encore livré au client
-    // le vrai statut de livraison arrive plus tard via ton webhook
-    console.log('reponse',reponse)
+      // "submitted" veut dire accepté par Gupshup, pas encore livré au client
+      // le vrai statut de livraison arrive plus tard via ton webhook
+      console.log('reponse', reponse)
 
-    if (reponse.status === 'submitted') {
-      return { ok: true, messageId: reponse.messageId };
+      if (reponse.status === 'submitted') {
+        return { ok: true, messageId: reponse.messageId };
+      }
+      return { ok: false, error: `Statut inattendu: ${reponse.status}` };
+    } catch (err) {
+      const httpErr = err as HttpErrorResponse;
+      // Gupshup renvoie souvent le détail de l'échec dans err.error
+      console.error('[WhatsappService] Échec appel API Gupshup :', httpErr.error ?? httpErr.message);
+      return { ok: false, error: httpErr.error?.message ?? 'Erreur inconnue' };
     }
-    return { ok: false, error: `Statut inattendu: ${reponse.status}` };
-  } catch (err) {
-    const httpErr = err as HttpErrorResponse;
-    // Gupshup renvoie souvent le détail de l'échec dans err.error
-    console.error('[WhatsappService] Échec appel API Gupshup :', httpErr.error ?? httpErr.message);
-    return { ok: false, error: httpErr.error?.message ?? 'Erreur inconnue' };
   }
-}
 
   private fmtTel(tel: string): string {
     const clean = tel.replace(/\s+/g, '');
     return clean.startsWith('+') ? clean : `${INDICATIF}${clean}`;
+  }
+
+
+  /**
+   * Sélectionne automatiquement le transport :
+   *   - CallMeBot si environment.callMeBotApiKey est défini
+   *   - wa.me sinon (ouverture navigateur, toujours "vrai" côté client)
+   */
+  public async envoyer(tel: string, message: string): Promise<boolean> {
+    if (environment.callMeBotApiKey) {
+      return this.envoyerViaCallMeBot(tel, message);
+    }
+    this.ouvrirWaMe(tel, message);
+    return true;
+  }
+
+  /** Envoi automatique via CallMeBot (inscription unique requise). */
+  private async envoyerViaCallMeBot(tel: string, message: string): Promise<boolean> {
+    try {
+      const numero = tel.replace(/[^0-9]/g, '');
+      const url =
+        `https://api.callmebot.com/whatsapp.php` +
+        `?phone=${numero}` +
+        `&text=${encodeURIComponent(message)}` +
+        `&apikey=${environment.callMeBotApiKey}`;
+      await firstValueFrom(this.http.get(url, { responseType: 'text' }));
+      return true;
+    } catch {
+      // Repli silencieux sur wa.me en cas d'échec réseau CallMeBot
+      this.ouvrirWaMe(tel, message);
+      return false;
+    }
+  }
+
+  /** Ouvre wa.me dans un nouvel onglet. */
+  private ouvrirWaMe(tel: string, message: string): void {
+    window.open(
+      `https://wa.me/${this.fmtTel(tel)}?text=${encodeURIComponent(message)}`,
+      '_blank'
+    );
   }
 
 
