@@ -12,7 +12,8 @@ import { Famille, Eleve, Paiement, Absence, Note, Sequence, SEQUENCES } from '..
 import { ParentSession, DashboardParent, PARENT_SESSION_KEY, PARENT_DATA_KEY, EleveParent, PaiementParent, NotifParent, WizardState, SHEET_TAMPON, DemandePaiement, REFRESH_INTERVAL_MS, H_TAMPON } from '../models/parent.models';
 import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 import { SheetsQueueServiceService } from './sheets-queue.service';
-import { H, SHEET } from './data.service';
+import { SHEET, H } from './@data';
+// import { H, SHEET } from './data.service';
 
 // ─────────────────────────────────────────────────────────────
 

@@ -6,9 +6,9 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { APP_ROUTES } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { rateLimitInterceptor } from './core/interceptors/rate-limit.interceptor';
-import { DataService } from './core/services/data.service';
 import { ParentService } from './core/services/parent.service';
 import { provideServiceWorker } from '@angular/service-worker';
+import { DataServiceBase } from './core/services/@data/_data.base.service';
 
 export const appConfig: ApplicationConfig = {
 
@@ -24,7 +24,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
 
     provideAppInitializer(() => {
-      const data = inject(DataService);
+      const data = inject(DataServiceBase);
       const data_parent = inject(ParentService);
 
       setTimeout(async () => {

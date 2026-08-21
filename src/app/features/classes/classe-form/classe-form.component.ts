@@ -4,9 +4,9 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NgxMaskDirective, provideNgxMask } from 'ngx-mask';
 
-import { DataService }  from '../../../core/services/data.service';
 import { Classe } from '../../../core/models/academic';
 import { Section } from '../../../core/models/shared';
+import { GetServices, AddServices, PatchServices } from '../../../core/services/@data';
 
 export interface ClasseModalData { classe?: Classe; }
 
@@ -106,13 +106,15 @@ export class ClasseModalComponent implements OnInit {
 
   readonly data     = inject<ClasseModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<ClasseModalComponent>);
-  private dataService = inject(DataService);
   private snack     = inject(MatSnackBar);
+    private get = inject(GetServices)
+  private add = inject(AddServices)
+  private patch = inject(PatchServices)
 
   isEdit  = false;
   private classeId: string | null = null;
 
-  enseignants = () => this.dataService.getEnseignants() ?? [];
+  enseignants = () => this.get.getEnseignants() ?? [];
 
   form = new FormGroup({
     nom_classe:           new FormControl('', Validators.required),
@@ -155,8 +157,8 @@ export class ClasseModalComponent implements OnInit {
       annee_scolaire: ''
     };
 
-    if (this.isEdit)  this.dataService.updateClasse(classe);
-    else              this.dataService.addClasse(classe);
+    if (this.isEdit)  this.patch.updateClasse(classe);
+    else              this.add.addClasse(classe);
 
     this.snack.open(this.isEdit ? 'Classe modifiée' : 'Classe créée', 'OK', { duration: 3000 });
     this.dialogRef.close({ success: true, classe });

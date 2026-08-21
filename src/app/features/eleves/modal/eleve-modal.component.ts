@@ -2,10 +2,10 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 
-import { DataService }  from '../../../core/services/data.service';
 import { StatutEleve } from '../../../core/models/shared';
 import { FamilleEnrichi, FamilleService } from '../../../core/models/family';
 import { Eleve } from '../../../core/models/academic';
+import { GetServices, AddServices, PatchServices } from '../../../core/services/@data';
 
 export interface EleveModalData { famille: FamilleEnrichi; eleve?: Eleve; }
 
@@ -118,13 +118,15 @@ export class EleveModalComponent implements OnInit {
 
   readonly data     = inject<EleveModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<EleveModalComponent>);
-  private dataSvc   = inject(DataService);
   private fas       = inject(FamilleService)
+    private get = inject(GetServices)
+    private add = inject(AddServices)
+    private patch = inject(PatchServices)
 
   isEdit  = false;
   private eleveId: string | null = null;
 
-  classes = computed(() => this.dataSvc.getClasses() ?? []);
+  classes = computed(() => this.get.getClasses() ?? []);
 
   form = new FormGroup({
     nom:            new FormControl('', Validators.required),
@@ -172,11 +174,11 @@ export class EleveModalComponent implements OnInit {
     const anneeUpdate =this.fas.upateAnneeSvc(this.data.famille,eleve,classe) 
     if(!anneeUpdate) return
     
-    if (this.isEdit) await this.dataSvc.updateEleve(eleve);
-    else             await this.dataSvc.addEleve(eleve);
+    if (this.isEdit) await this.patch.updateEleve(eleve);
+    else             await this.add.addEleve(eleve);
 
     console.log('anneeUpdate',anneeUpdate);
-    this.dataSvc.updateAnneeSvc(anneeUpdate)
+    this.patch.updateAnneeSvc(anneeUpdate)
 
     this.dialogRef.close({ success: true, eleve });
   }

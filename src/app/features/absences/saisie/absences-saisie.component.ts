@@ -11,7 +11,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { FamilleService, PointageModalData, PointageResult, Absence, Classe } from '../../../core/models';
 import { EleveData } from '../../insolvables/insolvables-list/insolvables-list.component';
 import { PointageModalComponent } from './components/pointage-modal.component';
-import { DataService } from '../../../core/services';
+import { AddServices, GetServices } from '../../../core/services/@data';
 
 type ViewMode = 'grille' | 'liste';
 
@@ -243,7 +243,8 @@ type ViewMode = 'grille' | 'liste';
 export class AbsencesSaisieComponent implements OnInit {
 
   private cache  = inject(CacheService);
-  private data   = inject(DataService);
+  private add   = inject(AddServices);
+  private get  = inject(GetServices)
   private auth   = inject(AuthService);
   private fas    = inject(FamilleService);
   private snack  = inject(MatSnackBar);
@@ -260,7 +261,7 @@ export class AbsencesSaisieComponent implements OnInit {
   ngOnInit(): void {
     const classes = this.classes();
     if (classes.length) this.classeId.set(classes[0].id_classe);
-    this.elevesData = this.fas.construireElevesDataAvecFamille(this.data.getFamilles());
+    this.elevesData = this.fas.construireElevesDataAvecFamille(this.get.getFamilles());
   }
 
   emptySet(): Set<string> { return new Set(); }
@@ -340,7 +341,7 @@ export class AbsencesSaisieComponent implements OnInit {
   }
 
   private enregistrerPointage(result: PointageResult, absentsSnapshot: Set<string>): void {
-    this.data.addPointage({
+    this.add.addPointage({
       id_pointage: result.id_pointage,
       id_matiere: result.id_matiere,
       id_enseignants: result.id_enseignants,
@@ -350,7 +351,7 @@ export class AbsencesSaisieComponent implements OnInit {
     });
 
     if (absentsSnapshot.size > 0) {
-      this.data.addAbsencesBatch(this.construireAbsences(absentsSnapshot, result.id_pointage));
+      this.add.addAbsencesBatch(this.construireAbsences(absentsSnapshot, result.id_pointage));
     }
     this.snack.open('Pointage enregistré ✓', 'OK', { duration: 3000 });
   }

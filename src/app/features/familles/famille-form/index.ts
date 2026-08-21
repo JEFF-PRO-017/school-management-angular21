@@ -9,13 +9,12 @@ import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angula
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { DataService } from '../../../core/services/data.service';
-
 import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 
 import { FamilleFormComponent, TEL_PATTERN } from './components/famille-form.component';
 import { FamilleFraisComponent, FraisFormValue } from './components/famille-frais.component';
 import { AnneeScolaireFamille, creerAnneeScolaire, Famille, FamilleEnrichi, FamilleService } from '../../../core/models/family';
+import { AddServices, PatchServices } from '../../../core/services/@data';
 
 export interface FamilleModalData { famille: Famille | FamilleEnrichi | null; }
 
@@ -84,9 +83,10 @@ export class FamilleModalComponent implements OnInit {
 
   readonly data = inject<FamilleModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<FamilleModalComponent>);
-  private svc = inject(DataService);
   private fas = inject(FamilleService);
   private snackBar = inject(MatSnackBar);
+  private add = inject(AddServices)
+  private patch  = inject(PatchServices)
 
   isEdit = false;
   familleId = '';
@@ -180,8 +180,8 @@ export class FamilleModalComponent implements OnInit {
         status: 'ACTIF'
       };
 
-      if (this.isEdit) this.svc.updateFamille(famille);
-      else this.svc.addFamille(famille);
+      if (this.isEdit) this.patch.updateFamille(famille);
+      else this.add.addFamille(famille);
 
       // AnneeScolaireFamille — si section active
       const base = this.anneeScolaireExistante ?? creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
@@ -195,8 +195,8 @@ export class FamilleModalComponent implements OnInit {
       };
 
       this.anneeScolaireExistante
-        ? this.svc.updateAnneeSvc(annee)
-        : this.svc.addAnneeSvc(annee);
+        ? this.patch.updateAnneeSvc(annee)
+        : this.add.addAnneeSvc(annee);
 
       this.snackBar.open(
         this.isEdit ? 'Famille modifiée avec succès' : 'Famille créée avec succès',

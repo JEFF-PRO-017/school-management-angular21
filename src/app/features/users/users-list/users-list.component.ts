@@ -8,8 +8,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AppUser, PERMISSIONS, PermissionId } from '../../../core/models/last_index';
 import { UserModalData, UserModalComponent }   from '../modal/user-modal.component';
-import { DataService }                         from '../../../core/services/data.service';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { GetServices } from '../../../core/services/@data';
 
 @Component({
   selector: 'app-users-list',
@@ -165,12 +165,12 @@ export class UsersListComponent {
   private dialog = inject(MatDialog);
   private snack  = inject(MatSnackBar);
   private cdr    = inject(ChangeDetectorRef);
-  private data   = inject(DataService);
+  private data   = inject(GetServices);
 
   readonly pageSize = 10;
   recherche = signal<string>('');
 
-  users = signal<AppUser[]>(this.data.getUsers());
+  users = signal<AppUser[]|any[]>(this.data.getUsers());
 
   private _debut = 0;
   private _fin   = this.pageSize;

@@ -8,7 +8,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CacheService } from '../../../core/services/cache.service';
-import { DataService } from '../../../core/services/data.service';
 import { ANNEE_SCOLAIRE } from '../../../core/models/shared';
 
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -99,7 +98,6 @@ export class FamilleDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cache = inject(CacheService);
-  private data = inject(DataService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private cdr = inject(ChangeDetectorRef);

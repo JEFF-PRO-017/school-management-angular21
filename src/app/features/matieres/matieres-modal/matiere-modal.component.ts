@@ -10,8 +10,8 @@ import {
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { DataService }  from '../../../core/services/data.service';
 import { MatiereConfig } from '../../../core/models';
+import { AddServices, GetServices, PatchServices } from '../../../core/services/@data';
 
 export interface MatiereModalData { matiere?: MatiereConfig; }
 
@@ -122,26 +122,28 @@ export interface MatiereModalData { matiere?: MatiereConfig; }
 })
 export class MatiereModalComponent implements OnInit {
 
-  readonly data     = inject<MatiereModalData>(MAT_DIALOG_DATA);
+  readonly data = inject<MatiereModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<MatiereModalComponent>);
-  private dataService = inject(DataService);
-  private snack     = inject(MatSnackBar);
+  private snack = inject(MatSnackBar);
+  private get = inject(GetServices)
+  private add = inject(AddServices)
+  private patch = inject(PatchServices)
 
-  isEdit    = false;
-  saving    = false;
+  isEdit = false;
+  saving = false;
   private matiereId: string | null = null;
 
-  classes    = () => this.dataService.getClasses()    ?? [];
-  enseignants = () => this.dataService.getUsers() ?? [];
+  classes = () => this.get.getClasses() ?? [];
+  enseignants = () => this.get.getUsers() ?? [];
 
   form = new FormGroup({
-    nom_matiere:       new FormControl('', Validators.required),
-    id_classe:         new FormControl('', Validators.required),
-    id_enseignant:     new FormControl(''),
-    coefficient:       new FormControl(1),
+    nom_matiere: new FormControl('', Validators.required),
+    id_classe: new FormControl('', Validators.required),
+    id_enseignant: new FormControl(''),
+    coefficient: new FormControl(1),
     note_eliminatoire: new FormControl<number | null>(null),
-    groupe:            new FormControl(''),
-    niveau:            new FormControl(''),
+    groupe: new FormControl(''),
+    niveau: new FormControl(''),
   });
 
   get fc() { return this.form.controls; }
@@ -149,19 +151,19 @@ export class MatiereModalComponent implements OnInit {
   ngOnInit(): void {
     const m = this.data?.matiere;
     if (!m) return;
-    this.isEdit    = true;
+    this.isEdit = true;
     this.matiereId = m.id_matiere;
     const coefficient = typeof m.coefficient === 'string'
       ? Number(m.coefficient)
       : m.coefficient;
     this.form.patchValue({
-      nom_matiere:       m.nom_matiere,
-      id_classe:         m.id_classe,
-      id_enseignant:     m.id_enseignant,
-      coefficient:       Number.isNaN(coefficient) ? 1 : coefficient,
+      nom_matiere: m.nom_matiere,
+      id_classe: m.id_classe,
+      id_enseignant: m.id_enseignant,
+      coefficient: Number.isNaN(coefficient) ? 1 : coefficient,
       note_eliminatoire: m.note_eliminatoire ?? null,
-      groupe:            m.groupe,
-      niveau:            m.niveau,
+      groupe: m.groupe,
+      niveau: m.niveau,
     });
   }
 
@@ -170,20 +172,20 @@ export class MatiereModalComponent implements OnInit {
     if (this.form.invalid) return;
 
     const matiere: MatiereConfig = {
-      id_matiere:        this.matiereId ?? `MAT-${Date.now()}`,
-      nom_matiere:       this.fc.nom_matiere.value!,
-      id_classe:         this.fc.id_classe.value!,
-      id_enseignant:     this.fc.id_enseignant.value ?? '',
-      coefficient:       +(this.fc.coefficient.value ?? 1),
+      id_matiere: this.matiereId ?? `MAT-${Date.now()}`,
+      nom_matiere: this.fc.nom_matiere.value!,
+      id_classe: this.fc.id_classe.value!,
+      id_enseignant: this.fc.id_enseignant.value ?? '',
+      coefficient: +(this.fc.coefficient.value ?? 1),
       note_eliminatoire: this.fc.note_eliminatoire.value ?? undefined,
-      groupe:            this.fc.groupe.value ?? '',
-      niveau:            this.fc.niveau.value ?? '',
+      groupe: this.fc.groupe.value ?? '',
+      niveau: this.fc.niveau.value ?? '',
     };
 
     if (this.isEdit) {
-      this.dataService.updateMatiere(matiere);
+      this.patch.updateMatiere(matiere);
     } else {
-       this.dataService.addMatiere(matiere);
+      this.add.addMatiere(matiere);
     }
     this.snack.open(
       this.isEdit ? 'Matière mise à jour' : 'Matière créée',

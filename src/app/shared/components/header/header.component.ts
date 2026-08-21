@@ -5,10 +5,10 @@ import {
 import { MatMenuModule }   from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService }               from '../../../core/services/auth.service';
-import { DataService }               from '../../../core/services/data.service';
 import { SheetsQueueServiceService } from '../../../core/services/sheets-queue.service';
 import { Section }                   from '../../../core/models/last_index';
 import { titleApp } from '../../../app.component';
+import { DataServiceBase } from '../../../core/services/@data/_data.base.service';
 
 @Component({
   selector: 'app-header',
@@ -251,7 +251,7 @@ export class HeaderComponent {
   @Output() toggleMenu = new EventEmitter<void>();
 
   private auth   = inject(AuthService);
-  private data   = inject(DataService);
+  private data   = inject(DataServiceBase);
   private queue  = inject(SheetsQueueServiceService);
   titleApp = titleApp;
 

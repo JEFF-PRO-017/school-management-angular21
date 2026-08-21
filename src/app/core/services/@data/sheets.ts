@@ -4,7 +4,7 @@ export const SHEET = {
     classes: 'F3_CLASSES',
     paiements: 'F4_PAIEMENTS',
     frais: 'F5_FRAIS_CONFIG',
-    notes: `F6_${new Date().getFullYear()}`,
+    notes: `F6_2026`,
     templates: 'F7_MSG_TEMPLATES',
     logs: 'F8_LOG_ALERTES',
     soldes: 'F9_SNAP',

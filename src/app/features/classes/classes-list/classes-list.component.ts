@@ -4,10 +4,10 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
-import { DataService } from '../../../core/services/data.service';
 import { ClasseModalComponent, ClasseModalData } from '../classe-form/classe-form.component';
 import { Classe } from '../../../core/models/academic';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { GetServices } from '../../../core/services/@data';
 
 @Component({
   selector: 'app-classes-list',
@@ -166,7 +166,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 export class ClassesListComponent {
 
   private dialog = inject(MatDialog);
-  private data   = inject(DataService);
+  private get   = inject(GetServices);
   private cdr    = inject(ChangeDetectorRef);
 
   anneeScolaire = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
@@ -178,12 +178,12 @@ export class ClassesListComponent {
 
   optsCycle = computed<string[]>(() => {
     const cycles = new Set(
-      (this.data.getClasses() ?? []).map(c => c.cycle).filter(Boolean)
+      (this.get.getClasses() ?? []).map(c => c.cycle).filter(Boolean)
     );
     return ['Tous', ...cycles];
   });
 
-  classes  = computed(() => this.data.getClasses() as Classe[] ?? []);
+  classes  = computed(() => this.get.getClasses() as Classe[] ?? []);
   filtered = computed(() => {
     const cycle = this.filtreCycle();
     return cycle === 'Tous'
@@ -227,7 +227,7 @@ export class ClassesListComponent {
 
   // ── Helpers effectif ──────────────────────────────────────────────
   effectif(id: string): number {
-    return (this.data.getEleves() ?? [])
+    return (this.get.getEleves() ?? [])
       .filter(e => e.id_classe === id 
         // TODO: A REMMETTRE
         // && e.statut === 'ACTIF'   

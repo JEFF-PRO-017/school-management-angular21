@@ -25,7 +25,6 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient }          from '@angular/common/http';
 import { firstValueFrom }      from 'rxjs';
 
-import { DataService }   from './data.service';
 import { CacheService }  from './cache.service';
 import {
   Famille, EleveEnrichi, MsgTemplate, LogAlerte
@@ -44,7 +43,6 @@ const INDICATIF = '+237';   // Cameroun
 export class WhatsappService {
 
   private http  = inject(HttpClient);
-  private data  = inject(DataService);
   private cache = inject(CacheService);
 
   // ══════════════════════════════════════════════════════════════
@@ -352,7 +350,7 @@ export class WhatsappService {
       date_envoi: new Date().toISOString(),
       statut:     ok ? 'envoye' : 'echec',
     };
-    this.data.addLog(log);   // cache + queue Sheets
+    // this.data.addLog(log);   // cache + queue Sheets
     if (ok) this.markSent(partial.hash_dedup);
   }
 

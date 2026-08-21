@@ -9,9 +9,9 @@ import { RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { DataService } from '../../../core/services/data.service';
 import { MsgTemplate } from '../../../core/models/last_index';
 import { TemplateFormComponent, TemplateModalData } from '../template-form/template-form.component';
+import { GetServices } from '../../../core/services/@data';
 
 
 type FiltreActif = 'tous' | 'actif' | 'inactif';
@@ -286,7 +286,7 @@ type FiltreActif = 'tous' | 'actif' | 'inactif';
 })
 export class TemplatesListComponent implements OnInit {
 
-  private data = inject(DataService);
+  private data = inject(GetServices);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private cdr = inject(ChangeDetectorRef);

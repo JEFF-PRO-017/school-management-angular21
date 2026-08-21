@@ -8,7 +8,6 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog }  from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { DataService }     from '../../../core/services/data.service';
 import { AuthService }     from '../../../core/services/auth.service';
 import { WhatsappService } from '../../../core/services/whatsapp.service';
 import { Eleve, MatiereConfig, Sequence, EleveEnrichi } from '../../../core/models/last_index';
@@ -19,6 +18,7 @@ import {
 } from '../helper/bulletin.models';
 import { toFloat, toNote } from '../helper/pdf-helpers';
 import { BulletinPdfService } from '../../../core/services/bulletin-pdf.service';
+import { GetServices } from '../../../core/services/@data';
 
 @Component({
   selector: 'app-bulletins',
@@ -328,13 +328,13 @@ import { BulletinPdfService } from '../../../core/services/bulletin-pdf.service'
 })
 export class BulletinsComponent implements OnInit {
 
-  private data   = inject(DataService);
   private auth   = inject(AuthService);
   private wa     = inject(WhatsappService);  // ← toute la logique WA est ici
   private pdfSvc = inject(BulletinPdfService);
   private dialog = inject(MatDialog);
   private snack  = inject(MatSnackBar);
   private cdr    = inject(ChangeDetectorRef);
+  private get  = inject(GetServices)
 
   ctrlClasse = new FormControl('');
   loading    = signal(false);
@@ -356,7 +356,7 @@ export class BulletinsComponent implements OnInit {
   private _groupes  = signal<GroupeMatiere[]>([]);
 
   classesDisponibles = computed(() => {
-    const all = this.data.getClasses() ?? [];
+    const all = this.get.getClasses() ?? [];
     return this.auth.isAdmin()
       ? all
       : all.filter(c => this.auth.getClassesAssignees().includes(c.id_classe));
@@ -427,7 +427,7 @@ export class BulletinsComponent implements OnInit {
     if (!this.ctrlClasse.value) return;
     this.loading.set(true);
     await Promise.resolve();
-    const classe   = (this.data.getClasses() ?? [])
+    const classe   = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
     const matieres = classe?.matieres ?? [];
     this._matieres.set(matieres);
@@ -458,7 +458,7 @@ export class BulletinsComponent implements OnInit {
 
   async envoyerMoyennesWA(): Promise<void> {
     const cibles  = this.ciblesWA();
-    const classe  = (this.data.getClasses() ?? [])
+    const classe  = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
     const periode = this.config.annee;
 
@@ -517,7 +517,7 @@ export class BulletinsComponent implements OnInit {
     this.genAll.set(true);
     await Promise.resolve();
     const bulletins = this._eleves().map(e => this._buildBulletinData(e));
-    const cls = (this.data.getClasses() ?? [])
+    const cls = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value)?.nom_classe ?? '';
     this.pdfSvc.telecharger(
       this.pdfSvc.genererBulletinsClasse(bulletins),
@@ -532,7 +532,7 @@ export class BulletinsComponent implements OnInit {
     this.genPV.set(true);
     await Promise.resolve();
     const matieres = this._matieres();
-    const cls = (this.data.getClasses() ?? [])
+    const cls = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
 
     const pvData: PVData = {
@@ -584,7 +584,7 @@ export class BulletinsComponent implements OnInit {
   }
 
   telechargerFicheSaisie(): void {
-    const cls = (this.data.getClasses() ?? [])
+    const cls = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
     const fdata: FicheSaisieData = {
       nomClasse: cls?.nom_classe ?? '',
@@ -626,7 +626,7 @@ export class BulletinsComponent implements OnInit {
   }
 
   private _buildBulletinData(eleve: Eleve): BulletinData {
-    const classe = (this.data.getClasses() ?? [])
+    const classe = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
     const rws  = this.rows();
     const row  = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);

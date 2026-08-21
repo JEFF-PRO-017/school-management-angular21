@@ -8,9 +8,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
-import { DataService } from '../../../core/services/data.service';
 import { LogAlerte } from '../../../core/models/last_index';
 import { TemplateFormComponent } from '../template-form/template-form.component';
+import { GetServices } from '../../../core/services/@data';
 
 // Valeurs possibles des filtres
 type FiltreStatut = '' | 'envoye' | 'echec';
@@ -266,7 +266,7 @@ type FiltrePeriode = '' | 'today' | 'week' | 'month';
 })
 export class AlertesLogComponent implements OnInit {
 
-  private data = inject(DataService);
+  private data = inject(GetServices);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
 
@@ -368,12 +368,12 @@ export class AlertesLogComponent implements OnInit {
   // ── Init ──
 
   ngOnInit(): void {
-    const logs = this.data.getLogs().sort((a, b) =>
-      new Date(b.date_envoi).getTime() - new Date(a.date_envoi).getTime()
-    );
-    this.logs.set(logs);
-    this.loading.set(false);
-    this.cdr.markForCheck();
+    // const logs = this.data.getLogs().sort((a, b) =>
+    //   new Date(b.date_envoi).getTime() - new Date(a.date_envoi).getTime()
+    // );
+    // this.logs.set(logs);
+    // this.loading.set(false);
+    // this.cdr.markForCheck();
   }
 
   // ── Action ──

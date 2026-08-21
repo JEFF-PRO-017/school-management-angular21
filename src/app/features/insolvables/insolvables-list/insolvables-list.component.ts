@@ -8,12 +8,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { CacheService } from '../../../core/services/cache.service';
-import { DataService } from '../../../core/services/data.service';
 import { InsolvablesPdfService } from '../../../core/services/@insolvables/insolvables-pdf.service';
 import { _dernierRdvFamille, _fmtDate } from '../../../core/services/@insolvables';
 import { EleveEnrichi, FamilleService, Famille, FamilleEnrichi, MsgTemplate, ANNEE_SCOLAIRE } from '../../../core/models';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
 import { Message, WhatsappService } from '../../../core/services/@whatsapp/whatsapp.service';
+import { GetServices } from '../../../core/services/@data';
 
 export interface EleveData extends EleveEnrichi {
   nb_enfants_famille: number;
@@ -202,7 +202,7 @@ export interface EleveData extends EleveEnrichi {
 export class InsolvablesListComponent implements OnInit {
 
   private cache = inject(CacheService);
-  private data = inject(DataService);
+  private get = inject(GetServices);
   private wa = inject(WhatsappService);
   private pdf = inject(InsolvablesPdfService);
   private snack = inject(MatSnackBar);
@@ -247,17 +247,17 @@ export class InsolvablesListComponent implements OnInit {
   setTemplate(t: MsgTemplate) { this.templateChoisi.set(t); }
 
   classes = computed(() => this.cache.getClasses());
-  templates = computed(() => this.data.getTemplates());
+  templates = computed(() => this.get.getTemplates());
 
   elevesData = signal<EleveData[]>([]);
 
   ngOnInit(): void {
-    this.data.loadTemplates().then(() => {
-      const rappel = this.data.getTemplates().find(t => t.type === 'rappel' || t.type === 'relance');
-      if (rappel) this.templateChoisi.set(rappel);
-      this.cdr.markForCheck();
-    });
-    this.elevesData.set(this.fasSvc.construireElevesDataAvecFamille(this.data.getFamilles()));
+    // this.get.loadTemplates().then(() => {
+    //   const rappel = this.get.getTemplates().find(t => t.type === 'rappel' || t.type === 'relance');
+    //   if (rappel) this.templateChoisi.set(rappel);
+    //   this.cdr.markForCheck();
+    // });
+    this.elevesData.set(this.fasSvc.construireElevesDataAvecFamille(this.get.getFamilles()));
   }
 
   filtered = computed<EleveData[]>(() => {

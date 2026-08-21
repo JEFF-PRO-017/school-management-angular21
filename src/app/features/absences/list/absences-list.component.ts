@@ -10,7 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { WhatsappService } from '../../../core/services/whatsapp.service';
 import { Absence, EleveEnrichi } from '../../../core/models';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
-import { DataService } from '../../../core/services';
+import { GetServices } from '../../../core/services/@data';
 
 type Periode = 'today' | 'week' | 'month' | '';
 type Justifie = '' | 'oui' | 'non';
@@ -179,7 +179,7 @@ interface LigneAbsence {
 })
 export class AbsencesListComponent {
 
-  private data = inject(DataService);
+  private get = inject(GetServices);
   private wa    = inject(WhatsappService);
   private snack = inject(MatSnackBar);
   private cdr   = inject(ChangeDetectorRef);
@@ -219,7 +219,7 @@ export class AbsencesListComponent {
     { val: '' as Justifie, lbl: 'Tous' }, { val: 'oui' as Justifie, lbl: 'Justifiées' }, { val: 'non' as Justifie, lbl: 'Non-just.' },
   ];
 
-  classes = computed(() => this.data.getClasses());
+  classes = computed(() => this.get.getClasses());
 
   // ── Pipeline principal : petites fonctions composées ──────────
   lignes = computed<LigneAbsence[]>(() => {
@@ -227,7 +227,7 @@ export class AbsencesListComponent {
     const minAbs = this.filtreMinAbs();
     const q      = (this.searchSignal() ?? '').toLowerCase();
 console.log('lignes() called with filtreClasse:', classe, 'filtreMinAbs:', minAbs, 'searchSignal:', q);
-    return this.data.getEleves()
+    return this.get.getEleves()
       .filter(e => !classe || e.id_classe === classe)
       .map(e => this.construireLigne(e))
       .filter(l => l.nbAbs >= minAbs && l.nbAbs > 0)

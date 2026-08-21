@@ -174,11 +174,11 @@ export class CacheService {
 
   // ── Setters ───────────────────────────────────────────────────
   setFamilles(d: Famille[])         { this._familles.set(d); }
-  setClasses(d: Classe[])           { this._classes.set(d); }
+  setClasses(d: Classe[]|any[])           { this._classes.set(d); }
   setFrais(d: FraisConfig[])        { this._frais.set(d); }
   setEnseignants(d: Enseignant[])   { this._enseignants.set(d); }
-  setMatieres(d: MatiereConfig[])   { this._matieres.set(d); }
-  setEleves(d: Eleve[])             { this._eleves.set(d); }
+  setMatieres(d: MatiereConfig[]|any[])   { this._matieres.set(d); }
+  setEleves(d: Eleve[]|any[])             { this._eleves.set(d); }
   setSoldes(d: SoldeSnap[])         { this._soldes.set(d); }
   setBulletins(d: BulletinSnap[])   { this._bulletins.set(d); }
   setNotes(d: Note[])               { this._notes.set(d); }

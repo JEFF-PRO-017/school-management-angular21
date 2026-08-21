@@ -7,8 +7,9 @@ import {
   ValidatorFn, AbstractControl, ValidationErrors,
 } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { AuthService, DataService } from '../../../../core/services';
+import { AuthService, } from '../../../../core/services';
 import { MatiereConfig, PointageModalData, PointageResult } from '../../../../core/models';
+import { GetServices } from '../../../../core/services/@data';
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -175,7 +176,7 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 export class PointageModalComponent {
 
   private auth    = inject(AuthService);
-  private dataSvc = inject(DataService);
+  private get = inject(GetServices)
   private ref     = inject(MatDialogRef<PointageModalComponent>);
   data: PointageModalData = inject(MAT_DIALOG_DATA);
 
@@ -184,7 +185,7 @@ export class PointageModalComponent {
   isAdmin     = computed(() => this.auth.isAdmin());
 
   enseignants = computed(() =>
-    this.dataSvc.getUsers().filter((u: any) => u.role === 'enseignant')
+    this.get.getUsers().filter((u: any) => u.role === 'enseignant')
   );
 
   // ── Formulaire ───────────────────────────────────────────────────
@@ -205,7 +206,7 @@ export class PointageModalComponent {
 
   matieresDispo(): MatiereConfig[] | any[] {
     const user  = this.auth.user() as any;
-    const toutes: MatiereConfig[] | any[] = this.dataSvc.getMatieres() ?? [];
+    const toutes: MatiereConfig[] | any[] = this.get.getMatieres() ?? [];
     const idEns = this.isAdmin() ? this.ctrlEnseignant.value : user?.id;
 
     if (!idEns) return toutes.filter(m => m.id_classe === this.data.id_classe);

@@ -1,7 +1,15 @@
-import { DataServiceBase } from "./_data.base.service";
+import { inject, Injectable } from "@angular/core";
+import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
+import { CacheService } from "../cache.service";
+import { SheetsQueueServiceService } from "../sheets-queue.service";
 import { SHEET } from "./sheets";
 
-export abstract class DeleteServices extends DataServiceBase {
+@Injectable({ providedIn: 'root' })
+export  class DeleteServices {
+    protected cache = inject(CacheService);
+    protected queue = inject(SheetsQueueServiceService);
+    protected sheets = inject(GoogleSheetsService);
+    
     async deleteNotesBatch(noteIds: string[]): Promise<void> {
         this.cache.deleteNotesBatch(noteIds);
         const rows = await Promise.all(
@@ -25,11 +33,11 @@ export abstract class DeleteServices extends DataServiceBase {
         });
     }
 
-      async deleteFamille(id: string): Promise<void> {
+    async deleteFamille(id: string): Promise<void> {
         this.cache.removeFamille(id);
         const row = await this.sheets.findRowById(SHEET.familles, id);
         if (row === -1) return;
         this.queue.enqueue({ sheetName: SHEET.familles, rowIndex: row - 1 }, 'deleteRow');
-      }
-    
+    }
+
 }

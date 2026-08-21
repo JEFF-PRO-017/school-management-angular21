@@ -9,10 +9,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { CacheService } from '../../../core/services/cache.service';
-import { DataService } from '../../../core/services/data.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Eleve } from '../../../core/models/last_index';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { PatchServices } from '../../../core/services/@data';
 
 export interface TransfertDialogData {
   eleve: Eleve;
@@ -72,7 +72,7 @@ export interface TransfertDialogData {
 export class TransfertEleveDialogComponent {
 
   private cache  = inject(CacheService);
-  private data_s = inject(DataService);
+  private patch = inject(PatchServices);
   private auth   = inject(AuthService);
   private snack  = inject(MatSnackBar);
 
@@ -121,7 +121,7 @@ export class TransfertEleveDialogComponent {
     };
 
     // Mise à jour cache + queue (rowIndex = 0 car inconnu ici, à améliorer en prod)
-    await this.data_s.updateEleve(eleveModifie);
+    await this.patch.updateEleve(eleveModifie);
 
     this.snack.open('Élève transféré avec succès', 'OK', { duration: 3000 });
     this.dialogRef.close(eleveModifie);

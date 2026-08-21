@@ -1,11 +1,19 @@
+import { inject, Injectable } from "@angular/core";
 import { deconcatString } from ".";
 import { Absence, AppUser, Classe, Eleve, Famille, MsgTemplate, Note, Paiement } from "../../models";
 import { SoldeSnap, BulletinSnap } from "../../models/last_index";
-import { DataServiceBase } from "./_data.base.service";
+import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
+import { CacheService } from "../cache.service";
+import { SheetsQueueServiceService } from "../sheets-queue.service";
 import { parse } from "./helpers";
 import { H, SHEET } from "./sheets";
 
-export abstract class RefreshServices extends DataServiceBase {
+@Injectable({ providedIn: 'root' })
+export  class RefreshServices {
+    protected cache = inject(CacheService);
+    protected queue = inject(SheetsQueueServiceService);
+    protected sheets = inject(GoogleSheetsService);
+    
     async refreshFamilles(): Promise<void> {
         const raw = await this.sheets.fetchRaw(SHEET.familles);
         this.cache.setFamilles(parse<Famille>(raw, H.familles));

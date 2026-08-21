@@ -9,8 +9,9 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AppUser, PERMISSIONS, PermissionId, Role, Section } from '../../../core/models/last_index';
-import { DataService } from '../../../core/services/data.service';
 import { hash } from 'bcryptjs';
+import { AddServices, GetServices, PatchServices } from '../../../core/services/@data';
+import { DeleteServices } from '../../../core/services/@data/_delete.services';
 
 export interface UserModalData { user?: AppUser; }
 
@@ -238,8 +239,10 @@ export class UserModalComponent implements OnInit {
   readonly data       = inject<UserModalData>(MAT_DIALOG_DATA);
   private dialogRef   = inject(MatDialogRef<UserModalComponent>);
   private snack       = inject(MatSnackBar);
-  private dataService = inject(DataService);
-
+  private patch = inject(PatchServices)
+  private add = inject(AddServices)
+  private get = inject(GetServices)
+  private delete = inject(DeleteServices)
   readonly PERMISSIONS = PERMISSIONS;
   readonly ROLES       = ROLES;
 
@@ -264,7 +267,7 @@ export class UserModalComponent implements OnInit {
 
   private usernameUnique(): ValidatorFn {
     return (ctrl: AbstractControl): ValidationErrors | null => {
-      const taken = this.dataService?.getUsers().some(u =>
+      const taken = this.get?.getUsers().some(u =>
         u.username === ctrl.value && u.id !== this.data?.user?.id
       );
       return taken ? { taken: true } : null;
@@ -333,9 +336,9 @@ export class UserModalComponent implements OnInit {
     };
 
     if (this.isEdit) {
-      await this.dataService.updateUser(user);
+      await this.patch.updateUser(user);
     } else {
-      await this.dataService.addUser(user);
+      await this.add.addUser(user);
     }
 
     this.saving.set(false);
@@ -349,7 +352,7 @@ export class UserModalComponent implements OnInit {
   supprimer() {
     if(!this.data || !this.data.user || !this.data.user.id) return
     if (!confirm(`Supprimer ${this.data?.user?.nom} ? Cette action est irréversible.`)) return;
-    this.dataService.deleteUser(this.data?.user?.id)
+    this.delete.deleteUser(this.data?.user?.id)
     this.dialogRef.close({ deleted: true, userId: this.data?.user?.id });
   }
 }

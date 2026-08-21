@@ -1,9 +1,18 @@
+import { inject, Injectable } from "@angular/core";
 import { AppUser, DemandePaiement, Eleve, EleveTampon, Enseignant, FamilleTampon, FraisConfig, H_TAMPON, MatiereConfig, MsgTemplate, Paiement, PensionTampon, SHEET_TAMPON } from "../../models";
 import { Classe, SoldeSnap } from "../../models/last_index";
-import { DataServiceBase } from "./_data.base.service";
+import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
+import { CacheService } from "../cache.service";
+import { SheetsQueueServiceService } from "../sheets-queue.service";
 import { parse } from "./helpers";
+import { mockDB } from "../../../../../public/mocdata";
 
-export abstract class GetServices extends DataServiceBase {
+@Injectable({ providedIn: 'root' })
+export class GetServices {
+    protected cache = inject(CacheService);
+    protected queue = inject(SheetsQueueServiceService);
+    protected sheets = inject(GoogleSheetsService);
+
     getClasses(): Classe[] { return this.cache.getClasses(); }
     getFamilles(): any[] { return this.cache.getFamilles(); }
     getEleves(): Eleve[] | any[] { return this.cache.getEleves(); }
@@ -37,6 +46,20 @@ export abstract class GetServices extends DataServiceBase {
     async getDemandePaiements(): Promise<DemandePaiement[]> {
         const raw = await this.sheets.fetchRaw(SHEET_TAMPON.paiements);
         return parse<DemandePaiement>(raw, H_TAMPON.paiements);
+    }
+
+    async loadUsers(): Promise<void> {
+        // const raw = await this.sheets.fetchRaw(SHEET.users);
+        // this.cache.setUsers(
+        //   this.parse<AppUser>(raw, H.users).map(u => ({
+        //     ...u,
+        //     is_admin: String(u.is_admin) === 'OUI' || u.is_admin === true,
+        //     permissions: deconcatString(
+        //       typeof u.permissions === 'string' ? u.permissions : ''
+        //     ),
+        //   }))
+        // );
+        this.cache.setUsers(mockDB.users as AppUser[])
     }
     getUsers(): AppUser[] | any[] {
         return this.cache.getUsers();

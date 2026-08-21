@@ -2,9 +2,10 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CacheService } from './cache.service';
-import { DataService } from './data.service';
 import { compare } from 'bcryptjs';
-import { AppUser, AppUserEnrichi, PermissionId, Section } from '../models';
+import { AppUserEnrichi, PermissionId, Section } from '../models';
+import { GetServices } from './@data';
+import { DataServiceBase } from './@data/_data.base.service';
 
 const STORAGE_KEY = 'app_user';
 const SECTION_KEY = 'app_section';
@@ -13,11 +14,12 @@ const SECTION_KEY = 'app_section';
 export class AuthService {
 
   private cache = inject(CacheService);
-  private data = inject(DataService);
+  private get = inject(GetServices);
+  private loa = inject(DataServiceBase)
   private router = inject(Router);   // injecté ici, pas dans logout()
-
+  // initAppData
   // ── State ─────────────────────────────────────────────────────────
-  private _user = signal<AppUserEnrichi | null>(null);
+  private _user = signal<AppUserEnrichi | null>(this.loadUser());
   private _section = signal<Section>(
     (localStorage.getItem(SECTION_KEY) as Section) ?? 'secondaire'
   );
@@ -47,11 +49,11 @@ export class AuthService {
   async login(username: string, password: string): Promise<boolean> {
     // S'assure que les utilisateurs sont bien chargés avant de vérifier
     // (peut déjà être en cache si initAppData a tourné avant)
-    if (this.data.getUsers().length === 0) {
-      await this.data.loadUsers();
+    if (this.get.getUsers().length === 0) {
+      await this.get.loadUsers();
     }
 
-    const u = this.data.getUsers().find(x => x.username === username);
+    const u = this.get.getUsers().find(x => x.username === username);
     if (!u) return false;
 
     const ok = await compare(password, u.mot_de_passe);
@@ -62,6 +64,7 @@ export class AuthService {
     this.cache.setSection(u.section);   // synchronise le filtre classes
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
     localStorage.setItem(SECTION_KEY, u.section);
+    this.loa.initAppData()
     return true;
   }
 

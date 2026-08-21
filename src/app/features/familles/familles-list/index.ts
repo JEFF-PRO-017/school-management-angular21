@@ -7,7 +7,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CacheService }    from '../../../core/services/cache.service';
-import { DataService }     from '../../../core/services/data.service';
 import { FamilleService }  from '../../../core/models/family/famile.service';
 import { ANNEE_SCOLAIRE }  from '../../../core/models/shared';
 import { FamilleEnrichi }  from '../../../core/models/family';
@@ -19,6 +18,7 @@ import { FamilleModalComponent, FamilleModalData }   from '../famille-form';
 
 import { FamillesToolbarComponent, FiltreEnfants, FiltreEtat } from './Components/familles-toolbar.component';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
+import { GetServices } from '../../../core/services/@data';
 
 export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprimer';
 
@@ -175,8 +175,8 @@ export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprime
 })
 export class FamillesListComponent implements OnInit {
 
-  cache       = inject(CacheService);
-  private data = inject(DataService);
+  private cache       = inject(CacheService);
+  private get = inject(GetServices);
   private dialog = inject(MatDialog);
   private snack  = inject(MatSnackBar);
   private cdr    = inject(ChangeDetectorRef);
@@ -239,7 +239,7 @@ export class FamillesListComponent implements OnInit {
     const cls    = this._classe();
     const nbEnf  = this._enfants();
 
-    return (this.data.getFamilles() ?? []).filter((f: FamilleEnrichi) => {
+    return (this.get.getFamilles() ?? []).filter((f: FamilleEnrichi) => {
       if (q && !f.nom_famille.toLowerCase().includes(q)
              && !f.tel_pere?.includes(q)
              && !f.tel_mere?.includes(q)

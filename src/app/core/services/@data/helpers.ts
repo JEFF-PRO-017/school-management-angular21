@@ -17,30 +17,30 @@ export function parse<T>(rows: any[][], headers: readonly string[]): T[] {
 }
 
 
-export async function chargerEnArrierePlan(
-    feuille: string,
-    headers: readonly string[],
-    onBloc: (rows: any[][]) => void
-): Promise<void> {
-    let debut = 2; // ligne 1 = en-têtes, on commence à la ligne 2
+// export async function chargerEnArrierePlan(
+//     feuille: string,
+//     headers: readonly string[],
+//     onBloc: (rows: any[][]) => void
+// ): Promise<void> {
+//     let debut = 2; // ligne 1 = en-têtes, on commence à la ligne 2
 
-    while (true) {
-        const plage = `${feuille}!A${debut}:Z${debut + BLOC - 1}`;
+//     while (true) {
+//         const plage = `${feuille}!A${debut}:Z${debut + BLOC - 1}`;
 
-        let lignes: any[][] | null;
-        try {
-            lignes = await this.sheets.getRange(plage);
-        } catch (err) {
-            console.error(`[${feuille}] bloc à partir de ${debut} abandonné`, err);
-            return; // erreur non gérée par l'interceptor (ex: réseau HS) → on arrête cette feuille
-        }
+//         let lignes: any[][] | null;
+//         try {
+//             lignes = await this.sheets.getRange(plage);
+//         } catch (err) {
+//             console.error(`[${feuille}] bloc à partir de ${debut} abandonné`, err);
+//             return; // erreur non gérée par l'interceptor (ex: réseau HS) → on arrête cette feuille
+//         }
 
-        if (!lignes?.length) break;       // plus rien → terminé
-        onBloc(lignes);                   // alimente le cache avec ce bloc
-        if (lignes.length < BLOC) break;  // bloc incomplet → c'était le dernier
-        debut += BLOC;                    // passe au bloc suivant
-    }
-}
+//         if (!lignes?.length) break;       // plus rien → terminé
+//         onBloc(lignes);                   // alimente le cache avec ce bloc
+//         if (lignes.length < BLOC) break;  // bloc incomplet → c'était le dernier
+//         debut += BLOC;                    // passe au bloc suivant
+//     }
+// }
 
 export function delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));

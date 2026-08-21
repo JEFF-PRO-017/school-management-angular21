@@ -1,11 +1,17 @@
-import { inject } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
 import { AddServices, concatStrings, GetServices, toRow } from ".";
 import { SHEET_TAMPON, H_TAMPON, DemandePaiement, MsgTemplate, AppUser, FraisConfig, FamilleTampon, EleveTampon, PensionTampon, MatiereConfig, AnneeScolaireFamille, Famille } from "../../models";
-import { DataServiceBase } from "./_data.base.service";
 import { SHEET, H } from "./sheets";
+import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
+import { CacheService } from "../cache.service";
+import { SheetsQueueServiceService } from "../sheets-queue.service";
 
-export abstract class PatchServices extends DataServiceBase {
-
+@Injectable({ providedIn: 'root' })
+export  class PatchServices  {
+    protected cache = inject(CacheService);
+    protected queue = inject(SheetsQueueServiceService);
+    protected sheets = inject(GoogleSheetsService); 
+    
     private addsv = inject(AddServices);
 
     /** Refuse une famille tampon (met à jour le statut) */

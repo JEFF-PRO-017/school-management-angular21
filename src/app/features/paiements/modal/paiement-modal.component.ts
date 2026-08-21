@@ -10,10 +10,8 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NgxMaskDirective, provideNgxMask } from 'ngx-mask';
 
-import { CacheService } from '../../../core/services/cache.service';
-import { DataService } from '../../../core/services/data.service';
 import { Famille, Paiement, ModePaiement } from '../../../core/models/last_index';
-import { RecuService } from '../recu.service';
+import { AddServices } from '../../../core/services/@data';
 
 export interface PaiementModalData {
   famille: Famille;
@@ -309,9 +307,7 @@ export class PaiementModalComponent implements OnInit {
 
   readonly data = inject<PaiementModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<PaiementModalComponent>);
-  private cache = inject(CacheService);
-  private dataSvc = inject(DataService);
-  private recuSvc = inject(RecuService);
+  private add = inject(AddServices);
   private snack = inject(MatSnackBar);
 
   saving = signal(false);
@@ -365,7 +361,7 @@ export class PaiementModalComponent implements OnInit {
       notes_caissier: this.form.value.notes_caissier || undefined,
       statut_alerte_whatsapp: 'EN_ATTENTE',
     };
-    await this.dataSvc.addPaiement(p);
+    await this.add.addPaiement(p);
     // this.recuSvc.generer(p, this.data.famille,
     //   this.data.totalVerse + this.montantSaisi(), this.data.montantAttendu);
     this.saving.set(false);

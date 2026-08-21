@@ -11,9 +11,9 @@ import { Famille, Eleve } from '../../core/models/last_index';
 import { FamilleTampon, EleveTampon, PensionTampon, DemandePaiement, SHEET_TAMPON } from '../../core/models/parent.models';
 import { GoogleSheetsService } from '../../core/services/@google-sheets/google-sheets.service';
 import { CacheService } from '../../core/services/cache.service';
-import { DataService } from '../../core/services/data.service';
 import { EleveModalComponent, EleveModalData } from '../eleves/modal/eleve-modal.component';
 import { FamilleModalComponent, FamilleModalData } from '../familles/famille-form';
+import { GetServices, AddServices, PatchServices } from '../../core/services/@data';
 
 
 // ── Types internes ────────────────────────────────────────────────
@@ -442,10 +442,12 @@ interface DemandeEnrichie extends DemandePaiement {
 export class ConsultantComponent implements OnInit {
 
   private sheets = inject(GoogleSheetsService);
-  readonly data  = inject(DataService);
   readonly cache = inject(CacheService);
   private dialog = inject(MatDialog);
   private cdr    = inject(ChangeDetectorRef);
+    private get = inject(GetServices)
+    private add = inject(AddServices)
+    private patch = inject(PatchServices)
 
   onglet      = signal<'familles' | 'paiements'>('familles');
   chargement  = signal(false);
@@ -536,13 +538,13 @@ export class ConsultantComponent implements OnInit {
     this.chargement.set(true);
     try {
       const [fams, elvs, pens, pais] = await Promise.all([
-        this.data.getFamillesTampon(),
-        this.data.getElevesTampon(),
-        this.data.getPensionsTampon(),
-        this.data.getDemandePaiements(),
+        this.get.getFamillesTampon(),
+        this.get.getElevesTampon(),
+        this.get.getPensionsTampon(),
+        this.get.getDemandePaiements(),
       ]);
       this.cache.setFamillesTampon(fams);
-      this.cache.setElevesTampon(elvs);
+      // this.cache.setElevesTampon(elvs);
       this.cache.setPensionsTampon(pens);
       this.cache.setDemandesPaiement(pais);
     } finally {
@@ -579,7 +581,7 @@ export class ConsultantComponent implements OnInit {
     if (!confirm(`Valider la famille "${f.nom_famille}" et tous ses enfants ?`)) return;
     this.validation.set(true);
     try {
-      await this.data.validerFamilleTampon(f, f.eleves, f.pension);
+      // await this.add.validerFamilleTampon(f, f.eleves, f.pension);
       // Marquer tous les élèves comme validés dans le cache
       f.eleves.forEach(e => this.cache.upsertEleveTampon({ ...e, statut_validation: 'valide' }));
       this.cache.upsertFamilleTampon({ ...f, statut_validation: 'valide' });
@@ -591,7 +593,7 @@ export class ConsultantComponent implements OnInit {
 
   async refuserFamille(f: FamilleTamponEnrichie): Promise<void> {
     if (!confirm(`Refuser la demande de "${f.nom_famille}" ?`)) return;
-    await this.data.refuserFamilleTampon(f.id_famille);
+    // await this.data.refuserFamilleTampon(f.id_famille);
     this.cache.upsertFamilleTampon({ ...f, statut_validation: 'refuse' });
     this.cdr.markForCheck();
   }
@@ -603,7 +605,7 @@ export class ConsultantComponent implements OnInit {
     this.validation.set(true);
     try {
       // Insérer uniquement cet élève dans les tables principales
-      await this.data.addEleve({
+      await this.add.addEleve({
         id_eleve:        e.id_eleve,
         id_famille:      f.id_famille,
         id_classe:       e.id_classe ?? '',
@@ -619,7 +621,7 @@ export class ConsultantComponent implements OnInit {
       const rowEleve = await this.sheets.findRowById(SHEET_TAMPON.eleves, e.id_eleve);
       if (rowEleve !== -1) {
         const maj: EleveTampon = { ...e, statut_validation: 'valide' };
-        this.data.addEleveTampon(maj);   // queue → updateRow via la feuille tampon
+        // this.add.addEleveTampon(maj);   // queue → updateRow via la feuille tampon
       }
 
       // Mettre à jour le cache tampon local
@@ -642,7 +644,7 @@ export class ConsultantComponent implements OnInit {
     if (!confirm(`Refuser ${e.nom} ${e.prenom} ?`)) return;
     const maj: EleveTampon = { ...e, statut_validation: 'refuse' };
     this.cache.upsertEleveTampon(maj);
-    this.data.addEleveTampon(maj);
+    // this.add.addEleveTampon(maj);
     this.cdr.markForCheck();
   }
 
@@ -675,7 +677,7 @@ export class ConsultantComponent implements OnInit {
         adresse_texte: r.famille.adresse_texte ?? '',
       };
       this.cache.upsertFamilleTampon(maj);
-      this.data.addFamilleTampon(maj);
+      // this.data.addFamilleTampon(maj);
       this.cdr.markForCheck();
     });
   }
@@ -713,7 +715,7 @@ export class ConsultantComponent implements OnInit {
         statut:         r.eleve.statut,
       };
       this.cache.upsertEleveTampon(maj);
-      this.data.addEleveTampon(maj);
+      // this.data.addEleveTampon(maj);
       this.cdr.markForCheck();
     });
   }
@@ -724,7 +726,7 @@ export class ConsultantComponent implements OnInit {
     if (!confirm(`Valider le paiement de ${this.fcfa(d.montant)} FCFA pour ${d.nom_famille} ?`)) return;
     this.validation.set(true);
     try {
-      await this.data.validerDemandePaiement(d);
+      // await this.data.validerDemandePaiement(d);
       this.cache.upsertDemandePaiement({ ...d, statut: 'valide' });
     } finally {
       this.validation.set(false);

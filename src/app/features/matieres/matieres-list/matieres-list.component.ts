@@ -4,10 +4,10 @@ import {
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { DataService } from '../../../core/services/data.service';
 import { MatiereModalComponent, MatiereModalData } from '../matieres-modal/matiere-modal.component';
 import { MatiereConfig } from '../../../core/models';
 import { CellDefDirective, TableColumn, TableComponent } from '../../../shared/components/table/table.component';
+import { GetServices } from '../../../core/services/@data';
 
 @Component({
   selector: 'app-matieres-list',
@@ -118,7 +118,7 @@ import { CellDefDirective, TableColumn, TableComponent } from '../../../shared/c
 export class MatieresListComponent {
 
   private dialog = inject(MatDialog);
-  private data = inject(DataService);
+  private get = inject(GetServices);
   private cdr = inject(ChangeDetectorRef);
 
   // ── Colonnes du tableau ──────────────────────────────────────
@@ -137,9 +137,9 @@ export class MatieresListComponent {
   setClasse(v: string) { this.filtreClasse.set(v); }
 
   optsClasse = computed<{ val: string; label: string }[]>(() => {
-    const classes = this.data.getClasses() ?? [];
+    const classes = this.get.getClasses() ?? [];
     const ids = new Set(
-      (this.data.getMatieres() ?? []).map(m => m.id_classe).filter(Boolean)
+      (this.get.getMatieres() ?? []).map(m => m.id_classe).filter(Boolean)
     );
     const opts = [...ids].map(id => ({
       val: id,
@@ -148,7 +148,7 @@ export class MatieresListComponent {
     return [{ val: 'Tous', label: 'Toutes' }, ...opts];
   });
 
-  matieres = computed<any[]>(() => this.data.getMatieres() ?? []);
+  matieres = computed<any[]>(() => this.get.getMatieres() ?? []);
 
   filtered = computed<any[]>(() => {
     const cls = this.filtreClasse();
@@ -166,11 +166,11 @@ export class MatieresListComponent {
 
   // ── Helpers affichage ──────────────────────────────────────────
   nomClasse(id: string): string {
-    return this.data.getClasses()?.find(c => c.id_classe === id)?.nom_classe ?? id;
+    return this.get.getClasses()?.find(c => c.id_classe === id)?.nom_classe ?? id;
   }
   nomEnseignant(id: string): string {
     if (!id) return '—';
-    const e = this.data.getUsers()?.find(x => x.id === id);
+    const e = this.get.getUsers()?.find(x => x.id === id);
     return e ? `${e.nom} ${e.prenom}` : '—';
   }
 

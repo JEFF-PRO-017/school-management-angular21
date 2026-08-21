@@ -4,7 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HeaderComponent } from '../header/header.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
-import { DataService } from '../../../core/services/data.service';
+import { DataServiceBase } from '../../../core/services/@data/_data.base.service';
 
 // Déclaration Bootstrap (disponible via CDN ou import dans angular.json)
 declare const bootstrap: any;
@@ -18,7 +18,7 @@ declare const bootstrap: any;
 })
 export class LayoutComponent implements OnInit {
 
-  private data = inject(DataService);
+  private data = inject(DataServiceBase);
 
   /** Indicateur de chargement initial */
   loading = signal(true);
@@ -26,7 +26,7 @@ export class LayoutComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       // Lance le batchGet au démarrage (Groupe A + B + D)
-      await this.data.initAppData();
+      // await this.data.initAppData();
     } finally {
       this.loading.set(false);
     }

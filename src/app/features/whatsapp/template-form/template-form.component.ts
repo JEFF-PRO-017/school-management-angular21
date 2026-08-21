@@ -11,7 +11,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { SheetsQueueServiceService } from '../../../core/services/sheets-queue.service';
 import { MsgTemplate } from '../../../core/models/last_index';
-import { DataService } from '../../../core/services/data.service';
+import { AddServices } from '../../../core/services/@data';
 
 export interface TemplateModalData { template?: MsgTemplate; }
 
@@ -212,7 +212,7 @@ export class TemplateFormComponent implements OnInit {
   readonly data = inject<TemplateModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<TemplateFormComponent>);
   private snack = inject(MatSnackBar);
-  private dataService = inject(DataService);
+  private dataService = inject(AddServices);
 
 
   readonly VARIABLES = VARIABLES;
