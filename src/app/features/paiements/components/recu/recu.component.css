@@ -101,15 +101,15 @@
       flex-shrink: 0;
   }
 
-  .brand-text .school-name,
-  .school-name-2 {
-      font-family: 'Montserrat', sans-serif;
-      //   font-weight: 800;
-      //   font-size: 10pt;
-      color: var(--navy-deep);
-      line-height: 1.12;
-      // letter-spacing:0.2px;
-  }
+.brand-text .school-name,
+.school-name-2 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 10pt;
+    color: var(--navy-deep);
+    line-height: 1.12;
+    letter-spacing: 0.2px;
+}
 
   .school-name {
       font-size: 8pt;
@@ -122,16 +122,15 @@
       letter-spacing: 1.8px;
   }
 
-  .brand-text .motto {
-      //   margin-top: 1mm;
-      font-size: 5.8pt;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      color: var(--gold);
-      font-weight: 1000;
-      // font-style: italic;
-  }
-
+.brand-text .motto {
+    margin-top: 1mm;
+    font-size: 5.8pt;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 1000;
+    font-style: italic;
+}
   .logo {
       width: 85px;
   }

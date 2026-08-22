@@ -8,7 +8,7 @@ import { PaiementEnrichi, FamilleEnrichi, EleveEnrichi, FamilleService } from '.
   selector: 'app-recu',
   imports: [DatePipe, DecimalPipe],
   templateUrl: './recu.component.html',
-  styleUrl: './recu.component.scss',
+  styleUrl: './recu.component.css',
   standalone: true,
 })
 export class RecuComponent implements OnInit {
