@@ -64,7 +64,7 @@ export class FamilleService {
     /** Retourne l'année scolaire en cours pour cette famille, si elle existe. */
     anneeSvcEncours(f: FamilleEnrichi | null): AnneeScolaireFamille | undefined {
         // J'AI GERE AINSI PARCEQUE CERTAINES TABLES NE SONT PAS TOTALEMEMNT ENRICHIES , DOU L'ABSENCE DE CERTAINES VALEUR EXEMPLE DE ELEVE QUI NE CONTINT PAS LES INOS PRECIS DE FAMILLES
-        const annees = this.cache.getFamilles().find(fa =>fa.id_famille ===f?.id_famille).annee_scolaires;
+        const annees = this.cache.getFamilles().find(fa => fa.id_famille === f?.id_famille).annee_scolaires;
         return annees ? annees.find((a: { annee_scolaire: string; }) => a.annee_scolaire === ANNEE_SCOLAIRE) : undefined;
     }
 
@@ -126,6 +126,7 @@ export class FamilleService {
             montant_reduction: reduction,
         };
     }
+
     creerAnneeScolaire(
         idFamille: string,
         annee: string,
@@ -139,6 +140,9 @@ export class FamilleService {
             montant_reduction: 0,
             montant_reduction_special: reductionSpecial,
             anciennete: 0,
+            format_montant: 0,
+            format_statut: 'cash',
+            application_montant: 0
         };
     }
 

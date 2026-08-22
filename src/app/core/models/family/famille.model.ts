@@ -29,6 +29,9 @@ export interface AnneeScolaireFamille {
     montant_reduction?: number;
     montant_reduction_special: number;
     anciennete: number;
+    format_montant: number;
+    format_statut : 'physique'|'cash',
+    application_montant:number
 }
 
 export interface Moratoire {
@@ -40,6 +43,7 @@ export interface Moratoire {
     commentaire?: string;
     numero_moratoire?: string;
     regler: boolean;
+    statut: 'ACTIF'|'NON-ACTIF'
 }
 
 export interface MoratoireEnrichi extends Moratoire {
@@ -53,37 +57,3 @@ export interface EleveEnrichi extends Eleve {
     absences?:Absence[];
 }
 
-// export interface SoldeSnap {
-//     id_eleve: string;
-//     id_famille: string;
-//     total_verse: number;
-//     montant_attendu: number;
-//     reste_a_payer: number;
-//     statut_insolvable: string | boolean;
-//     dernier_paiement: string;
-//     nb_enfants_famille: number;
-// }
-
-// ── Enrichi ───────────────────────────────────────────────────────
-/** SoldeSnap avec famille et élève résolus */
-// export interface SoldeSnapEnrichi extends SoldeSnap {
-//     famille?: Famille;
-//     eleve?: Eleve;
-// }
-
-
-// export function creerAnneeScolaire(
-//     idFamille: string,
-//     annee: string,
-//     reductionSpecial = 0
-// ): AnneeScolaireFamille {
-//     return {
-//         id_annee_scolaire: `${idFamille}AN_SC`,
-//         id_famille: idFamille,
-//         annee_scolaire: annee,
-//         montant_total_attendu: 0,
-//         montant_reduction: 0,
-//         montant_reduction_special: reductionSpecial,
-//         anciennete: 0,
-//     };
-// }

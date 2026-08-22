@@ -44,7 +44,8 @@ export const H = {
         'date_envoi', 'statut', 'hash_dedup'],
     absences: ['id', 'id_eleve', 'id_famille', 'id_pointage', 'id_classe', 'date', 'heure', 'justifie', 'motif'],
     users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions', 'tel'],
-    anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction', 'montant_reduction_special', 'anciennete'],
+    anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction',
+         'montant_reduction_special', 'anciennete','format_montant','format_statut','application_montant'],
     pointages: ['id_pointage', 'id_matiere', 'id_enseignants', 'date_debut', 'date_fin', 'duree']
 } as const;
 

@@ -91,8 +91,8 @@ const routes: Routes = [
         path: 'consultant',
         canActivate: [consultantGuard],
         loadComponent: () =>
-          import('./features/consultant-public/consultant.component')
-            .then(m => m.ConsultantComponent),
+          import('./features/validation/validation-page.component')
+            .then(m => m.ValidationPageComponent),
       },
 
     ],
