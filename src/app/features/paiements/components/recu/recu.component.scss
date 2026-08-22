@@ -1,0 +1,739 @@
+  :host {
+      --navy-deep: #0B1F3D;
+      --navy: #12294D;
+      --navy-soft: #1D3A66;
+      --gold: #C79A46;
+      --gold-light: #E7CE93;
+      --paper: #FFFFFF;
+      --ink: #16233B;
+      --ink-soft: #6B7686;
+      --line: #E2E6EE;
+      --red: #D14343;
+      --wa-green: #25D366;
+  }
+
+  * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+  }
+
+  html,
+  body {
+      background: #ECECEA;
+  }
+
+  body {
+      font-family: 'Public Sans', sans-serif;
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+  }
+
+  .page {
+      width: 210mm;
+      height: 297mm;
+      background: var(--paper);
+      position: relative;
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+  }
+
+  .content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 9mm;
+      /* réserve la barre de contact en bas de page */
+      display: flex;
+      flex-direction: column;
+  }
+
+  .receipt {
+      flex: 1;
+      padding: 6mm 18mm 5mm 9mm;
+      /* marge droite réservée à l'onglet vertical */
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      gap: 3.2mm;
+  }
+
+  .receipt>* {
+      flex-shrink: 0;
+  }
+
+  /* ===================== Onglet vertical latéral ===================== */
+  .side-tab {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      width: 7.5mm;
+      padding: 5mm 0;
+      background: var(--navy-deep);
+      color: #fff;
+      border-radius: 3px 0 0 3px;
+      writing-mode: vertical-rl;
+      transform: translateY(-50%) rotate(180deg);
+      font-size: 7.4pt;
+      font-weight: 800;
+      letter-spacing: 2.4px;
+      text-align: center;
+  }
+
+  /* ===================== En-tête ===================== */
+  .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 3mm;
+  }
+
+  .brand {
+      text-align: center;
+      gap: 3mm;
+  }
+
+  .crest {
+      width: 16mm;
+      height: 16mm;
+      flex-shrink: 0;
+  }
+
+  .brand-text .school-name,
+  .school-name-2 {
+      font-family: 'Montserrat', sans-serif;
+      //   font-weight: 800;
+      //   font-size: 10pt;
+      color: var(--navy-deep);
+      line-height: 1.12;
+      // letter-spacing:0.2px;
+  }
+
+  .school-name {
+      font-size: 8pt;
+      font-weight: 200;
+  }
+
+  .school-name-2 {
+      font-size: 10pt;
+      font-weight: 950;
+      letter-spacing: 1.8px;
+  }
+
+  .brand-text .motto {
+      //   margin-top: 1mm;
+      font-size: 5.8pt;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 1000;
+      // font-style: italic;
+  }
+
+  .logo {
+      width: 85px;
+  }
+
+  .title-mid {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.4mm;
+      min-width: 0;
+  }
+
+  .title-mid .deco-line {
+      flex: 1;
+      max-width: 16mm;
+      height: 1.4px;
+      background: linear-gradient(to right, transparent, var(--gold));
+  }
+
+  .title-mid .deco-line.right {
+      background: linear-gradient(to left, transparent, var(--gold));
+  }
+
+  .title-mid .star {
+      color: var(--gold);
+      font-size: 6pt;
+  }
+
+  .title-mid h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 17.5pt;
+      color: var(--navy-deep);
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+  }
+
+  .id-box {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 1.8mm 3mm;
+      display: flex;
+      align-items: center;
+      gap: 2mm;
+  }
+
+  .id-box .id-txt .id-lbl {
+      font-size: 5.6pt;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      font-weight: 700;
+  }
+
+  .id-box .id-txt .id-val {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 9.6pt;
+      color: var(--gold);
+      letter-spacing: 0.4px;
+  }
+
+  .id-box svg {
+      width: 5.4mm;
+      height: 5.4mm;
+      color: var(--navy);
+      flex-shrink: 0;
+  }
+
+  /* ===================== Corps deux colonnes ===================== */
+  .body-grid {
+      display: grid;
+      grid-template-columns: 1.02fr 1fr;
+      gap: 6mm;
+  }
+
+  .col-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2.4mm;
+  }
+
+  .field {
+      display: flex;
+      align-items: center;
+      gap: 2.2mm;
+  }
+
+  .field .ficon {
+      width: 6mm;
+      height: 6mm;
+      border: 1px solid var(--navy);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--navy);
+      flex-shrink: 0;
+  }
+
+  .field .ficon svg {
+      width: 3.6mm;
+      height: 3.6mm;
+  }
+
+  .field .flabel {
+      font-size: 7.4pt;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--ink);
+      text-transform: uppercase;
+  }
+
+  .field .fsep {
+      color: var(--ink-soft);
+      font-weight: 600;
+  }
+
+  .field .fval {
+      font-size: 9pt;
+      font-weight: 700;
+      color: var(--navy-deep);
+  }
+
+  .thin-rule {
+      height: 1px;
+      background: var(--line);
+      margin: 0.6mm 0;
+  }
+
+  table.children {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+  }
+
+  table.children thead th {
+      text-align: left;
+      font-size: 6.2pt;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--navy-deep);
+      font-weight: 700;
+      padding: 1.8mm 2.6mm;
+  }
+
+  table.children thead th:first-child {
+      width: 9mm;
+      text-align: center;
+  }
+
+  table.children thead th:last-child {
+      width: 22mm;
+  }
+
+  table.children tbody td {
+      font-size: 8.4pt;
+      padding: 1.9mm 2.6mm;
+      border-bottom: 1px solid var(--line);
+      color: var(--ink);
+  }
+
+  table.children tbody tr:last-child td {
+      border-bottom: none;
+  }
+
+  table.children tbody td.classe {
+      font-weight: 700;
+      color: var(--navy-soft);
+  }
+
+  .num-badge {
+      width: 4.6mm;
+      height: 4.6mm;
+      border-radius: 50%;
+      background: var(--navy-deep);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7pt;
+      font-weight: 700;
+      margin: 0 auto;
+  }
+
+  /* ===================== Colonne droite : finances ===================== */
+  .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 2.6mm;
+  }
+
+  .payment-card {
+      background: linear-gradient(135deg, var(--navy-deep), var(--navy-soft));
+      border-radius: 3px;
+      padding: 2.6mm 4mm;
+      color: #fff;
+  }
+
+  .payment-card .pc-top {
+      display: flex;
+      align-items: center;
+      gap: 2.4mm;
+      font-size: 7.4pt;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--gold-light);
+  }
+
+  .payment-card .pc-top .ic {
+      width: 6.4mm;
+      height: 6.4mm;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+  }
+
+  .payment-card .pc-top .ic svg {
+      width: 3.6mm;
+      height: 3.6mm;
+  }
+
+  .payment-card .pc-amt {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 19pt;
+      margin-top: 0.8mm;
+      letter-spacing: 0.3px;
+  }
+
+  .status-card {
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 2.2mm 3.6mm;
+  }
+
+  .status-line {
+      display: flex;
+      align-items: center;
+      gap: 2.2mm;
+      padding: 1.4mm 0;
+  }
+
+  .status-line+.status-line {
+      border-top: 1px solid var(--line);
+  }
+
+  .status-line .ficon {
+      width: 5.6mm;
+      height: 5.6mm;
+      border: 1px solid var(--navy);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--navy);
+      flex-shrink: 0;
+  }
+
+  .status-line .ficon svg {
+      width: 3.2mm;
+      height: 3.2mm;
+  }
+
+  .status-line .slbl {
+      font-size: 7.2pt;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--ink);
+      flex: 1;
+  }
+
+  .status-line .sval {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 10.4pt;
+      color: var(--navy-deep);
+  }
+
+  .status-line.remaining .slbl,
+  .status-line.remaining .sval,
+  .status-line.remaining .ficon {
+      color: var(--red);
+      border-color: var(--red);
+  }
+
+  .date-card {
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 2mm 3.6mm;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4mm;
+  }
+
+  .date-card .field {
+      gap: 2mm;
+  }
+
+  .date-card .ficon {
+      width: 5.6mm;
+      height: 5.6mm;
+  }
+
+  .date-card .ficon svg {
+      width: 3.2mm;
+      height: 3.2mm;
+  }
+
+  /* ===================== Bas : signature / cachet / contact ===================== */
+  .bottom-row {
+      display: flex;
+      gap: 3.6mm;
+      align-items: stretch;
+  }
+
+  .sc-box {
+      flex: 1.55;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      display: flex;
+  }
+
+  .sc-panel {
+      flex: 1;
+      padding: 2mm 2.6mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+  }
+
+  .sc-panel+.sc-panel {
+      border-left: 1px solid var(--line);
+  }
+
+  .sc-panel .p-title {
+      font-size: 6.2pt;
+      font-weight: 800;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      color: var(--ink);
+      padding-bottom: 1.4mm;
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+      margin-bottom: 1.6mm;
+  }
+
+  .sig-area {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      min-height: 9mm;
+  }
+
+  .sig-area svg {
+      width: 20mm;
+      height: 9mm;
+      color: var(--navy);
+  }
+
+  .stamp-circle {
+      width: 14mm;
+      height: 14mm;
+      border: 1.2px dashed var(--navy-soft);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6mm;
+      margin-top: 0.6mm;
+  }
+
+  .stamp-circle .st-line {
+      font-size: 4.4pt;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--navy-soft);
+      font-weight: 700;
+      line-height: 1.15;
+  }
+
+  .stamp-circle svg {
+      width: 4mm;
+      height: 4mm;
+      color: var(--navy-soft);
+  }
+
+  .contact-box {
+      flex: 1.1;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+  }
+
+  .contact-head {
+      background: var(--navy-deep);
+      color: #fff;
+      text-align: center;
+      font-size: 6.6pt;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      padding: 1.6mm 0;
+  }
+
+  .contact-body {
+      padding: 2mm 2.6mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.8mm;
+      flex: 1;
+  }
+
+  .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 2mm;
+  }
+
+  .contact-row .cic {
+      width: 6mm;
+      height: 6mm;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+  }
+
+  .contact-row.wa .cic {
+      background: var(--wa-green);
+  }
+
+  .contact-row.call .cic {
+      background: var(--navy);
+  }
+
+  .contact-row .cic svg {
+      width: 3.4mm;
+      height: 3.4mm;
+      color: #fff;
+  }
+
+  .contact-row .ctxt .cnum {
+      font-size: 8pt;
+      font-weight: 700;
+      color: var(--navy-deep);
+      line-height: 1.1;
+  }
+
+  .contact-row .ctxt .clbl {
+      font-size: 6pt;
+      color: var(--ink-soft);
+      font-weight: 600;
+  }
+
+  /* ===================== Remerciement ===================== */
+  .thanks-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3mm;
+      margin-top: auto;
+      padding-top: 1mm;
+  }
+
+  .thanks-row .deco-line {
+      flex: 1;
+      max-width: 26mm;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold));
+  }
+
+  .thanks-row .deco-line.right {
+      background: linear-gradient(to left, transparent, var(--gold));
+  }
+
+  .thanks {
+      font-family: 'Parisienne', cursive;
+      font-size: 14pt;
+      color: var(--navy-deep);
+      white-space: nowrap;
+      font-style: italic;
+  }
+
+  .thanks-row svg {
+      width: 3.4mm;
+      height: 3.4mm;
+      color: var(--gold);
+      flex-shrink: 0;
+  }
+
+  /* ===================== Ligne de découpe ===================== */
+  .cut-line {
+      height: 0;
+      border-top: 1.4px dashed #B7BFCC;
+      position: relative;
+      margin: 0 9mm 0 9mm;
+  }
+
+  .cut-line .tag {
+      position: absolute;
+      top: -2.4mm;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--paper);
+      padding: 0 3mm;
+      font-size: 6pt;
+      letter-spacing: 1.8px;
+      color: var(--ink-soft);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 1.2mm;
+  }
+
+  .cut-line .tag svg {
+      width: 2.8mm;
+      height: 2.8mm;
+  }
+
+  /* ===================== Barre de contact bas de page ===================== */
+  .page-footer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 9mm;
+      background: var(--navy-deep);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5mm;
+      font-size: 7.6pt;
+      font-weight: 600;
+  }
+
+  .page-footer .pf-item {
+      display: flex;
+      align-items: center;
+      gap: 1.8mm;
+      white-space: nowrap;
+  }
+
+  .page-footer .pf-item svg {
+      width: 3.6mm;
+      height: 3.6mm;
+      color: var(--gold-light);
+      flex-shrink: 0;
+  }
+
+  .page-footer .pf-sep {
+      width: 1px;
+      height: 4mm;
+      background: rgba(255, 255, 255, 0.25);
+  }
+
+  @media print {
+
+      html,
+      body {
+          background: #fff;
+      }
+
+      .page {
+          box-shadow: none;
+          margin: 0;
+      }
+
+      @page {
+          size: A4;
+          margin: 0;
+      }
+  }
+
+  .toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+  }
+
+  @media print {
+      .toolbar {
+          display: none;
+      }
+  }

@@ -1,0 +1,457 @@
+<div class="toolbar no-print">
+  <button type="button" (click)="imprimer()">Imprimer</button>
+  <button type="button" (click)="telechargerPdf()">Télécharger le PDF</button>
+</div>
+
+<body>
+<div class="page">
+    <div class="content">
+
+        <!-- ===================== EXEMPLAIRE 1 : REÇU PARENT ===================== -->
+        <section class="receipt">
+            <span class="side-tab">Reçu Parent ({{libelleCopie}})</span>
+
+            <div class="header">
+                <div class="brand">
+                   <img src="/assets/logo-csb.png" class="logo" alt="Logo Berceau du Savoir" />
+
+                    <div class="brand-text">
+                        <div class="school-name">GROUPE SCOLAIRE BILINGUE</div>
+                        <div class="school-name-2">BERCEAU DU SAVOIR</div>
+                        <div class="motto">LA VOIE • DU • SUCCES</div>
+                    </div>
+                </div>
+
+                <div class="title-mid">
+                    <span class="deco-line"></span>
+                    <span class="star">★</span>
+                    <h1>REÇU PARENT</h1>
+                    <span class="star">★</span>
+                    <span class="deco-line right"></span>
+                </div>
+
+                <div class="id-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <rect x="4" y="3" width="16" height="18" rx="1.5" />
+                        <path d="M8 8h8M8 12h8M8 16h5" />
+                    </svg>
+                    <div class="id-txt">
+                        <div class="id-lbl">ID reçu</div>
+                        <div class="id-val">{{ paiement?.recu_numero }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="body-grid">
+                <div class="col-left">
+                    <div class="field">
+                        <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8">
+                                <circle cx="12" cy="8" r="3.4" />
+                                <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+                            </svg></span>
+                        <span class="flabel">N° Parent</span><span class="fsep">:</span><span
+                            class="fval">{{ famille?.id_famille }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8">
+                                <circle cx="8.5" cy="8" r="2.6" />
+                                <circle cx="16" cy="9.2" r="2.2" />
+                                <path
+                                    d="M3.5 20c.3-3.3 2.4-5.6 5-5.6s4.6 2.2 5 5.5M14.5 20c.2-2.6 1.6-4.4 3.7-4.4 2 0 3.4 1.6 3.8 3.8" />
+                            </svg></span>
+                        <span class="flabel">Nom de la famille</span><span class="fsep">:</span><span
+                            class="fval">{{ famille?.nom_famille }}</span>
+                    </div>
+
+                    <div class="thin-rule"></div>
+
+                    <div class="field">
+                        <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8">
+                                <circle cx="12" cy="8" r="3.4" />
+                                <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+                            </svg></span>
+                        <span class="flabel">Nombre d'enfant(s)</span><span class="fsep">:</span><span
+                            class="fval">{{ famille?.eleves?.length ?? 0 }}</span>
+                    </div>
+
+                    <table class="children">
+                        <thead>
+                            <tr>
+                                <th>N°</th>
+                                <th>Nom et prénom</th>
+                                <th>Classe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (eleve of enfantsAffiches; track $index; let i = $index) {
+                            <tr>
+                                <td><span class="num-badge">{{ i + 1 }}</span></td>
+                                <td>{{ eleve.nom }} {{ eleve.prenom }}</td>
+                                <td class="classe">{{ eleve.classe?.nom_classe }}</td>
+                            </tr>
+                            }
+                            @if (enfantsRestants.length > 0) {
+                            <tr>
+                                <td colspan="3" class="autres-classes">
+                                    + {{ enfantsRestants.length }} autre(s) : {{ classesRestantesTexte }}
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="col-right">
+                    <div class="payment-card rounded-3">
+                        <div class="pc-top">
+                            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+                                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                                    <path d="M3 10h18M16 14h2" />
+                                </svg></span>
+                            Montant du paiement
+                        </div>
+                        <div class="pc-amt">{{ paiement?.montant_verse | number:'1.0-0' }} FCFA</div>
+                    </div>
+
+                    <div class="status-card">
+                        <div class="status-line">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <path d="M4 12l4 4L20 6" />
+                                </svg></span>
+                            <span class="slbl">Montant déjà versé</span>
+                            <span class="sval">{{ montantVerse | number:'1.0-0' }} FCFA</span>
+                        </div>
+                        <div class="status-line remaining">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="8.5" />
+                                    <path d="M12 7v6l4 2" />
+                                </svg></span>
+                            <span class="slbl">Montant restant</span>
+                            <span class="sval">{{ montantRestant | number:'1.0-0' }} FCFA</span>
+                        </div>
+                    </div>
+
+                    <div class="date-card">
+                        <div class="field">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <rect x="3.5" y="5" width="17" height="15" rx="1.5" />
+                                    <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+                                </svg></span>
+                            <span class="flabel">Date D'impression</span><span class="fsep">:</span><span
+                                class="fval">{{ heureImpression | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="8" />
+                                    <path d="M12 7.5V12l3 2" />
+                                </svg></span>
+                            <span class="flabel">Heure</span><span class="fsep">:</span><span class="fval">{{ heureImpression | date:'HH:mm' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-row">
+                <div class="sc-box">
+                    <div class="sc-panel">
+                        <div class="p-title">Signature / Cachet</div>
+                        <div class="sig-area">
+
+                        </div>
+                    </div>
+                    <div class="sc-panel">
+                        <div class="p-title">Cachet de l'école</div>
+
+                    </div>
+                </div>
+
+                <div class="contact-box rounded-3">
+                    <div class="contact-head">Service client</div>
+                    <div class="contact-body">
+                        <div class="contact-row wa">
+                            <span class="cic"><svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.5A10 10 0 1012 2zm0 18.1a8.1 8.1 0 01-4.2-1.2l-.3-.2-3 .9.9-2.9-.2-.3A8.1 8.1 0 1112 20.1zm4.4-6.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1-.2-.1-1-.4-2-1.2-.7-.6-1.2-1.4-1.4-1.6-.1-.2 0-.4.1-.5.1-.1.2-.3.4-.4.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.4.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1 0-.1-.2-.2-.4-.3z" />
+                                </svg></span>
+                            <div class="ctxt">
+                                <div class="cnum">{{serviceClient.what}}</div>
+                                <div class="clbl">WhatsApp</div>
+                            </div>
+                        </div>
+                        <div class="contact-row call">
+                            <span class="cic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9">
+                                    <path
+                                        d="M4 4.5c0-.6.4-1 1-1h2.7c.5 0 .9.3 1 .8l.8 3.1c.1.4 0 .8-.3 1.1l-1.3 1.3a13.5 13.5 0 006.5 6.5l1.3-1.3c.3-.3.7-.4 1.1-.3l3.1.8c.5.1.8.5.8 1V19c0 .6-.4 1-1 1h-1.5C10.9 20 4 13.1 4 6V4.5z" />
+                                </svg></span>
+                            <div class="ctxt">
+                                <div class="cnum">{{serviceClient.appel}}</div>
+                                <div class="clbl">Appel</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="thanks-row">
+                <span class="deco-line"></span>
+                <span class="thanks">Merci pour votre confiance !</span>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 21s-7.5-4.6-10-9.3C.5 8 2.4 4.5 6 4.5c2 0 3.5 1.2 6 4 2.5-2.8 4-4 6-4 3.6 0 5.5 3.5 4 7.2C19.5 16.4 12 21 12 21z" />
+                </svg>
+                <span class="deco-line right"></span>
+            </div>
+        </section>
+
+        <!-- ===================== LIGNE DE DÉCOUPE ===================== -->
+        <div class="cut-line">
+            <span class="tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#8A93A3" stroke-width="1.6">
+                    <circle cx="6" cy="6" r="3" />
+                    <circle cx="6" cy="18" r="3" />
+                    <path d="M8.5 8l11 8M19.5 6l-11 8" />
+                </svg>
+                À découper
+            </span>
+        </div>
+
+        <!-- ===================== EXEMPLAIRE 2 : COPIE ARCHIVE ===================== -->
+        <section class="receipt">
+            <span class="side-tab">Reçu Archive ({{libelleCopie}})</span>
+
+            <div class="header">
+                <div class="brand">
+                   <img src="/assets/logo-csb.png" class="logo" alt="Logo Berceau du Savoir" />
+
+                    <div class="brand-text">
+                        <div class="school-name">GROUPE SCOLAIRE BILINGUE</div>
+                        <div class="school-name-2">BERCEAU DU SAVOIR</div>
+                        <div class="motto">LA VOIE • DU • SUCCES</div>
+                    </div>
+                </div>
+
+                <div class="title-mid">
+                    <span class="deco-line"></span>
+                    <span class="star">★</span>
+                    <h1>REÇU ARCHIVE</h1>
+                    <span class="star">★</span>
+                    <span class="deco-line right"></span>
+                </div>
+
+                <div class="id-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <rect x="4" y="3" width="16" height="18" rx="1.5" />
+                        <path d="M8 8h8M8 12h8M8 16h5" />
+                    </svg>
+                    <div class="id-txt">
+                        <div class="id-lbl">ID reçu</div>
+                        <div class="id-val">{{ paiement?.recu_numero }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="body-grid">
+                <div class="col-left">
+                    <div class="field">
+                        <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8">
+                                <circle cx="12" cy="8" r="3.4" />
+                                <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+                            </svg></span>
+                        <span class="flabel">N° Parent</span><span class="fsep">:</span><span
+                            class="fval">{{ famille?.id_famille }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8">
+                                <circle cx="8.5" cy="8" r="2.6" />
+                                <circle cx="16" cy="9.2" r="2.2" />
+                                <path
+                                    d="M3.5 20c.3-3.3 2.4-5.6 5-5.6s4.6 2.2 5 5.5M14.5 20c.2-2.6 1.6-4.4 3.7-4.4 2 0 3.4 1.6 3.8 3.8" />
+                            </svg></span>
+                        <span class="flabel">Nom de la famille</span><span class="fsep">:</span><span
+                            class="fval">{{ famille?.nom_famille }}</span>
+                    </div>
+
+                    <div class="thin-rule"></div>
+
+                    <div class="field">
+                        <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.8">
+                                <circle cx="12" cy="8" r="3.4" />
+                                <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+                            </svg></span>
+                        <span class="flabel">Nombre d'enfant(s)</span><span class="fsep">:</span><span
+                            class="fval">{{ famille?.eleves?.length ?? 0 }}</span>
+                    </div>
+
+                    <table class="children">
+                        <thead>
+                            <tr>
+                                <th>N°</th>
+                                <th>Nom et prénom</th>
+                                <th>Classe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (eleve of enfantsAffiches; track $index; let i = $index) {
+                            <tr>
+                                <td><span class="num-badge">{{ i + 1 }}</span></td>
+                                <td>{{ eleve.nom }} {{ eleve.prenom }}</td>
+                                <td class="classe">{{ eleve.classe?.nom_classe }}</td>
+                            </tr>
+                            }
+                            @if (enfantsRestants.length > 0) {
+                            <tr>
+                                <td colspan="3" class="autres-classes">
+                                    + {{ enfantsRestants.length }} autre(s) : {{ classesRestantesTexte }}
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="col-right">
+                    <div class="payment-card rounded-3">
+                        <div class="pc-top">
+                            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+                                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                                    <path d="M3 10h18M16 14h2" />
+                                </svg></span>
+                            Montant du paiement
+                        </div>
+                        <div class="pc-amt">{{ paiement?.montant_verse | number:'1.0-0' }} FCFA</div>
+                    </div>
+
+                    <div class="status-card">
+                        <div class="status-line">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <path d="M4 12l4 4L20 6" />
+                                </svg></span>
+                            <span class="slbl">Montant déjà versé</span>
+                            <span class="sval">{{ montantVerse | number:'1.0-0' }} FCFA</span>
+                        </div>
+                        <div class="status-line remaining">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="8.5" />
+                                    <path d="M12 7v6l4 2" />
+                                </svg></span>
+                            <span class="slbl">Montant restant</span>
+                            <span class="sval">{{ montantRestant | number:'1.0-0' }} FCFA</span>
+                        </div>
+                    </div>
+
+                    <div class="date-card">
+                        <div class="field">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <rect x="3.5" y="5" width="17" height="15" rx="1.5" />
+                                    <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+                                </svg></span>
+                            <span class="flabel">Date D'impression</span><span class="fsep">:</span><span
+                                class="fval">{{ heureImpression | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="8" />
+                                    <path d="M12 7.5V12l3 2" />
+                                </svg></span>
+                            <span class="flabel">Heure</span><span class="fsep">:</span><span class="fval">{{ heureImpression | date:'HH:mm' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-row">
+                <div class="sc-box">
+                    <div class="sc-panel">
+                        <div class="p-title">Signature / Cachet</div>
+                        <div class="sig-area">
+                        </div>
+                    </div>
+                    <div class="sc-panel">
+                        <div class="p-title">Cachet de l'école</div>
+
+                    </div>
+                </div>
+
+                <div class="contact-box rounded-3">
+                    <div class="contact-head">Service client</div>
+                    <div class="contact-body">
+                        <div class="contact-row wa">
+                            <span class="cic"><svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.5A10 10 0 1012 2zm0 18.1a8.1 8.1 0 01-4.2-1.2l-.3-.2-3 .9.9-2.9-.2-.3A8.1 8.1 0 1112 20.1zm4.4-6.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1-.2-.1-1-.4-2-1.2-.7-.6-1.2-1.4-1.4-1.6-.1-.2 0-.4.1-.5.1-.1.2-.3.4-.4.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.4.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1 0-.1-.2-.2-.4-.3z" />
+                                </svg></span>
+                            <div class="ctxt">
+                                <div class="cnum">{{serviceClient.what}}</div>
+                                <div class="clbl">WhatsApp</div>
+                            </div>
+                        </div>
+                        <div class="contact-row call">
+                            <span class="cic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9">
+                                    <path
+                                        d="M4 4.5c0-.6.4-1 1-1h2.7c.5 0 .9.3 1 .8l.8 3.1c.1.4 0 .8-.3 1.1l-1.3 1.3a13.5 13.5 0 006.5 6.5l1.3-1.3c.3-.3.7-.4 1.1-.3l3.1.8c.5.1.8.5.8 1V19c0 .6-.4 1-1 1h-1.5C10.9 20 4 13.1 4 6V4.5z" />
+                                </svg></span>
+                            <div class="ctxt">
+                                <div class="cnum">{{serviceClient.appel}}</div>
+                                <div class="clbl">Appel</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="thanks-row">
+                <span class="deco-line"></span>
+                <span class="thanks ">Merci pour votre confiance !</span>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 21s-7.5-4.6-10-9.3C.5 8 2.4 4.5 6 4.5c2 0 3.5 1.2 6 4 2.5-2.8 4-4 6-4 3.6 0 5.5 3.5 4 7.2C19.5 16.4 12 21 12 21z" />
+                </svg>
+                <span class="deco-line right"></span>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ===================== Barre de contact bas de page ===================== -->
+     <!-- <div class="page-footer"> 
+        <div class="pf-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 21s7-6.5 7-11.5A7 7 0 105 9.5C5 14.5 12 21 12 21z" />
+                <circle cx="12" cy="9.5" r="2.4" />
+            </svg>
+            Cocody, Riviera 3, Abidjan — Côte d'Ivoire
+        </div>
+        <span class="pf-sep"></span>
+        <div class="pf-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="M3.5 6.5l8.5 6 8.5-6" />
+            </svg>
+            contact-berceaudusavoir.ci
+        </div>
+        <span class="pf-sep"></span>
+        <div class="pf-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="8.5" />
+                <path
+                    d="M3.5 12h17M12 3.5c2.5 2.5 3.8 5.5 3.8 8.5s-1.3 6-3.8 8.5c-2.5-2.5-3.8-5.5-3.8-8.5S9.5 6 12 3.5z" />
+            </svg>
+            www.berceaudusavoir.ci
+        </div>
+    </div>  -->
+</div>
+</body>

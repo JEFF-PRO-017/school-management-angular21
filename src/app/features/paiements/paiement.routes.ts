@@ -9,4 +9,8 @@ export const PAIEMENT_ROUTES: Routes = [
     loadComponent: () =>
       import('./paiements-gestion-list.component').then(m => m.PaiementsGestionListComponent),
   },
+  {
+    path:'recu',
+    loadComponent : ()=>import('./components/recu/recu.component').then(r=>r.RecuComponent)
+  }
 ];

@@ -1,16 +1,19 @@
 // features/paiements/modal/recu-modal.component.ts
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-import { PaiementEnrichi, FamilleEnrichi, FamilleService } from '../../../core/models';
-import { PatchServices, GetServices } from '../../../core/services/@data';
-import { CacheService } from '../../../core/services/cache.service';
+import { PaiementEnrichi } from '../../../core/models';
+import { PatchServices } from '../../../core/services/@data';
 import { configRecuPaiement } from '../../../core/services/@recu-paiement/recu-paiement.config';
 import { genererRecuPdf } from '../../../core/services/@recu-paiement/recu-pdf.service';
+// import { genererRecuPdf } from '../../../shared/utils/recu-pdf-builder';
+// import { configRecuPaiement, OptionsRecuPaiement } from './recu-paiement.config';
 
-
-export interface RecuModalData { paiement: PaiementEnrichi; }
+export interface RecuModalData {
+  paiement: PaiementEnrichi;
+  options?: any;
+}
 
 @Component({
   selector: 'app-recu-modal',
@@ -18,6 +21,7 @@ export interface RecuModalData { paiement: PaiementEnrichi; }
   imports: [MatDialogModule],
   template: `
 <div class="d-flex flex-column" style="width:100%;height:100%">
+
   <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
     <div>
       <div class="fw-semibold">Reçu de paiement</div>
@@ -26,12 +30,20 @@ export interface RecuModalData { paiement: PaiementEnrichi; }
     <button class="btn-close" (click)="fermer()"></button>
   </div>
 
+  <!-- Aperçu -->
   <div class="flex-grow-1 d-flex justify-content-center align-items-center bg-body-tertiary py-4">
-    <iframe [src]="apercuUrl()"
-            style="width:210mm;height:100%;max-height:100%;border:1px solid #dee2e6;border-radius:6px;background:white;box-shadow:0 4px 14px rgba(0,0,0,.1)">
-    </iframe>
+    @if (chargement()) {
+      <div class="text-muted small d-flex align-items-center gap-2">
+        <span class="spinner-border spinner-border-sm"></span> Génération du reçu…
+      </div>
+    } @else if (apercuUrl()) {
+      <iframe [src]="apercuUrl()"
+              style="width:180mm;height:100%;max-height:100%;border:1px solid #dee2e6;border-radius:6px;background:white;box-shadow:0 4px 14px rgba(0,0,0,.1)">
+      </iframe>
+    }
   </div>
 
+  <!-- Statut prochaine impression -->
   <div class="px-4 py-3 d-flex align-items-center gap-2 border-top">
     <span class="badge rounded-pill"
           [class.bg-success-subtle]="data.paiement.statut === 'confirmé'"
@@ -43,13 +55,15 @@ export interface RecuModalData { paiement: PaiementEnrichi; }
     <span class="text-muted small">{{ libelleCopieSuivante() }}</span>
   </div>
 
+  <!-- Pied -->
   <div class="d-flex justify-content-end gap-2 px-4 py-3 border-top">
     <button class="btn btn-outline-secondary" (click)="fermer()">Fermer</button>
-    <button class="btn btn-primary px-4" [disabled]="impressionEnCours()" (click)="imprimer()">
+    <button class="btn btn-primary px-4" [disabled]="impressionEnCours() || chargement()" (click)="imprimer()">
       @if (impressionEnCours()) { <span class="spinner-border spinner-border-sm me-1"></span> }
       {{ impressionEnCours() ? 'Impression…' : 'Imprimer' }}
     </button>
   </div>
+
 </div>
   `
 })
@@ -58,35 +72,22 @@ export class RecuModalComponent {
   readonly data     = inject<RecuModalData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<RecuModalComponent>);
   private patch     = inject(PatchServices);
-  private get       = inject(GetServices);
-  private cache     = inject(CacheService);
-  private fas       = inject(FamilleService);
   private sanitizer = inject(DomSanitizer);
 
+  chargement        = signal(true);
   impressionEnCours = signal(false);
-  private version    = signal(0);
+  apercuUrl         = signal<SafeResourceUrl | null>(null);
 
-  apercuUrl = computed<SafeResourceUrl>(() => {
-    this.version();
-    const p = this.data.paiement;
-    const famille = p.famille as FamilleEnrichi;
-    const eleves = (this.get.getEleves() ?? []).filter(e => e.id_famille === p.id_famille);
+  constructor() {
+    this.rafraichirApercu();
+  }
 
-    const enfants = eleves.map((e, i) => ({
-      numero: i + 1,
-      nomPrenom: `${e.nom} ${e.prenom}`,
-      classe: this.cache.classesMap().get(e.id_classe)?.nom_classe ?? e.id_classe,
-    }));
-
-    const montantAttendu = this.fas.montantAttentu(famille);
-    const montantVerse   = this.fas.montantVerse(famille);
-    const montantRestant = this.fas.montantRestant(montantAttendu, montantVerse);
-
-    const doc = genererRecuPdf(configRecuPaiement(p, {
-      enfants, montantVerseTotal: montantVerse, montantRestant,
-    }));
-    return this.sanitizer.bypassSecurityTrustResourceUrl(doc.output('datauristring'));
-  });
+  private async rafraichirApercu(): Promise<void> {
+    this.chargement.set(true);
+    const doc = await genererRecuPdf(configRecuPaiement(this.data.paiement, this.data.options));
+    this.apercuUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(doc.output('datauristring')));
+    this.chargement.set(false);
+  }
 
   libelleCopieSuivante(): string {
     const n = this.data.paiement.nb_impressions;
@@ -100,17 +101,16 @@ export class RecuModalComponent {
     const p = this.data.paiement;
     const premiereImpression = p.nb_impressions === 0;
 
-    const doc = new (await import('jspdf')).default(); // placeholder, réutilise apercuUrl-généré doc dans une vraie impl.
-    // Pour l'impression, on régénère via le même chemin que l'aperçu :
-    const url = this.apercuUrl();
+    const doc = await genererRecuPdf(configRecuPaiement(p, this.data.options));
+    doc.autoPrint();
+    window.open(doc.output('bloburl'), '_blank');
 
     p.nb_impressions += 1;
     if (premiereImpression) p.statut = 'confirmé';
     await this.patch.updatePaiement(p);
 
-    this.version.update(v => v + 1);
+    await this.rafraichirApercu();
     this.impressionEnCours.set(false);
-    window.open(url as string, '_blank');
   }
 
   fermer(): void {

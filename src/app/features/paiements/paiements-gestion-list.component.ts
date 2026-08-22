@@ -1,6 +1,6 @@
 // features/paiements/list/paiements-gestion-list.component.ts
 import { Component, inject, computed, signal, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { FamilleEnrichi, FamilleService, PaiementEnrichi } from '../../core/models';
 import { GetServices } from '../../core/services/@data';
@@ -94,15 +94,7 @@ import { PaiementModalComponent, PaiementModalData } from './modal/paiement-moda
     </ng-template>
 
     <ng-template cellDef="statut" let-p>
-      <span class="badge rounded-pill"
-            [class.bg-success-subtle]="p.statut === 'confirmé'"
-            [class.text-success-emphasis]="p.statut === 'confirmé'"
-            [class.bg-warning-subtle]="p.statut === 'crée'"
-            [class.text-warning-emphasis]="p.statut === 'crée'"
-            [class.bg-danger-subtle]="p.statut === 'refusé'"
-            [class.text-danger-emphasis]="p.statut === 'refusé'">
-        {{ p.statut === 'confirmé' ? 'Vérifié' : p.statut === 'refusé' ? 'Refusé' : 'Créé' }}
-      </span>
+{{ p.statut }}
     </ng-template>
 
     <ng-template cellDef="actions" let-p>
@@ -149,11 +141,12 @@ import { PaiementModalComponent, PaiementModalData } from './modal/paiement-moda
 })
 export class PaiementsGestionListComponent {
 
-  private get    = inject(GetServices);
-  private del    = inject(DeleteServices);
+  private get = inject(GetServices);
+  private del = inject(DeleteServices);
   private dialog = inject(MatDialog);
-  private cdr    = inject(ChangeDetectorRef);
-  private fas    = inject(FamilleService);
+  private cdr = inject(ChangeDetectorRef);
+  private fas = inject(FamilleService);
+  private router = inject(Router)
 
   private readonly palette = [
     { bg: '#E8F5E9', txt: '#2E7D32' }, { bg: '#E3F2FD', txt: '#1565C0' },
@@ -162,40 +155,40 @@ export class PaiementsGestionListComponent {
   ];
 
   columns: TableColumn<PaiementEnrichi>[] = [
-    { id: 'famille',        header: 'Famille',       sortable: true, accessor: p => p.famille.nom_famille },
-    { id: 'montant',        header: 'Montant',       align: 'center', sortable: true, accessor: p => p.montant_verse },
-    { id: 'recu_numero',    header: 'N° Reçu',        align: 'center', sortable: true, accessor: p => p.recu_numero },
-    { id: 'nb_impressions', header: 'Impressions',   align: 'center', sortable: true, accessor: p => p.nb_impressions },
-    { id: 'mode_paiement',  header: 'Mode',           align: 'center', sortable: true, accessor: p => p.mode_paiement },
-    { id: 'date_paiement',  header: 'Date',           align: 'center', sortable: true, accessor: p => p.date_paiement },
-    { id: 'statut',         header: 'Statut',         align: 'center', sortable: true, accessor: p => p.statut },
-    { id: 'actions',        header: 'Actions',        align: 'center', exportable: false },
+    { id: 'famille', header: 'Famille', sortable: true, accessor: p => p.famille.nom_famille },
+    { id: 'montant', header: 'Montant', align: 'center', sortable: true, accessor: p => p.montant_verse },
+    { id: 'recu_numero', header: 'N° Reçu', align: 'center', sortable: true, accessor: p => p.recu_numero },
+    { id: 'nb_impressions', header: 'Impressions', align: 'center', sortable: true, accessor: p => p.nb_impressions },
+    { id: 'mode_paiement', header: 'Mode', align: 'center', sortable: true, accessor: p => p.mode_paiement },
+    { id: 'date_paiement', header: 'Date', align: 'center', sortable: true, accessor: p => p.date_paiement },
+    { id: 'statut', header: 'Statut', align: 'center', sortable: true, accessor: p => p.statut },
+    { id: 'actions', header: 'Actions', align: 'center', exportable: false },
   ];
 
   optsStatut = [
-    { val: 'Tous',      label: 'Tous' },
-    { val: 'crée',      label: 'Créé' },
-    { val: 'confirmé',  label: 'Vérifié' },
-    { val: 'refusé',    label: 'Refusé' },
+    { val: 'Tous', label: 'Tous' },
+    { val: 'crée', label: 'Créé' },
+    { val: 'confirmé', label: 'Vérifié' },
+    { val: 'refusé', label: 'Refusé' },
   ];
 
   optsMode = [
-    { val: 'Tous',   label: 'Tous modes' },
-    { val: 'cash',   label: '💵 Espèces' },
+    { val: 'Tous', label: 'Tous modes' },
+    { val: 'cash', label: '💵 Espèces' },
     { val: 'mobile', label: '📱 Mobile' },
   ];
 
   filtreStatut = signal('Tous');
-  filtreMode   = signal('Tous');
+  filtreMode = signal('Tous');
 
   paiements = computed(() => this.get.getPaiements() ?? []);
 
   filtered = computed(() => {
     const statut = this.filtreStatut();
-    const mode   = this.filtreMode();
+    const mode = this.filtreMode();
     return this.paiements().filter(p => {
       if (statut !== 'Tous' && p.statut !== statut) return false;
-      if (mode   !== 'Tous' && p.mode_paiement !== mode) return false;
+      if (mode !== 'Tous' && p.mode_paiement !== mode) return false;
       return true;
     });
   });
@@ -216,12 +209,8 @@ export class PaiementsGestionListComponent {
   avTxt(p: PaiementEnrichi): string { return this.palette[this.hashIdx(p)].txt; }
 
   ouvrirRecu(p: PaiementEnrichi): void {
-    this.dialog.open(RecuModalComponent, {
-      data: { paiement: p } satisfies RecuModalData,
-      width: '75vw', height: '75vh', maxWidth: '95vw',
-    }).afterClosed().subscribe(() => this.cdr.markForCheck());
+    this.router.navigate(['/paiement/recus', p.id_paiement]);
   }
-
   ouvrirWhatsapp(p: PaiementEnrichi): void {
     const message = `Bonjour, nous confirmons la réception de votre paiement de ${this.fmt(p.montant_verse)} FCFA. Merci.`;
     this.dialog.open(WhatsappModalComponent, {
@@ -232,7 +221,7 @@ export class PaiementsGestionListComponent {
         variables: [
           { label: 'Montant', valeur: `${this.fmt(p.montant_verse)} FCFA` },
           { label: 'Reçu N°', valeur: p.recu_numero },
-          { label: 'Date',    valeur: p.date_paiement },
+          { label: 'Date', valeur: p.date_paiement },
         ],
       } satisfies WhatsappModalData,
       width: '560px', maxWidth: '96vw',

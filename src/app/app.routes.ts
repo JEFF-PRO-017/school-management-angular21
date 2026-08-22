@@ -14,6 +14,12 @@ const routes: Routes = [
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
 
+  {
+    path: 'paiement/recus/:id',
+    loadComponent: () => import('./features/paiements/components/recu/recu.component').then(r => r.RecuComponent),
+    canActivate: [authGuard]
+  },
+
   // ── Application (protégée) ───────────────────────────────────────
   {
     path: '',
