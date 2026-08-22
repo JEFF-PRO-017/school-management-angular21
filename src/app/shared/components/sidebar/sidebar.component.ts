@@ -82,14 +82,14 @@ import { AuthService } from '../../../core/services/auth.service';
         Matières
       </a>
     }
-    @if (can('frais')) {
-      <a routerLink="/frais" routerLinkActive="sb-link--active" class="sb-link">
+    @if (can('paiement')) {
+      <a routerLink="/paiement" routerLinkActive="sb-link--active" class="sb-link">
         <svg class="sb-icon" viewBox="0 0 16 16" fill="none">
           <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
           <path d="M5 7h2M5 10h4M10 7h1"
                 stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
         </svg>
-        Frais
+        Paiement
       </a>
     }
 

@@ -3,44 +3,44 @@ import { Injectable, signal, computed } from '@angular/core';
 import {
   Famille, Eleve, Classe, FraisConfig, Enseignant,
   MatiereConfig, SoldeSnap, BulletinSnap,
-  Note, Sequence, SEQUENCES, 
+  Note, Sequence, SEQUENCES,
   MsgTemplate, LogAlerte, PermissionId
 } from '../models/last_index';
 import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
 import { AnneeScolaireFamille } from '../models/family';
-import { AppUser, AppUserEnrichi, PointageResult,Absence,Paiement } from '../models';
+import { AppUser, AppUserEnrichi, PointageResult, Absence, Paiement, PaiementEnrichi } from '../models';
 
 
 @Injectable({ providedIn: 'root' })
 export class CacheService {
 
   // ── Signaux bruts ──────────────────────────────────────────────
-  private _familles    = signal<Famille[]>([]);
-  private _classes     = signal<Classe[]>([]);
-  private _frais       = signal<FraisConfig[]>([]);
+  private _familles = signal<Famille[]>([]);
+  private _classes = signal<Classe[]>([]);
+  private _frais = signal<FraisConfig[]>([]);
   private _enseignants = signal<Enseignant[]>([]);
-  private _matieres    = signal<MatiereConfig[]>([]);
-  private _notes       = signal<Note[]>([]);
-  private _paiements   = signal<Paiement[]>([]);
-  private _eleves      = signal<Eleve[]>([]);
-  private _soldes      = signal<SoldeSnap[]>([]);
-  private _bulletins   = signal<BulletinSnap[]>([]);
-  private _absences    = signal<Absence[]>([]);
-  private _templates   = signal<MsgTemplate[]>([]);
-  private _logs        = signal<LogAlerte[]>([]);
-  private _users       = signal<AppUser[]>([]);
-  private _anneeSvc    = signal<AnneeScolaireFamille[]>([])
-  private _pointages  = signal<PointageResult[]>([])
+  private _matieres = signal<MatiereConfig[]>([]);
+  private _notes = signal<Note[]>([]);
+  private _paiements = signal<Paiement[]>([]);
+  private _eleves = signal<Eleve[]>([]);
+  private _soldes = signal<SoldeSnap[]>([]);
+  private _bulletins = signal<BulletinSnap[]>([]);
+  private _absences = signal<Absence[]>([]);
+  private _templates = signal<MsgTemplate[]>([]);
+  private _logs = signal<LogAlerte[]>([]);
+  private _users = signal<AppUser[]>([]);
+  private _anneeSvc = signal<AnneeScolaireFamille[]>([])
+  private _pointages = signal<PointageResult[]>([])
 
   // ── Signaux tampon (espace parent — données en attente) ────────
-  private _famillesTampon  = signal<FamilleTampon[]>([]);
-  private _elevesTampon    = signal<EleveTampon[]>([]);
-  private _pensionsTampon  = signal<PensionTampon[]>([]);
+  private _famillesTampon = signal<FamilleTampon[]>([]);
+  private _elevesTampon = signal<EleveTampon[]>([]);
+  private _pensionsTampon = signal<PensionTampon[]>([]);
   private _demandesPaiement = signal<DemandePaiement[]>([]);
 
   // ── Section active — injectée depuis AuthService via setSection() ─
   // Permet de filtrer les classes par section sans passer par le composant
-  private _section     = signal<'primaire' | 'secondaire' | 'all'>('all');
+  private _section = signal<'primaire' | 'secondaire' | 'all'>('all');
 
   // ── Niveau 1 : index notes pour O(1) ──────────────────────────
   // Clé : "id_eleve|sequence|id_classe"
@@ -69,18 +69,18 @@ export class CacheService {
 
   // ── Niveau 2 : élèves enrichis ────────────────────────────────
   private _elevesEnrichis = computed<any[]>(() => {
-    const famMap   = new Map(this._familles().map(f => [f.id_famille, f]));
-    const absMap   = this._absences();
+    const famMap = new Map(this._familles().map(f => [f.id_famille, f]));
+    const absMap = this._absences();
     const notesIdx = this._notesIndex();
     const classe = this._classes()
-    console.log('famMAp , absMap, notesIdx',famMap, absMap, notesIdx)
+    console.log('famMAp , absMap, notesIdx', famMap, absMap, notesIdx)
     return this._eleves().map(e => ({
       ...e,
-      classe:classe.find(c => c.id_classe ===e.id_classe),
-      famille:   famMap.get(e.id_famille),
-      absences:  absMap.filter(a => a.id_eleve === e.id_eleve),
+      classe: classe.find(c => c.id_classe === e.id_classe),
+      famille: famMap.get(e.id_famille),
+      absences: absMap.filter(a => a.id_eleve === e.id_eleve),
       sequences: SEQUENCES.map((seq: Sequence) => ({
-        sequence:    seq,
+        sequence: seq,
         notes_eleve: notesIdx.get(`${e.id_eleve}|${seq}|${e.id_classe}`) ?? [],
       })),
     }));
@@ -91,19 +91,19 @@ export class CacheService {
   //
   // RÈGLE RESPECTÉE : on crée un NOUVEL objet avec { ...f } pour chaque famille
   // On ne mute jamais un objet existant dans un computed()
-  private _famillesEnrichies = computed<Famille[]|any[]>(() => {
-    const anneeSvc          = this._anneeSvc() //N3
-    const elevesEnrichis    = this._elevesEnrichis();   // N2
-    const paiementsParFam   = this._paiementsParFamille(); // N1
+  private _famillesEnrichies = computed<Famille[] | any[]>(() => {
+    const anneeSvc = this._anneeSvc() //N3
+    const elevesEnrichis = this._elevesEnrichis();   // N2
+    const paiementsParFam = this._paiementsParFamille(); // N1
 
     console.log('fammille enrichies')
     return this._familles().map(f => ({
       ...f,                                               // copie tous les champs bruts
-      eleves:    elevesEnrichis.filter(e => e.id_famille === f.id_famille),
+      eleves: elevesEnrichis.filter(e => e.id_famille === f.id_famille),
       paiements: paiementsParFam.get(f.id_famille) ?? [], // ← enrichissement paiements
-      annee_scolaires: anneeSvc.filter(a=>a.id_famille === f.id_famille)
+      annee_scolaires: anneeSvc.filter(a => a.id_famille === f.id_famille)
     }));
-    
+
   });
 
   // ── Niveau 3 : matières enrichies ─────────────────────────────
@@ -113,7 +113,7 @@ export class CacheService {
     return this._matieres().map(m => ({
       ...m,
       enseignant: ensMap.get(m.id_enseignant),
-      classe:     clsMap.get(m.id_classe),
+      classe: clsMap.get(m.id_classe),
     }));
   });
 
@@ -121,32 +121,41 @@ export class CacheService {
   // _section est mis à jour par AuthService.setSection() via header
   // getClasses() retourne uniquement les classes de la section visible
   private _classesEnrichies = computed<Classe[]>(() => {
-    const mats    = this._matieresEnrichies();
-    const elevs   = this._elevesEnrichis();
+    const mats = this._matieresEnrichies();
+    const elevs = this._elevesEnrichis();
     const section = this._section();
 
     return this._classes()
       // .filter(c => section === 'all' || c.cycle === section)
       .map(c => ({
         ...c,
-        eleves:   elevs.filter(e => e.id_classe === c.id_classe),
+        eleves: elevs.filter(e => e.id_classe === c.id_classe),
         matieres: mats.filter(m => m.id_classe === c.id_classe),
       }));
   });
 
-  private _usersEnrichies = computed<AppUserEnrichi[]| any[]>(() => {
+  private _usersEnrichies = computed<AppUserEnrichi[] | any[]>(() => {
 
-      console.log('user-enrichies')
-      const mats    = this._matieresEnrichies(); 
-      const cls     = this._classesEnrichies();
+    console.log('user-enrichies')
+    const mats = this._matieresEnrichies();
+    const cls = this._classesEnrichies();
 
-      return this._users()
-        .map (u =>({
-          ...u,
-          classes_assignees_infos:cls.find(c => c.enseignant_principal ===u.id),
-          matieres:mats.filter(m => m.id_enseignant ===u.id)
-        }))
+    return this._users()
+      .map(u => ({
+        ...u,
+        classes_assignees_infos: cls.find(c => c.enseignant_principal === u.id),
+        matieres: mats.filter(m => m.id_enseignant === u.id)
+      }))
 
+  })
+
+  private _paiementEnrichies = computed<PaiementEnrichi[] | any[]>(() => {
+    const fas = this._familles()
+    return this._paiements()
+      .map(p => ({
+        ...p,
+        famille: fas.find(f => f.id_famille === p.id_famille)
+      }))
   })
 
   // ── Maps O(1) publiques ───────────────────────────────────────
@@ -161,125 +170,126 @@ export class CacheService {
   );
 
   // ── Getters publics ────────────────────────────────────────────
-  getFamilles():    any[]        { return this._famillesEnrichies(); }
-  getClasses():     Classe[]         { return this._classesEnrichies(); }
-  getEleves():      Eleve[]          { return this._elevesEnrichis(); }
-  getMatieres():    MatiereConfig[]  { return this._matieresEnrichies(); }
-  getFrais():       FraisConfig[]    { return this._frais(); }
-  getEnseignants(): Enseignant[]     { return this._enseignants(); }
-  getSoldes():      SoldeSnap[]      { return this._soldes(); }
-  getBulletins():   BulletinSnap[]   { return this._bulletins(); }
-  getNotes():       Note[]           { return this._notes(); }
-  getPaiements():   Paiement[]       { return this._paiements(); }
+  getFamilles(): any[] { return this._famillesEnrichies(); }
+  getClasses(): Classe[] { return this._classesEnrichies(); }
+  getEleves(): Eleve[] { return this._elevesEnrichis(); }
+  getMatieres(): MatiereConfig[] { return this._matieresEnrichies(); }
+  getFrais(): FraisConfig[] { return this._frais(); }
+  getEnseignants(): Enseignant[] { return this._enseignants(); }
+  getSoldes(): SoldeSnap[] { return this._soldes(); }
+  getBulletins(): BulletinSnap[] { return this._bulletins(); }
+  getNotes(): Note[] { return this._notes(); }
+  getPaiements(): PaiementEnrichi[] { return this._paiementEnrichies(); }
 
   // ── Setters ───────────────────────────────────────────────────
-  setFamilles(d: Famille[])         { this._familles.set(d); }
-  setClasses(d: Classe[]|any[])           { this._classes.set(d); }
-  setFrais(d: FraisConfig[])        { this._frais.set(d); }
-  setEnseignants(d: Enseignant[])   { this._enseignants.set(d); }
-  setMatieres(d: MatiereConfig[]|any[])   { this._matieres.set(d); }
-  setEleves(d: Eleve[]|any[])             { this._eleves.set(d); }
-  setSoldes(d: SoldeSnap[])         { this._soldes.set(d); }
-  setBulletins(d: BulletinSnap[])   { this._bulletins.set(d); }
-  setNotes(d: Note[])               { this._notes.set(d); }
-  setPaiements(d: Paiement[])       { this._paiements.set(d); }
-  setAnneeSvc(a:AnneeScolaireFamille[]){this._anneeSvc.set(a);}
-  setPointages(p:PointageResult[]) {this._pointages.set(p)}
+  setFamilles(d: Famille[]) { this._familles.set(d); }
+  setClasses(d: Classe[] | any[]) { this._classes.set(d); }
+  setFrais(d: FraisConfig[]) { this._frais.set(d); }
+  setEnseignants(d: Enseignant[]) { this._enseignants.set(d); }
+  setMatieres(d: MatiereConfig[] | any[]) { this._matieres.set(d); }
+  setEleves(d: Eleve[] | any[]) { this._eleves.set(d); }
+  setSoldes(d: SoldeSnap[]) { this._soldes.set(d); }
+  setBulletins(d: BulletinSnap[]) { this._bulletins.set(d); }
+  setNotes(d: Note[]) { this._notes.set(d); }
+  setPaiements(d: Paiement[]) { this._paiements.set(d); }
+  setAnneeSvc(a: AnneeScolaireFamille[]) { this._anneeSvc.set(a); }
+  setPointages(p: PointageResult[]) { this._pointages.set(p) }
 
   // ── Upsert / remove ───────────────────────────────────────────
-  upsertFamille(f: Famille)   { this._familles.update(l => upsert(l, f, 'id_famille')); }
-  removeFamille(id: string)   { this._familles.update(l => l.filter(x => x.id_famille !== id)); }
+  upsertFamille(f: Famille) { this._familles.update(l => upsert(l, f, 'id_famille')); }
+  removeFamille(id: string) { this._familles.update(l => l.filter(x => x.id_famille !== id)); }
+  removePaiement(id: string) {  this._paiements.update(l => l.filter(x => x.id_paiement !== id)); }
 
-  upsertEleve(e: Eleve)       { this._eleves.update(l => upsert(l, e, 'id_eleve')); }
-  removeEleve(id: string)     { this._eleves.update(l => l.filter(x => x.id_eleve !== id)); }
+  upsertEleve(e: Eleve) { this._eleves.update(l => upsert(l, e, 'id_eleve')); }
+  removeEleve(id: string) { this._eleves.update(l => l.filter(x => x.id_eleve !== id)); }
 
-  upsertClasse(c: Classe)     { this._classes.update(l => upsert(l, c, 'id_classe')); }
+  upsertClasse(c: Classe) { this._classes.update(l => upsert(l, c, 'id_classe')); }
 
   upsertPaiement(p: Paiement) { this._paiements.update(l => upsert(l, p, 'id_paiement')); }
 
-  upsertSolde(s: SoldeSnap)   { this._soldes.update(l => upsert(l, s, 'id_eleve')); }
+  upsertSolde(s: SoldeSnap) { this._soldes.update(l => upsert(l, s, 'id_eleve')); }
 
   upsertMatiere(m: MatiereConfig) { this._matieres.update(l => upsert(l, m, 'id_matiere')); }
 
-  upsertAnneeSvc(a:AnneeScolaireFamille){ this._anneeSvc.update(l => upsert(l, a, 'id_annee_scolaire')) }
+  upsertAnneeSvc(a: AnneeScolaireFamille) { this._anneeSvc.update(l => upsert(l, a, 'id_annee_scolaire')) }
 
   // ── Absences ──────────────────────────────────────────────────────
-  getAbsences():       Absence[]  { return this._absences(); }
-  setAbsences(d: Absence[])       { this._absences.set(d); }
-  addAbsence(a: Absence)          { this._absences.update(l => [a, ...l]); }
-  addAbsencesBatch(abs: Absence[]){ this._absences.update(l => [...abs, ...l]); }
-  addPointage(p:PointageResult){this._pointages.update(l => [p,...l])}
+  getAbsences(): Absence[] { return this._absences(); }
+  setAbsences(d: Absence[]) { this._absences.set(d); }
+  addAbsence(a: Absence) { this._absences.update(l => [a, ...l]); }
+  addAbsencesBatch(abs: Absence[]) { this._absences.update(l => [...abs, ...l]); }
+  addPointage(p: PointageResult) { this._pointages.update(l => [p, ...l]) }
 
   // ── Templates ─────────────────────────────────────────────────────
-  getTemplates():            MsgTemplate[]  { return this._templates(); }
-  setTemplates(d: MsgTemplate[])            { this._templates.set(d); }
-  upsertTemplate(t: MsgTemplate)            {
+  getTemplates(): MsgTemplate[] { return this._templates(); }
+  setTemplates(d: MsgTemplate[]) { this._templates.set(d); }
+  upsertTemplate(t: MsgTemplate) {
     this._templates.update(l => upsert(l, t, 'id_template'));
   }
 
   // ── Logs alertes ──────────────────────────────────────────────────
-  getLogs():                 LogAlerte[]    { return this._logs(); }
-  setLogs(d: LogAlerte[])                   { this._logs.set(d); }
-  upsertLog(l: LogAlerte)                   {
+  getLogs(): LogAlerte[] { return this._logs(); }
+  setLogs(d: LogAlerte[]) { this._logs.set(d); }
+  upsertLog(l: LogAlerte) {
     this._logs.update(list => upsert(list, l, 'id_log'));
   }
 
   // ── Utilisateurs ──────────────────────────────────────────────────
-  getUsers():                AppUser[]      { return this._usersEnrichies(); }
-  setUsers(d: AppUser[])                    { this._users.set(d); }
-  upsertUser(u: AppUser)                    {
+  getUsers(): AppUser[] { return this._usersEnrichies(); }
+  setUsers(d: AppUser[]) { this._users.set(d); }
+  upsertUser(u: AppUser) {
     this._users.update(l => upsert(l, u, 'id'));
   }
-  removeUser(id: string)                    {
+  removeUser(id: string) {
     this._users.update(l => l.filter(u => u.id !== id));
   }
 
   // ── Familles tampon ───────────────────────────────────────────
-  getFamillesTampon():       FamilleTampon[]  { return this._famillesTampon(); }
-  setFamillesTampon(d: FamilleTampon[])       { this._famillesTampon.set(d); }
-  upsertFamilleTampon(f: FamilleTampon)       {
+  getFamillesTampon(): FamilleTampon[] { return this._famillesTampon(); }
+  setFamillesTampon(d: FamilleTampon[]) { this._famillesTampon.set(d); }
+  upsertFamilleTampon(f: FamilleTampon) {
     this._famillesTampon.update(l => upsert(l, f, 'id_famille'));
   }
-  removeFamilleTampon(id: string)             {
+  removeFamilleTampon(id: string) {
     this._famillesTampon.update(l => l.filter(f => f.id_famille !== id));
   }
 
   // ── Élèves tampon ─────────────────────────────────────────────
-  getElevesTampon():         EleveTampon[]    { return this._elevesTampon(); }
-  setElevesTampon(d: EleveTampon[])           { this._elevesTampon.set(d); }
-  upsertEleveTampon(e: EleveTampon)           {
+  getElevesTampon(): EleveTampon[] { return this._elevesTampon(); }
+  setElevesTampon(d: EleveTampon[]) { this._elevesTampon.set(d); }
+  upsertEleveTampon(e: EleveTampon) {
     this._elevesTampon.update(l => upsert(l, e, 'id_eleve'));
   }
-  removeElevesTamponFamille(idFamille: string){
+  removeElevesTamponFamille(idFamille: string) {
     this._elevesTampon.update(l => l.filter(e => e.id_famille !== idFamille));
   }
 
   // ── Pensions tampon ───────────────────────────────────────────
-  getPensionsTampon():       PensionTampon[]  { return this._pensionsTampon(); }
-  setPensionsTampon(d: PensionTampon[])       { this._pensionsTampon.set(d); }
-  upsertPensionTampon(p: PensionTampon)       {
+  getPensionsTampon(): PensionTampon[] { return this._pensionsTampon(); }
+  setPensionsTampon(d: PensionTampon[]) { this._pensionsTampon.set(d); }
+  upsertPensionTampon(p: PensionTampon) {
     this._pensionsTampon.update(l => upsert(l, p, 'id'));
   }
 
   // ── Demandes paiement ─────────────────────────────────────────
-  getDemandesPaiement():     DemandePaiement[]   { return this._demandesPaiement(); }
-  setDemandesPaiement(d: DemandePaiement[])      { this._demandesPaiement.set(d); }
-  upsertDemandePaiement(d: DemandePaiement)      {
+  getDemandesPaiement(): DemandePaiement[] { return this._demandesPaiement(); }
+  setDemandesPaiement(d: DemandePaiement[]) { this._demandesPaiement.set(d); }
+  upsertDemandePaiement(d: DemandePaiement) {
     this._demandesPaiement.update(l => upsert(l, d, 'id'));
   }
-  removeDemandePaiement(id: string)              {
+  removeDemandePaiement(id: string) {
     this._demandesPaiement.update(l => l.filter(d => d.id !== id));
   }
 
   // ── Computed consultant — vue enrichie (jointure en mémoire) ──
   // Accessible depuis ConsultantComponent sans recharger Sheets à chaque fois
   readonly famillesTamponEnrichies = computed(() => {
-    const fams  = this._famillesTampon();
+    const fams = this._famillesTampon();
     const elevs = this._elevesTampon();
-    const pens  = this._pensionsTampon();
+    const pens = this._pensionsTampon();
     return fams.map(f => ({
       ...f,
-      eleves:  elevs.filter(e =>
+      eleves: elevs.filter(e =>
         e.id_famille === f.id_famille || (e as any).id_famille_tampon === f.id_famille
       ),
       pension: pens.find(p => p.id_famille === f.id_famille) ?? null,
@@ -304,16 +314,16 @@ export class CacheService {
 
   // ── Invalidation complète ─────────────────────────────────────
   invalidateAll(): void {
-    this._familles.set([]);    this._classes.set([]);
-    this._frais.set([]);       this._enseignants.set([]);
-    this._matieres.set([]);    this._eleves.set([]);
-    this._soldes.set([]);      this._bulletins.set([]);
-    this._notes.set([]);       this._paiements.set([]);
-    this._absences.set([]);    this._templates.set([]);
-    this._logs.set([]);        this._users.set([]);
+    this._familles.set([]); this._classes.set([]);
+    this._frais.set([]); this._enseignants.set([]);
+    this._matieres.set([]); this._eleves.set([]);
+    this._soldes.set([]); this._bulletins.set([]);
+    this._notes.set([]); this._paiements.set([]);
+    this._absences.set([]); this._templates.set([]);
+    this._logs.set([]); this._users.set([]);
     // Tables tampon
-    this._famillesTampon.set([]);   this._elevesTampon.set([]);
-    this._pensionsTampon.set([]);   this._demandesPaiement.set([]);
+    this._famillesTampon.set([]); this._elevesTampon.set([]);
+    this._pensionsTampon.set([]); this._demandesPaiement.set([]);
   }
 }
 

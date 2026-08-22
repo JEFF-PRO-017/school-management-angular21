@@ -5,11 +5,11 @@ import { SheetsQueueServiceService } from "../sheets-queue.service";
 import { SHEET } from "./sheets";
 
 @Injectable({ providedIn: 'root' })
-export  class DeleteServices {
+export class DeleteServices {
     protected cache = inject(CacheService);
     protected queue = inject(SheetsQueueServiceService);
     protected sheets = inject(GoogleSheetsService);
-    
+
     async deleteNotesBatch(noteIds: string[]): Promise<void> {
         this.cache.deleteNotesBatch(noteIds);
         const rows = await Promise.all(
@@ -38,6 +38,13 @@ export  class DeleteServices {
         const row = await this.sheets.findRowById(SHEET.familles, id);
         if (row === -1) return;
         this.queue.enqueue({ sheetName: SHEET.familles, rowIndex: row - 1 }, 'deleteRow');
+    }
+    // dans DeleteServices
+    async deletePaiement(id: string): Promise<void> {
+        this.cache.removePaiement(id);
+        const row = await this.sheets.findRowById(SHEET.paiements, id);
+        if (row === -1) return;
+        this.queue.enqueue({ sheetName: SHEET.paiements, rowIndex: row - 1 }, 'deleteRow');
     }
 
 }

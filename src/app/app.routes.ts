@@ -36,8 +36,8 @@ const routes: Routes = [
       },
       {
         path: 'eleves',
-        canActivate:[permGuard],data:{perm:'eleves'},
-        loadChildren:()=>import('./features/eleves/eleves.routes').then(m => m.ELEVES_ROUTES)
+        canActivate: [permGuard], data: { perm: 'eleves' },
+        loadChildren: () => import('./features/eleves/eleves.routes').then(m => m.ELEVES_ROUTES)
       },
       {
         path: 'classes',
@@ -52,7 +52,7 @@ const routes: Routes = [
       {
         path: 'matieres',
         canActivate: [permGuard], data: { perm: 'matieres' },
-        loadChildren: () => import('./features/matieres/matieres.routes').then(m => m.MATIERES_ROUTES), 
+        loadChildren: () => import('./features/matieres/matieres.routes').then(m => m.MATIERES_ROUTES),
       },
 
       // Pédagogie
@@ -68,7 +68,11 @@ const routes: Routes = [
         canActivate: [permGuard], data: { perm: 'absences' },
         loadChildren: () => import('./features/absences/absences.routes').then(m => m.ABSENCES_ROUTES),
       },
-
+      {
+        path: 'paiement',
+        canActivate: [permGuard], data: { perm: 'paiement' },
+        loadChildren: () => import('./features/paiements/paiement.routes').then(r => r.PAIEMENT_ROUTES)
+      },
       // WhatsApp
       {
         path: 'whatsapp',
@@ -82,7 +86,7 @@ const routes: Routes = [
         canActivate: [adminGuard],
         loadChildren: () => import('./features/users/users.routes').then(m => m.USERS_ROUTES),
       },
-            // ── Espace consultant (guard staff) ─────────────────────────
+      // ── Espace consultant (guard staff) ─────────────────────────
       {
         path: 'consultant',
         canActivate: [consultantGuard],
@@ -101,7 +105,7 @@ export const APP_ROUTES: Routes = [...routes, ...PARENT_ROUTES];
 
 // ── Guard consultant : vérifie que c'est un admin ou caissier ──────
 export function consultantGuard() {
-  const auth   = inject(AuthService);
+  const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.isAdmin() || auth.hasPermission('validation_parents')) return true;
   return router.createUrlTree(['/dashboard']);

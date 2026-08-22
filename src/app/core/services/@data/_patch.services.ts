@@ -1,17 +1,17 @@
 import { inject, Injectable } from "@angular/core";
 import { AddServices, concatStrings, GetServices, toRow } from ".";
-import { SHEET_TAMPON, H_TAMPON, DemandePaiement, MsgTemplate, AppUser, FraisConfig, FamilleTampon, EleveTampon, PensionTampon, MatiereConfig, AnneeScolaireFamille, Famille } from "../../models";
+import { SHEET_TAMPON, H_TAMPON, DemandePaiement, MsgTemplate, AppUser, FraisConfig, FamilleTampon, EleveTampon, PensionTampon, MatiereConfig, AnneeScolaireFamille, Famille, Paiement } from "../../models";
 import { SHEET, H } from "./sheets";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { CacheService } from "../cache.service";
 import { SheetsQueueServiceService } from "../sheets-queue.service";
 
 @Injectable({ providedIn: 'root' })
-export  class PatchServices  {
+export class PatchServices {
     protected cache = inject(CacheService);
     protected queue = inject(SheetsQueueServiceService);
-    protected sheets = inject(GoogleSheetsService); 
-    
+    protected sheets = inject(GoogleSheetsService);
+
     private addsv = inject(AddServices);
 
     /** Refuse une famille tampon (met à jour le statut) */
@@ -62,6 +62,14 @@ export  class PatchServices  {
 
     async updateFamille(f: Famille): Promise<void> {
         this.cache.upsertFamille(f); const row = await this.sheets.findRowById(SHEET.familles, f.id_famille); if (row === -1) return this.addsv.addFamille(f); this.queue.enqueue({ sheetName: SHEET.familles, row, col: 1, values: toRow(f, H.familles) }, 'updateRow');
+    }
+
+    // dans PatchServices
+    async updatePaiement(p: Paiement): Promise<void> {
+        this.cache.upsertPaiement(p);
+        const row = await this.sheets.findRowById(SHEET.paiements, p.id_paiement);
+        if (row === -1) return this.addsv.addPaiement(p);
+        this.queue.enqueue({ sheetName: SHEET.paiements, row, col: 1, values: toRow(p, H.paiements) }, 'updateRow');
     }
 
 }

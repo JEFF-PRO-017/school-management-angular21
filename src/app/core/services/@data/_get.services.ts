@@ -1,5 +1,5 @@
 import { inject, Injectable } from "@angular/core";
-import { AppUser, DemandePaiement, Eleve, EleveTampon, Enseignant, FamilleTampon, FraisConfig, H_TAMPON, MatiereConfig, MsgTemplate, Paiement, PensionTampon, SHEET_TAMPON } from "../../models";
+import { AppUser, DemandePaiement, Eleve, EleveTampon, Enseignant, FamilleTampon, FraisConfig, H_TAMPON, MatiereConfig, MsgTemplate, Paiement, PaiementEnrichi, PensionTampon, SHEET_TAMPON } from "../../models";
 import { Classe, SoldeSnap } from "../../models/last_index";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { CacheService } from "../cache.service";
@@ -20,7 +20,7 @@ export class GetServices {
     getFrais(): FraisConfig[] { return this.cache.getFrais(); }
     getEnseignants(): Enseignant[] { return this.cache.getEnseignants(); }
     getSoldes(): SoldeSnap[] { return this.cache.getSoldes(); }
-    getPaiements(): Paiement[] { return this.cache.getPaiements(); }
+    getPaiements(): PaiementEnrichi[] { return this.cache.getPaiements(); }
     getTemplates(): MsgTemplate[] {
         return this.cache.getTemplates().filter(t => t.actif);
     }

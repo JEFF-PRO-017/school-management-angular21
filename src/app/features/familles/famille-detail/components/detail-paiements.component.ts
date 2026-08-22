@@ -52,12 +52,12 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
                 {{ p.date_prochain_rdv ? fmtDate(p.date_prochain_rdv) : '—' }}
               </td> -->
               <td class="text-center">
-                <span class="badge"
+                <!-- <span class="badge"
                       [class.text-bg-success]="p.statut_alerte_whatsapp === 'ENVOYE'"
                       [class.text-bg-danger]="p.statut_alerte_whatsapp === 'ECHEC'"
                       [class.text-bg-secondary]="p.statut_alerte_whatsapp !== 'ENVOYE' && p.statut_alerte_whatsapp !== 'ECHEC'">
                   {{ wLabel(p.statut_alerte_whatsapp) }}
-                </span>
+                </span> -->
               </td>
             </tr>
           }
