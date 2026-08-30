@@ -18,10 +18,12 @@ export class DataServiceBase {
 
         console.log('chargement n1', Date.now());
         // Groupe A — données statiques (batchGet)
-        const [rawFam, rawCls, rawFrais, rawEns, rawMat, rawAnn, rawPoi] = await this.batchFetch([
+        const [rawFam, rawCls,
+            //  rawFrais,
+              rawEns, rawMat, rawAnn, rawPoi] = await this.batchFetch([
             `${SHEET.familles}!A:L`,
             `${SHEET.classes}!A:H`,
-            `${SHEET.frais}!A:I`,
+            // `${SHEET.frais}!A:I`,
             `${SHEET.enseignants}!A:F`,
             `${SHEET.matieres}!A:H`,
             `${SHEET.anneesvc}!A:H`,
@@ -29,7 +31,7 @@ export class DataServiceBase {
         ]);
         this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
         this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
-        this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
+        // this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
         this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
         this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
         this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc));
@@ -38,9 +40,11 @@ export class DataServiceBase {
         console.log('chargement n1', Date.now());
 
         // Groupe B — élèves + soldes
-        const [rawElv, rawSol] = await this.batchFetch([
+        const [rawElv,
+            //  rawSol
+            ] = await this.batchFetch([
             `${SHEET.eleves}!A:K`,
-            `${SHEET.soldes}!A:H`,
+            // `${SHEET.soldes}!A:H`,
         ]);
         this.cache.setEleves(this.parse<Eleve>(rawElv, H.eleves));
         console.log('chargement n1', Date.now());
@@ -63,14 +67,22 @@ export class DataServiceBase {
 
     public async ensureSheets(): Promise<void> {
         const entries = Object.entries(SHEET) as [keyof typeof SHEET, string][];
-        await Promise.all(
-            entries
-                .filter(([key]) => key in H)
-                .map(([key, name]) => this.sheets.createSheet({
-                    sheetName: name,
-                    headers: H[key as keyof typeof H] as unknown as string[],
-                }))
-        );
+
+       await entries.forEach(([key, name],i) => {
+            this.sheets.createSheet({
+            sheetName:name,
+            headers:H[key as keyof typeof H] as unknown as string[],
+          })
+           console.log( `createSheet ${i}` , Date.now());
+        })
+        // await Promise.all(
+        //     entries
+        //         .filter(([key]) => key in H)
+        //         .map(([key, name]) => this.sheets.createSheet({
+        //             sheetName: name,
+        //             headers: H[key as keyof typeof H] as unknown as string[],
+        //         }))
+        // );
     }
     private parse<T>(rows: any[][], headers: readonly string[]): T[] {
         if (!rows?.length) return [];

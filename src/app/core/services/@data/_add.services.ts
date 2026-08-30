@@ -41,9 +41,9 @@ export  class AddServices {
         this.cache.upsertUser(u); this.queue.enqueue({ sheetName: SHEET.users, rowData: toRow({ ...u, permissions: concatStrings(u.permissions), is_admin: u.is_admin ? 'OUI' : 'NON' }, H.users) }, 'addRow');
     }
 
-    addLog(l: LogAlerte): void {
-        this.cache.upsertLog(l); this.queue.enqueue({ sheetName: SHEET.logs, rowData: toRow(l, H.logs) }, 'addRow');
-    }
+    // addLog(l: LogAlerte): void {
+    //     this.cache.upsertLog(l); this.queue.enqueue({ sheetName: SHEET.logs, rowData: toRow(l, H.logs) }, 'addRow');
+    // }
 
     addTemplate(t: MsgTemplate): void {
         this.cache.upsertTemplate(t); this.queue.enqueue({ sheetName: SHEET.templates, rowData: toRow(t, H.templates) }, 'addRow');
@@ -61,9 +61,9 @@ export  class AddServices {
         this.cache.setNotesBatch(notes); notes.forEach(n => this.queue.enqueue({ sheetName: SHEET.notes, rowData: toRow(n, H.notes) }, 'addRow'));
     }
 
-    async addFrais(f: FraisConfig): Promise<void> {
-        this.queue.enqueue({ sheetName: SHEET.frais, rowData: toRow(f, H.frais) }, 'addRow');
-    }
+    // async addFrais(f: FraisConfig): Promise<void> {
+    //     this.queue.enqueue({ sheetName: SHEET.frais, rowData: toRow(f, H.frais) }, 'addRow');
+    // }
 
     async addPaiement(p: Paiement): Promise<void> {
         this.cache.upsertPaiement(p); this.queue.enqueue({ sheetName: SHEET.paiements, rowData: toRow(p, H.paiements) }, 'addRow');

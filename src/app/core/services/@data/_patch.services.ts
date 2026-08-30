@@ -32,9 +32,9 @@ export class PatchServices {
         this.cache.upsertUser(u); this.sheets.findRowById(SHEET.users, u.id).then(row => { if (row === -1) return this.addsv.addUser(u); this.queue.enqueue({ sheetName: SHEET.users, row, col: 1, values: toRow({ ...u, permissions: concatStrings(u.permissions), is_admin: u.is_admin ? 'OUI' : 'NON' }, H.users) }, 'updateRow'); });
     }
 
-    async updateFrais(f: FraisConfig): Promise<void> {
-        const row = await this.sheets.findRowById(SHEET.frais, f.id_frais); if (row === -1) return this.addsv.addFrais(f); this.queue.enqueue({ sheetName: SHEET.frais, row, col: 1, values: toRow(f, H.frais) }, 'updateRow');
-    }
+    // async updateFrais(f: FraisConfig): Promise<void> {
+    //     const row = await this.sheets.findRowById(SHEET.frais, f.id_frais); if (row === -1) return this.addsv.addFrais(f); this.queue.enqueue({ sheetName: SHEET.frais, row, col: 1, values: toRow(f, H.frais) }, 'updateRow');
+    // }
 
     async validerFamilleTampon(famille: FamilleTampon, eleves: EleveTampon[], pension: PensionTampon | null): Promise<void> {
         // await this.addsv.addFamille({ id_famille: famille.id_famille, nom_famille: famille.nom_famille, tel_pere: famille.tel_pere, tel_mere: famille.tel_mere, tel_autre: famille.tel_autre, adresse_texte: famille.adresse_texte }); for (const e of eleves) { await this.addsv.addEleve({ id_eleve: e.id_eleve, id_famille: famille.id_famille, id_classe: e.id_classe ?? '', nom: e.nom, prenom: e.prenom, date_naissance: e.date_naissance ?? '', sexe: e.sexe ?? undefined, statut: 'actif', matricule: '' }); } const rowFam = await this.sheets.findRowById(SHEET_TAMPON.familles, famille.id_famille); if (rowFam !== -1) this.queue.enqueue({ sheetName: SHEET_TAMPON.familles, row: rowFam, col: 1, values: toRow({ ...famille, statut_validation: 'valide' }, H_TAMPON.familles) }, 'updateRow');

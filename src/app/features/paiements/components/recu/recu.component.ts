@@ -8,7 +8,7 @@ import { PaiementEnrichi, FamilleEnrichi, EleveEnrichi, FamilleService } from '.
   selector: 'app-recu',
   imports: [DatePipe, DecimalPipe],
   templateUrl: './recu.component.html',
-  styleUrl: './recu.component.css',
+  styleUrl: './recu.component.scss',
   standalone: true,
 })
 export class RecuComponent implements OnInit {
@@ -73,8 +73,9 @@ export class RecuComponent implements OnInit {
     this.montantRestant = fa.montantRestant
   }
 
-  imprimer(): void {
-    window.print()
+  async imprimer(): Promise<void> {
+    debugger
+    await window.print()
     this.marquerImpression();
   }
 
@@ -86,10 +87,9 @@ export class RecuComponent implements OnInit {
     if (!this.paiement) return;
     this.impressionEnCours.set(true);
     const p = this.paiement;
-    const premiereImpression = p.nb_impressions === 0;
 
     p.nb_impressions = 1 + (+ p.nb_impressions);
-    if (premiereImpression) p.statut = 'confirmé';
+    p.statut = 'confirmé';
     await this.patch.updatePaiement(p);
     this.impressionEnCours.set(false);
   }
