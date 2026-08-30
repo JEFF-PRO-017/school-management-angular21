@@ -38,7 +38,7 @@
               },
               {
                 "glob": "manifest.webmanifest",
-                "input": "src",
+                "input": "public",
                 "output": ""
               }
             ],

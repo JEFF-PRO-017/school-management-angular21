@@ -7,8 +7,8 @@ import { APP_ROUTES } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { rateLimitInterceptor } from './core/interceptors/rate-limit.interceptor';
 import { ParentService } from './core/services/parent.service';
-import { provideServiceWorker } from '@angular/service-worker';
 import { DataServiceBase } from './core/services/@data/_data.base.service';
+import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
 
@@ -34,8 +34,8 @@ export const appConfig: ApplicationConfig = {
         await data.ensureSheets();
       }, 600);
     }), provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000'
-    }),
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+          })
   ],
 };
