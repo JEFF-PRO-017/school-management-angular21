@@ -1,0 +1,6 @@
+{
+  "outputDirectory": "dist/school-app/browser",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
