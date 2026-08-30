@@ -39,7 +39,8 @@
               {
                 "glob": "manifest.webmanifest",
                 "input": "public",
-                "output": ""
+                "output": "/",
+                 "ignore": []
               }
             ],
             "styles": [

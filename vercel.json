@@ -1,16 +1,6 @@
 {
   "outputDirectory": "dist/school-app/browser",
-  "headers": [
-    {
-      "source": "/manifest.webmanifest",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, must-revalidate"
-        }
-      ]
-    }
-  ],
+  "buildCommand": "ng build && echo '=== FICHIERS DIST ===' && find dist/school-app/browser -maxdepth 1 -type f && echo '=== MANIFEST ===' && cat dist/school-app/browser/manifest.webmanifest || echo 'MANIFEST INTROUVABLE'",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
