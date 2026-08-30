@@ -34,8 +34,8 @@ export const appConfig: ApplicationConfig = {
         await data.ensureSheets();
       }, 600);
     }), provideServiceWorker('ngsw-worker.js', {
-            enabled: !isDevMode(),
-            registrationStrategy: 'registerWhenStable:30000'
-          }),
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000'
+    }),
   ],
 };
