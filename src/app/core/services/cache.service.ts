@@ -73,7 +73,6 @@ export class CacheService {
     const absMap = this._absences();
     const notesIdx = this._notesIndex();
     const classe = this._classes()
-    console.log('famMAp , absMap, notesIdx', famMap, absMap, notesIdx)
     return this._eleves().map(e => ({
       ...e,
       classe: classe.find(c => c.id_classe === e.id_classe),
@@ -96,7 +95,6 @@ export class CacheService {
     const elevesEnrichis = this._elevesEnrichis();   // N2
     const paiementsParFam = this._paiementsParFamille(); // N1
 
-    console.log('fammille enrichies')
     return this._familles().map(f => ({
       ...f,                                               // copie tous les champs bruts
       eleves: elevesEnrichis.filter(e => e.id_famille === f.id_famille),
@@ -136,7 +134,6 @@ export class CacheService {
 
   private _usersEnrichies = computed<AppUserEnrichi[] | any[]>(() => {
 
-    console.log('user-enrichies')
     const mats = this._matieresEnrichies();
     const cls = this._classesEnrichies();
 

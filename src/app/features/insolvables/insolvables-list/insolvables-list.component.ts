@@ -357,7 +357,6 @@ export class InsolvablesListComponent implements OnInit {
       msg: 'yo man cest le berceau'
     }
     await this.wa.send_message_bulk([message]);
-    console.log('je viens de finir le send message')
   }
 
   prochainRdv(f: FamilleEnrichi | undefined): string | null {

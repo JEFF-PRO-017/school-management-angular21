@@ -140,9 +140,17 @@ export class LoginComponent {
       this.form.value.username!,
       this.form.value.password!
     );
+
     this.loading.set(false);
-    if (ok) this.router.navigate(['/dashboard']);
-    else this.error.set('Identifiant ou mot de passe incorrect.');
+    
+    if (ok === 'success') this.router.navigate(['/dashboard']);
+    else if (ok === 'incorrect') {
+      this.error.set('Identifiant ou mot de passe incorrect.');
+    } else if (ok === 'non-actif') {
+      this.error.set('Votre compte n’est pas actif. Contactez l’administrateur.')
+    } else {
+      this.error.set('Erreur réseau. Réessayez dans quelques secondes.');
+    }
   }
 
   // Retour vers la connexion parent

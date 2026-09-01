@@ -146,7 +146,6 @@ export class EleveModalComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    console.log("this.data",this.data)
     if (!this.data.eleve) return;
     this.isEdit = true;
     this.eleveId = this.data.eleve.id_eleve;
@@ -187,7 +186,6 @@ export class EleveModalComponent implements OnInit {
     if (this.isEdit) await this.patch.updateEleve(eleve);
     else await this.add.addEleve(eleve);
 
-    console.log('anneeUpdate', anneeUpdate);
     this.patch.updateAnneeSvc(anneeUpdate)
 
     this.dialogRef.close({ success: true, eleve });

@@ -8,18 +8,20 @@
 //  - Scheduler inchangé (setInterval 2s)
 //  - Persistance localStorage inchangée
 // ─────────────────────────────────────────────────────────────────
-import { effect, Injectable, signal } from '@angular/core';
+import { effect, inject, Injectable, signal } from '@angular/core';
 import { GoogleSheetsService, RowConfig, CellConfig, DeleteRowConfig }
   from './@google-sheets/google-sheets.service';
 import { from, EMPTY, of } from 'rxjs';
 import { switchMap, map, catchError, filter, tap } from 'rxjs/operators';
+import { Router } from '@angular/router';
+import { SessionService } from './@session/session.service';
 
 // ── Types des payloads possibles ──────────────────────────────────
 
 export interface UpdateRowConfig {
   sheetName: string;
-  row:    number;   // numéro de ligne Sheets (1-based)
-  col:    number;   // colonne de départ (1 = A)
+  row: number;   // numéro de ligne Sheets (1-based)
+  col: number;   // colonne de départ (1 = A)
   values: any[];    // toutes les valeurs de la ligne dans l'ordre des en-têtes
 }
 
@@ -32,8 +34,8 @@ export type QueuePayload =
   | DeleteRowConfig;
 
 interface QueueItem {
-  id:      string;
-  order:   QueueOrder;
+  id: string;
+  order: QueueOrder;
   payload: QueuePayload;
 }
 
@@ -43,16 +45,19 @@ const INTERVAL_MS = 2000;
 @Injectable({ providedIn: 'root' })
 export class SheetsQueueServiceService {
 
-  private queue    = signal<QueueItem[]>([]);
-  private online   = signal(navigator.onLine);
+  private sessionService = inject(SessionService);
+  private router = inject(Router);
+
+  private queue = signal<QueueItem[]>([]);
+  private online = signal(navigator.onLine);
   private scheduled: ReturnType<typeof setInterval> | null = null;
-  private syncing  = false;
+  private syncing = false;
 
   constructor(private sheets: GoogleSheetsService) {
     // Restaure la file depuis localStorage au démarrage
     this.queue.set(this.load());
 
-    window.addEventListener('online',  () => this.online.set(true));
+    window.addEventListener('online', () => this.online.set(true));
     window.addEventListener('offline', () => this.online.set(false));
 
     // Persiste + démarre le scheduler à chaque changement de la file
@@ -67,19 +72,33 @@ export class SheetsQueueServiceService {
   // ── API publique ───────────────────────────────────────────────
 
   enqueue(payload: QueuePayload, order: QueueOrder): void {
-    this.queue.update(list => [
-      ...list,
-      { id: crypto.randomUUID(), order, payload },
-    ]);
+
+    console.log('enqueue', order, payload, 'sessionService.isValid()', this.sessionService.isValid(), 'sessionService.get()', this.sessionService.get());
+    if (this.sessionService.isValid()) {
+      return this.queue.update(list => [
+        ...list,
+        { id: crypto.randomUUID(), order, payload },
+      ]);
+    }
+
+    // On lit la session AVANT de la supprimer, pour savoir vers quel login rediriger
+    const session = this.sessionService.get();
+    const route = this.sessionService.getLoginRoute(session);
+    this.sessionService.clear();
+
+    // createUrlTree = redirection directe, sans appel supplémentaire à router.navigate
+    this.router.navigate(route);
+    return 
+    // TODO  METTRE UNE NOTIFICATION DE SESION EXPIRE
   }
 
   dequeue(): void {
     this.queue.update(list => list.slice(1));
   }
 
-  peek():    QueueItem  { return this.queue()[0]; }
-  isEmpty(): boolean    { return this.queue().length === 0; }
-  size():    number     { return this.queue().length; }
+  peek(): QueueItem { return this.queue()[0]; }
+  isEmpty(): boolean { return this.queue().length === 0; }
+  size(): number { return this.queue().length; }
 
   /** Vide complètement la file sans envoyer — à utiliser avec précaution */
   clearQueue(): void {
@@ -94,7 +113,7 @@ export class SheetsQueueServiceService {
   sync(): void {
     if (this.syncing || !this.online() || this.isEmpty()) return;
     this.syncing = true;
-    const item   = this.peek();
+    const item = this.peek();
 
     of(item).pipe(
       filter(i => !!i?.order && !!i?.payload),
@@ -109,7 +128,7 @@ export class SheetsQueueServiceService {
       }),
     ).subscribe({
       complete: () => { this.syncing = false; },
-      error:    () => { this.syncing = false; },
+      error: () => { this.syncing = false; },
     });
   }
 

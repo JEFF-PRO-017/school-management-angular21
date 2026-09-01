@@ -274,7 +274,6 @@ export class TableComponent<T = any> implements  AfterContentInit {
     const cf = this.columnFilters();
     const sort = this.sortState();
 
-    console.log('chargement du filtre',gf,cf,sort)
     let rows = this.dataSignal();
 
     if (gf) {

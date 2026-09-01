@@ -1,6 +1,6 @@
 // app.routes.ts — routes principales avec guards
 import { Router, Routes } from '@angular/router';
-import { authGuard, permGuard, adminGuard, sessionGuard } from './core/guards/auth.guard';
+import { authGuard, permGuard, adminGuard, sessionGuard, consultantGuard } from './core/guards/auth.guard';
 import { PARENT_ROUTES } from './features/parents/parent.routes';
 import { inject } from '@angular/core';
 import { AuthService } from './core/services/auth.service';
@@ -17,14 +17,15 @@ const routes: Routes = [
   {
     path: 'paiement/recus/:id',
     loadComponent: () => import('./features/paiements/components/recu/recu.component').then(r => r.RecuComponent),
-    canActivate: [authGuard,sessionGuard]
+    canActivate: [authGuard, sessionGuard]
   },
 
   // ── Application (protégée) ───────────────────────────────────────
   {
     path: '',
     loadComponent: () => import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
-    canActivate: [authGuard,sessionGuard],
+    canActivate: [authGuard],
+    canActivateChild: [sessionGuard], 
     children: [
 
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -110,9 +111,3 @@ const routes: Routes = [
 export const APP_ROUTES: Routes = [...routes, ...PARENT_ROUTES];
 
 // ── Guard consultant : vérifie que c'est un admin ou caissier ──────
-export function consultantGuard() {
-  const auth = inject(AuthService);
-  const router = inject(Router);
-  if (auth.isAdmin() || auth.hasPermission('validation_parents')) return true;
-  return router.createUrlTree(['/dashboard']);
-}

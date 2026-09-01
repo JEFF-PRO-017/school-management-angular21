@@ -124,6 +124,8 @@ export class ParentLoginComponent {
             this.router.navigate(['/espace-parent/dashboard']);
         } else if (r === 'introuvable') {
             this.erreurMsg.set('Numéro non reconnu. Vérifiez ou inscrivez-vous.');
+        } else if (r === 'non-actif') {
+            this.erreurMsg.set('Votre compte n’est pas actif. Contactez l’administrateur.');
         } else {
             this.erreurMsg.set('Erreur réseau. Réessayez dans quelques secondes.');
         }

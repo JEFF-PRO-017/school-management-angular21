@@ -153,8 +153,6 @@ export class MatieresListComponent {
   filtered = computed<any[]>(() => {
     const cls = this.filtreClasse();
     const matieres = this.matieres();
-    console.log('matieres', matieres);
-    console.log('filtreClasse', cls);
     return cls === 'Tous'
       ? matieres
       : matieres.filter(m => m.id_classe === cls);

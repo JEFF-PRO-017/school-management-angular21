@@ -160,7 +160,6 @@ export class FamilleMapComponent implements OnInit, OnDestroy {
       if (isNaN(lat) || isNaN(lng)) return;
 
        const latLng: [number, number] = [lat, lng];
-      console.log('latLng', latLng)
       this.allBounds.push(latLng);
 
       const totalVerse = this.fas.montantVerse(f)
@@ -171,7 +170,6 @@ export class FamilleMapComponent implements OnInit, OnDestroy {
       const marker = this.ms.creerMarqueurFamille(
         this.ref!, latLng, aDette ? COLOR_BAD : COLOR_OK, popup
       );
-      console.log('marker', marker)
       marker.on('popupopen', () => {
         this.ms.attacherBoutonPopup(f.id_famille, () => {
           this.ref!.map.closePopup();

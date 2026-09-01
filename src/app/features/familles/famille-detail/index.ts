@@ -106,7 +106,6 @@ export class FamilleDetailComponent implements OnInit {
   // famille = signal<FamilleEnrichi | null>(null);
   id = signal<string>('')
   famille = computed(() => {
-    console.log('fresh famille')
     return this.cache.getFamilles().find(f => f.id_famille === this.id());
   })
   annee = ANNEE_SCOLAIRE;

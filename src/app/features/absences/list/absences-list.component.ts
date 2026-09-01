@@ -226,7 +226,6 @@ export class AbsencesListComponent {
     const classe = this.filtreClasse();
     const minAbs = this.filtreMinAbs();
     const q      = (this.searchSignal() ?? '').toLowerCase();
-console.log('lignes() called with filtreClasse:', classe, 'filtreMinAbs:', minAbs, 'searchSignal:', q);
     return this.get.getEleves()
       .filter(e => !classe || e.id_classe === classe)
       .map(e => this.construireLigne(e))

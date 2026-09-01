@@ -8,18 +8,19 @@ import {
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { AppUser, PERMISSIONS, PermissionId, Role, Section } from '../../../core/models/last_index';
+// import { AppUser, PERMISSIONS, PermissionId, Role, Section } from '../../../core/models/last_index';
 import { hash } from 'bcryptjs';
 import { AddServices, GetServices, PatchServices } from '../../../core/services/@data';
 import { DeleteServices } from '../../../core/services/@data/_delete.services';
+import { AppUser, Role, PERMISSIONS, PermissionId, Section } from '../../../core/models';
 
 export interface UserModalData { user?: AppUser; }
 
 const ROLES: { val: Role; label: string }[] = [
-  { val: 'admin',       label: 'Administrateur' },
-  { val: 'caissier',    label: 'Caissier'       },
-  { val: 'enseignant',  label: 'Enseignant'     },
-  { val: 'surveillant', label: 'Surveillant'    },
+  { val: 'admin', label: 'Administrateur' },
+  { val: 'caissier', label: 'Caissier' },
+  { val: 'enseignant', label: 'Enseignant' },
+  { val: 'surveillant', label: 'Surveillant' },
 ];
 
 @Component({
@@ -151,7 +152,7 @@ const ROLES: { val: Role; label: string }[] = [
 
       <!-- Rôle + Section -->
       <div class="row g-2 mb-2">
-        <div class="col-6">
+        <div class="col-4">
           <label class="form-label small text-muted fw-semibold mb-1">Rôle *</label>
           <select class="form-select form-select-sm" formControlName="role" (change)="onRoleChange()">
             @for (r of ROLES; track r.val) {
@@ -159,7 +160,16 @@ const ROLES: { val: Role; label: string }[] = [
             }
           </select>
         </div>
-        <div class="col-6">
+
+        <div class="col-4">
+          <label class="form-label small text-muted fw-semibold mb-1">Status</label>
+          <select class="form-select form-select-sm" formControlName="status">
+            <option value="ACTIF">Actif</option>
+            <option value="NON-ACTIF">Non Actif</option>
+          </select>
+        </div>
+        
+        <div class="col-4">
           <label class="form-label small text-muted fw-semibold mb-1">Section</label>
           <select class="form-select form-select-sm" formControlName="section">
             <option value="primaire">Primaire</option>
@@ -236,31 +246,32 @@ const ROLES: { val: Role; label: string }[] = [
 })
 export class UserModalComponent implements OnInit {
 
-  readonly data       = inject<UserModalData>(MAT_DIALOG_DATA);
-  private dialogRef   = inject(MatDialogRef<UserModalComponent>);
-  private snack       = inject(MatSnackBar);
+  readonly data = inject<UserModalData>(MAT_DIALOG_DATA);
+  private dialogRef = inject(MatDialogRef<UserModalComponent>);
+  private snack = inject(MatSnackBar);
   private patch = inject(PatchServices)
   private add = inject(AddServices)
   private get = inject(GetServices)
   private delete = inject(DeleteServices)
   readonly PERMISSIONS = PERMISSIONS;
-  readonly ROLES       = ROLES;
+  readonly ROLES = ROLES;
 
-  isEdit  = false;
-  saving  = signal(false);
+  isEdit = false;
+  saving = signal(false);
   showPwd = signal(false);
-  perms   = signal<Set<PermissionId>>(new Set());
+  perms = signal<Set<PermissionId>>(new Set());
 
   form = new FormGroup({
-    nom:      new FormControl('', [Validators.required, Validators.minLength(2)]),
+    nom: new FormControl('', [Validators.required, Validators.minLength(2)]),
     username: new FormControl('', {
       validators: [Validators.required, Validators.minLength(3), this.usernameUnique()],
       updateOn: 'blur',
     }),
-    tel:      new FormControl('', [Validators.pattern(/^\d{8,15}$/)]),
+    tel: new FormControl('', [Validators.pattern(/^\d{8,15}$/)]),
     password: new FormControl(''),
-    role:     new FormControl<Role>('enseignant'),
-    section:  new FormControl<Section>('secondaire'),
+    role: new FormControl<Role>('enseignant'),
+    section: new FormControl<Section>('secondaire'),
+    status: new FormControl<'ACTIF' | 'NON-ACTIF'>('ACTIF'),
   });
 
   get fc() { return this.form.controls; }
@@ -278,7 +289,7 @@ export class UserModalComponent implements OnInit {
     const u = this.data?.user;
     if (u) {
       this.isEdit = true;
-      this.form.patchValue({ nom: u.nom, username: u.username, role: u.role, section: u.section, tel: u.tel ?? '' });
+      this.form.patchValue({ nom: u.nom, username: u.username, role: u.role, status: u.status, section: u.section, tel: u.tel ?? '' });
       this.fc.username.clearValidators();
       this.fc.username.updateValueAndValidity();
       this.fc.password.clearValidators();
@@ -298,16 +309,16 @@ export class UserModalComponent implements OnInit {
     this.perms.update(s => { const n = new Set(s); checked ? n.add(p) : n.delete(p); return n; });
   }
 
-  toutCocher()   { this.perms.set(new Set(PERMISSIONS.map(p => p.id))); }
+  toutCocher() { this.perms.set(new Set(PERMISSIONS.map(p => p.id))); }
   toutDecocher() { this.perms.set(new Set()); }
 
   onRoleChange() { this._permissionsParDefaut(this.fc.role.value as Role); }
 
   private _permissionsParDefaut(role: Role) {
     const map: Record<Role, PermissionId[]> = {
-      admin:       PERMISSIONS.map(p => p.id),
-      caissier:    ['insolvables', 'familles'],
-      enseignant:  ['notes', 'bulletins', 'absences', 'eleves'],
+      admin: PERMISSIONS.map(p => p.id),
+      caissier: ['insolvables', 'familles'],
+      enseignant: ['notes', 'bulletins', 'absences', 'eleves'],
       surveillant: ['absences', 'eleves'],
     };
     this.perms.set(new Set(map[role] ?? []));
@@ -324,15 +335,16 @@ export class UserModalComponent implements OnInit {
       : (this.data?.user?.mot_de_passe ?? '');
 
     const user: AppUser = {
-      id:           this.data?.user?.id ?? `USR-${Date.now()}`,
-      username:     this.fc.username.value!,
+      id: this.data?.user?.id ?? `USR-${Date.now()}`,
+      username: this.fc.username.value!,
       mot_de_passe: hashedPassword,
-      nom:          this.fc.nom.value!,
-      tel:          this.fc.tel.value ?? '',
-      role:         this.fc.role.value as Role,
-      is_admin:     isAdmin,
-      section:      this.fc.section.value as Section,
-      permissions:  isAdmin ? PERMISSIONS.map(p => p.id) : [...this.perms()],
+      nom: this.fc.nom.value!,
+      tel: this.fc.tel.value ?? '',
+      role: this.fc.role.value as Role,
+      status: this.fc.status.value as 'ACTIF' | 'NON-ACTIF',
+      is_admin: isAdmin,
+      section: this.fc.section.value as Section,
+      permissions: isAdmin ? PERMISSIONS.map(p => p.id) : [...this.perms()],
     };
 
     if (this.isEdit) {
@@ -350,7 +362,7 @@ export class UserModalComponent implements OnInit {
   }
 
   supprimer() {
-    if(!this.data || !this.data.user || !this.data.user.id) return
+    if (!this.data || !this.data.user || !this.data.user.id) return
     if (!confirm(`Supprimer ${this.data?.user?.nom} ? Cette action est irréversible.`)) return;
     this.delete.deleteUser(this.data?.user?.id)
     this.dialogRef.close({ deleted: true, userId: this.data?.user?.id });

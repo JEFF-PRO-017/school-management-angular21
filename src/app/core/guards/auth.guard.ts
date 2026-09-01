@@ -28,7 +28,7 @@ export const permGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const auth    = inject(AuthService);
   const router  = inject(Router);
   const perm    = route.data['perm'] as PermissionId | undefined;
-  if (!perm || auth.hasPermission(perm)) return true;
+  if (!perm || auth.hasPermission(perm) || auth.isAdmin()) return true;
   return router.createUrlTree(['/dashboard']);
 };
 
@@ -38,6 +38,13 @@ export const adminGuard: CanActivateFn = () => {
   const router = inject(Router);
   return auth.isAdmin() ? true : router.createUrlTree(['/dashboard']);
 };
+
+export const consultantGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (auth.isAdmin() || auth.hasPermission('validation_parents')) return true;
+  return router.createUrlTree(['/dashboard']);
+}
 
 
 export const sessionGuard: CanActivateFn = () => {

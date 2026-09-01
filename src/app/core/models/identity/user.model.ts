@@ -11,9 +11,11 @@ export interface AppUser {
   mot_de_passe: string;        // hashé bcrypt (stocké dans Sheets)
   nom: string;
   role: Role;
-  is_admin: boolean;
+  is_admin: boolean|'OUI';
   section: Section;
   permissions: PermissionId[];
+  tel?: string;
+  status: 'ACTIF' | 'NON-ACTIF';
 }
 
 // ── Enrichi ───────────────────────────────────────────────────────

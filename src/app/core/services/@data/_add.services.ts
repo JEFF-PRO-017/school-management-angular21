@@ -40,7 +40,7 @@ export  class AddServices {
     addUser(u: AppUser): void {
         this.cache.upsertUser(u); this.queue.enqueue({ sheetName: SHEET.users, rowData: toRow({ ...u, permissions: concatStrings(u.permissions), is_admin: u.is_admin ? 'OUI' : 'NON' }, H.users) }, 'addRow');
     }
-
+    
     // addLog(l: LogAlerte): void {
     //     this.cache.upsertLog(l); this.queue.enqueue({ sheetName: SHEET.logs, rowData: toRow(l, H.logs) }, 'addRow');
     // }

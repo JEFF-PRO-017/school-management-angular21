@@ -4,8 +4,9 @@ import { Classe, SoldeSnap } from "../../models/last_index";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { CacheService } from "../cache.service";
 import { SheetsQueueServiceService } from "../sheets-queue.service";
-import { parse } from "./helpers";
+import { deconcatString, parse } from "./helpers";
 import { mockDB } from "../../../../../public/mocdata";
+import { H, SHEET } from "./sheets";
 
 @Injectable({ providedIn: 'root' })
 export class GetServices {
@@ -48,19 +49,7 @@ export class GetServices {
         return parse<DemandePaiement>(raw, H_TAMPON.paiements);
     }
 
-    async loadUsers(): Promise<void> {
-        // const raw = await this.sheets.fetchRaw(SHEET.users);
-        // this.cache.setUsers(
-        //   this.parse<AppUser>(raw, H.users).map(u => ({
-        //     ...u,
-        //     is_admin: String(u.is_admin) === 'OUI' || u.is_admin === true,
-        //     permissions: deconcatString(
-        //       typeof u.permissions === 'string' ? u.permissions : ''
-        //     ),
-        //   }))
-        // );
-        this.cache.setUsers(mockDB.users as AppUser[])
-    }
+
     getUsers(): AppUser[] | any[] {
         return this.cache.getUsers();
     }

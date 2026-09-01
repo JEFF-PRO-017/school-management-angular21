@@ -74,7 +74,6 @@ export class WhatsappService {
 
       // "submitted" veut dire accepté par Gupshup, pas encore livré au client
       // le vrai statut de livraison arrive plus tard via ton webhook
-      console.log('reponse', reponse)
 
       if (reponse.status === 'submitted') {
         return { ok: true, messageId: reponse.messageId };

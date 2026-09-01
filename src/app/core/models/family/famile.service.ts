@@ -193,7 +193,6 @@ export class FamilleService {
         for (const famille of familles) {
             result.push(...this.construireDonneesPourFamille(famille, aujourdhui));
         }
-        console.log('construireElevesDataAvecFamille', result);
         return result;
     }
 

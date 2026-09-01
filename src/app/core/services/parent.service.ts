@@ -8,12 +8,13 @@
 //   - CRUD tables tampon (inscription, paiement initié)
 import { Injectable, inject, signal, computed } from '@angular/core';
 
-import { Famille, Eleve, Paiement, Absence, Note, Sequence, SEQUENCES } from '../models/last_index';
+import { Eleve, Paiement, Absence, Note, Sequence, SEQUENCES } from '../models/last_index';
 import { DashboardParent, PARENT_DATA_KEY, EleveParent, PaiementParent, NotifParent, SHEET_TAMPON, DemandePaiement, REFRESH_INTERVAL_MS, H_TAMPON } from '../models/parent.models';
 import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 import { SHEET, H } from './@data';
 import { Session } from '../models/auth/session.model';
 import { SessionService } from './@session/session.service';
+import { Famille } from '../models';
 
 // ─────────────────────────────────────────────────────────────
 
@@ -50,16 +51,12 @@ export class ParentService {
 
   // ── Auth ─────────────────────────────────────────────────────
 
-  async login(tel: string): Promise<'ok' | 'introuvable' | 'erreur'> {
+  async login(tel: string): Promise<'ok' | 'introuvable' | 'erreur' | 'non-actif'> {
     this.chargement.set(true);
     this.erreur.set(null);
     try {
       const raw = await this.sheets.fetchRaw(SHEET.familles);
-      const familles = this.parse<Famille>(raw, [
-        'id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre',
-        'latitude', 'longitude', 'adresse_texte',
-        'montant_total_attendu', 'annee_scolaire', 'montant_reduction', 'commentaire',
-      ]);
+      const familles = this.parse<Famille>(raw, H.familles);
 
       const clean = tel.replace(/\s+/g, '').replace(/^\+237/, '');
       const famille = familles.find(f =>
@@ -68,15 +65,11 @@ export class ParentService {
       );
 
       if (!famille) { this.chargement.set(false); return 'introuvable'; }
+      if (famille.status === 'NON-ACTIF') { this.chargement.set(false); return 'non-actif'; }
 
-      const session: Session = {
-        id_famille: famille.id_famille,
-        nom_famille: famille.nom_famille,
-        tel: clean,
-        expires_at: Date.now() + 1 * 24 * 60 * 60 * 1000, // 1 jour
-      };
+      const session: Session = { id_famille: famille.id_famille, nom_famille: famille.nom_famille, tel: clean, expires_at: 0, };
       this.session.set(session);
-      this.sessionService.set(session);
+      this.sessionService.creer(session);
 
       await this.chargerDonnees(famille.id_famille);
       this.demarrerRefresh();
@@ -182,7 +175,7 @@ export class ParentService {
       });
 
       // ── Paiement ──
-      const attendu = +(famille.montant_total_attendu ?? 0) - +(famille.montant_reduction ?? 0);
+      const attendu = 0
       const paye = mesPaiements.reduce((s, p) => s + +(p.montant_verse ?? 0), 0);
       const reste = Math.max(0, attendu - paye);
       const rdvs = mesPaiements.map(p => p.date_prochain_rdv).filter(Boolean) as string[];

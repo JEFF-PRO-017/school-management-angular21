@@ -6,10 +6,10 @@ import { FormsModule } from '@angular/forms';
 import { MatDialog }   from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { AppUser, PERMISSIONS, PermissionId } from '../../../core/models/last_index';
 import { UserModalData, UserModalComponent }   from '../modal/user-modal.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { GetServices } from '../../../core/services/@data';
+import { AppUser, PermissionId, PERMISSIONS } from '../../../core/models';
 
 @Component({
   selector: 'app-users-list',
@@ -179,7 +179,6 @@ export class UsersListComponent {
   filtres = computed(() => {
     const q = this.recherche().toLowerCase().trim();
     if (!q) return this.users();
-    console.log('this.users()',this.users())
     return this.users().filter(u =>
       u.nom.toLowerCase().includes(q) ||
       u.username.toLowerCase().includes(q) ||
