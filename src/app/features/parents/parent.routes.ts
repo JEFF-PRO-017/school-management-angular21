@@ -2,17 +2,7 @@
 // parent.routes.ts — Routes du module Espace Parent
 // ─────────────────────────────────────────────────────────────────
 import { Routes } from '@angular/router';
-import { inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { ParentService } from '../../core/services/parent.service';
-
-export function parentGuard() {
-  const svc = inject(ParentService);
-  const router = inject(Router);
-  if (svc.estConnecte()) return true;
-  return router.createUrlTree(['/espace-parent/login']);
-}
-
+import { sessionGuard } from '../../core/guards/auth.guard';
 
 
 export const PARENT_ROUTES: Routes = [
@@ -27,36 +17,36 @@ export const PARENT_ROUTES: Routes = [
       {
         path: 'inscription',
         loadComponent: () =>
-          import('./components/parent-inscription.component').then(m => m.ParentInscriptionComponent),
+          import('./wizard-inscription/parent-inscription.component').then(m => m.ParentInscriptionComponent),
       },
       {
         path: 'dashboard',
-        canActivate: [parentGuard],
+        canActivate: [sessionGuard],
         loadComponent: () =>
           import('./parent-dashboard/parent-dashboard.component').then(m => m.ParentDashboardComponent),
       },
       {
         path: 'paiement',
-        canActivate: [parentGuard],
+        canActivate: [sessionGuard],
         loadComponent: () =>
           import('./components/parent-eleve-paiement.component').then(m => m.ParentPaiementComponent),
       },
       {
         path: 'eleve/:id',
-        canActivate: [parentGuard],
+        canActivate: [sessionGuard],
         loadComponent: () =>
           import('./components/parent-eleve-paiement.component').then(m => m.ParentEleveComponent),
       },
       {
         path: 'notifications',
-        canActivate: [parentGuard],
+        canActivate: [sessionGuard],
         loadComponent: () =>
           import('./components/parent-notifications-enfant.component')
             .then(m => m.ParentNotificationsComponent),
       },
       {
         path: 'ajouter-enfant',
-        canActivate: [parentGuard],
+        canActivate: [sessionGuard],
         loadComponent: () =>
           import('./components/parent-notifications-enfant.component')
             .then(m => m.ParentAjouterEnfantComponent),

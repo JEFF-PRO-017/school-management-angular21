@@ -12,18 +12,19 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import * as jose from 'jose';
 import { environment } from '../../../../environments/environment';
+import { H, SHEET } from '../@data';
 
 // ── Types d'entrée ────────────────────────────────────────────────
 
-export interface SheetConfig   { sheetName: string; headers: string[]; }
-export interface RowConfig     { sheetName: string; rowData: any[]; }
+export interface SheetConfig { sheetName: string; headers: string[]; }
+export interface RowConfig { sheetName: string; rowData: any[]; }
 export interface UpdateRowConfig {
   sheetName: string;
-  row:    number;   // ligne Sheets 1-based
-  col:    number;   // colonne de départ (1 = A)
+  row: number;   // ligne Sheets 1-based
+  col: number;   // colonne de départ (1 = A)
   values: any[];    // valeurs dans l'ordre des en-têtes
 }
-export interface CellConfig    { sheetName: string; row: number; col: number; value: any; }
+export interface CellConfig { sheetName: string; row: number; col: number; value: any; }
 export interface DeleteRowConfig { sheetName: string; rowIndex: number; }
 
 // ─────────────────────────────────────────────────────────────────
@@ -31,10 +32,10 @@ export interface DeleteRowConfig { sheetName: string; rowIndex: number; }
 @Injectable({ providedIn: 'root' })
 export class GoogleSheetsService {
 
-  private readonly BASE  = 'https://sheets.googleapis.com/v4/spreadsheets';
+  private readonly BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
   private readonly SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
-  private token:  string | null = null;
-  private expiry  = 0;
+  private token: string | null = null;
+  private expiry = 0;
 
   constructor(private http: HttpClient) {
     this.refreshToken();
@@ -44,7 +45,7 @@ export class GoogleSheetsService {
 
   private async refreshToken(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
-    const pk  = await jose.importPKCS8(
+    const pk = await jose.importPKCS8(
       environment.googlePrivateKey.replace(/\\n/g, '\n'), 'RS256'
     );
     const jwt = await new jose.SignJWT({ scope: this.SCOPE })
@@ -60,7 +61,7 @@ export class GoogleSheetsService {
         params: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }
       })
     );
-    this.token  = res.access_token;
+    this.token = res.access_token;
     this.expiry = now + 3500;
   }
 
@@ -77,7 +78,7 @@ export class GoogleSheetsService {
   // ── Helpers URL ──────────────────────────────────────────────
 
   private enc(name: string): string { return encodeURIComponent(name); }
-  private url(path: string):  string { return `${this.BASE}/${environment.spreadsheetId}${path}`; }
+  private url(path: string): string { return `${this.BASE}/${environment.spreadsheetId}${path}`; }
   private rangeNotation(col: number, row: number): string {
     return `${this.colLetter(col)}${row}`;
   }
@@ -123,9 +124,9 @@ export class GoogleSheetsService {
    * Remplace les N appels updateCell de l'ancienne version.
    */
   async updateRow(cfg: UpdateRowConfig): Promise<void> {
-    const hdrs  = await this.headers();
+    const hdrs = await this.headers();
     const start = this.rangeNotation(cfg.col, cfg.row);
-    const end   = this.rangeNotation(cfg.col + cfg.values.length - 1, cfg.row);
+    const end = this.rangeNotation(cfg.col + cfg.values.length - 1, cfg.row);
     const range = `${this.enc(cfg.sheetName)}!${start}:${end}`;
     await firstValueFrom(
       this.http.put(
@@ -152,7 +153,7 @@ export class GoogleSheetsService {
   /** Supprime une ligne par son index (0-based) */
   async deleteRow(cfg: DeleteRowConfig): Promise<void> {
     if (cfg.rowIndex === 0) throw new Error('Impossible de supprimer la ligne d\'en-têtes');
-    const hdrs    = await this.headers();
+    const hdrs = await this.headers();
     const sheetId = await this.getSheetId(cfg.sheetName);
     await firstValueFrom(
       this.http.post(this.url(':batchUpdate'), {
@@ -160,9 +161,9 @@ export class GoogleSheetsService {
           deleteDimension: {
             range: {
               sheetId,
-              dimension:  'ROWS',
+              dimension: 'ROWS',
               startIndex: cfg.rowIndex,
-              endIndex:   cfg.rowIndex + 1,
+              endIndex: cfg.rowIndex + 1,
             }
           }
         }]
@@ -226,60 +227,88 @@ export class GoogleSheetsService {
   /** Lit toute une feuille (colonnes A:Z) */
   async fetchRaw(sheetName: string): Promise<any[][]> {
     const hdrs = await this.headers();
+    const range = this.rangePourSheet(sheetName); // calcul automatique, plus de 'A:Z' fixe
     const res: any = await firstValueFrom(
       this.http.get(
-        this.url(`/values/${this.enc(sheetName)}!A:Z`),
+        this.url(`/values/${this.enc(sheetName)}!${range}`),
         { headers: hdrs }
       )
     );
     return res.values ?? [];
   }
 
+  
+// Convertit un numéro de colonne (1-based) en lettre Excel/Sheets : 1→A, 9→I, 27→AA
+ numVersColonne(n: number): string {
+  let lettre = '';
+  while (n > 0) {
+    const reste = (n - 1) % 26;
+    lettre = String.fromCharCode(65 + reste) + lettre;
+    n = Math.floor((n - 1) / 26);
+  }
+  return lettre;
+}
+
+// Retrouve la clé de H (ex: 'familles') à partir du nom réel du sheet (ex: 'F1_FAMILLES')
+ cleDepuisNomSheet(sheetName: string): keyof typeof H | undefined {
+  const entree = Object.entries(SHEET).find(([, valeur]) => valeur === sheetName);
+  return entree ? (entree[0] as keyof typeof H) : undefined;
+}
+
+// Calcule la range minimale nécessaire (ex: 'A:I') pour un nom de sheet donné
+// Retourne 'A:Z' par défaut si le sheet est inconnu ou n'a pas d'entrée dans H (sécurité)
+ rangePourSheet(sheetName: string): string {
+  const cle = this.cleDepuisNomSheet(sheetName);
+  if (!cle || !(cle in H)) return 'A:Z';
+  const nbColonnes = H[cle].length;
+  return `A:${this.numVersColonne(nbColonnes)}`;
+}
+
   // ── Helpers internes ─────────────────────────────────────────
 
-  private async getSheetId(sheetName: string): Promise<number> {
-    const hdrs = await this.headers();
-    const res: any = await firstValueFrom(
-      this.http.get(this.url(''), { headers: hdrs })
-    );
-    const sheet = res.sheets?.find((s: any) => s.properties?.title === sheetName);
-    if (!sheet) throw new Error(`Feuille "${sheetName}" introuvable`);
-    return sheet.properties.sheetId;
-  }
+  private async getSheetId(sheetName: string): Promise < number > {
+  const hdrs = await this.headers();
+  const res: any = await firstValueFrom(
+    this.http.get(this.url(''), { headers: hdrs })
+  );
+  const sheet = res.sheets?.find((s: any) => s.properties?.title === sheetName);
+  if(!sheet) throw new Error(`Feuille "${sheetName}" introuvable`);
+  return sheet.properties.sheetId;
+}
 
   /** Convertit un numéro de colonne (1-based) en lettre(s) Excel */
   private colLetter(col: number): string {
-    let s = '';
-    while (col > 0) {
-      const mod = (col - 1) % 26;
-      s   = String.fromCharCode(65 + mod) + s;
-      col = Math.floor((col - 1) / 26);
-    }
-    return s;
+  let s = '';
+  while (col > 0) {
+    const mod = (col - 1) % 26;
+    s = String.fromCharCode(65 + mod) + s;
+    col = Math.floor((col - 1) / 26);
   }
+  return s;
+}
 
   // findSheetId conservé pour compatibilité
-  async findSheetId(sheetName: string): Promise<number> {
-    return this.getSheetId(sheetName);
-  }
+  async findSheetId(sheetName: string): Promise < number > {
+  return this.getSheetId(sheetName);
+}
 
   /**
    * LIT UN BLOC DE LIGNES — utilisé par DataService pour charger 100 lignes à la fois.
    * Exemple de plage : 'SM_TICKETS_2026_05!A2:Z101'
    * Retourne un tableau vide si la plage est vide (fin des données).
    */
-  async getRange(range: string): Promise<any[][]> {
-    const hdrs = await this.headers();
-    // La plage contient déjà le nom de la feuille — on l'encode correctement
-    const parts    = range.split('!');                      // ['SM_TICKETS_2026_05', 'A2:Z101']
-    const feuille  = this.enc(parts[0]);
-    const cellules = parts[1] ?? 'A:Z';
-    const res: any = await firstValueFrom(
-      this.http.get(
-        this.url(`/values/${feuille}!${cellules}`),
-        { headers: hdrs }
-      )
-    );
-    return res.values ?? []; // tableau vide = plus rien à lire
-  }
+  async getRange(range: string): Promise < any[][] > {
+  const hdrs = await this.headers();
+  // La plage contient déjà le nom de la feuille — on l'encode correctement
+  const parts = range.split('!');                      // ['SM_TICKETS_2026_05', 'A2:Z101']
+  const feuille = this.enc(parts[0]);
+  const cellules = parts[1] ?? 'A:Z';
+  const res: any = await firstValueFrom(
+    this.http.get(
+      this.url(`/values/${feuille}!${cellules}`),
+      { headers: hdrs }
+    )
+  );
+  return res.values ?? []; // tableau vide = plus rien à lire
+}
 }

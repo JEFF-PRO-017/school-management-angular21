@@ -8,18 +8,11 @@ import { Famille, Eleve, Paiement, Absence, Note, Sequence } from './last_index'
 // ── Session parent ────────────────────────────────────────────────
 
 /** Clé localStorage pour la session parent */
-export const PARENT_SESSION_KEY = 'parent_session';
 /** Clé localStorage pour le cache données parent */
 export const PARENT_DATA_KEY    = 'parent_data_cache';
 /** Intervalle de rafraîchissement automatique en ms (10 min) */
 export const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
-export interface ParentSession {
-  id_famille:  string;
-  nom_famille: string;
-  tel:         string;       // numéro utilisé pour se connecter
-  expires_at:  number;       // timestamp Unix ms
-}
 
 // ── Données enrichies côté parent ────────────────────────────────
 
@@ -117,12 +110,6 @@ export interface DemandePaiement {
 
 // ── Wizard d'inscription — état ────────────────────────────────────
 
-export interface WizardState {
-  etape:    1 | 2 | 3 | 4;
-  famille:  Partial<FamilleTampon>;
-  eleves:   Partial<EleveTampon>[];
-  pension:  Partial<PensionTampon>;
-}
 
 // ── Sheets tampon — noms des feuilles ──────────────────────────────
 

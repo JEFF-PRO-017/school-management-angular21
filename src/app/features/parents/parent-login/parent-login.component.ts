@@ -1,5 +1,6 @@
 // parent-login.component.ts — Connexion espace parent
 // Mobile-first, connexion par numéro de téléphone
+// Style géré entièrement par Bootstrap (déjà installé dans le projet)
 import {
     Component, inject, signal, ChangeDetectionStrategy
 } from '@angular/core';
@@ -13,111 +14,87 @@ import { titleApp } from '../../../app.component';
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule],
-    styles: [`
-    :host { display:flex; min-height:100dvh; background:#F0F4F8;
-            align-items:center; justify-content:center; padding:16px; }
-
-    .card { background:white; border-radius:20px; padding:36px 28px;
-            max-width:400px; width:100%;
-            box-shadow:0 4px 24px rgba(0,0,0,.08); }
-
-    .logo { display:flex; flex-direction:column; align-items:center;
-            gap:12px; margin-bottom:36px; }
-    .logo-icon { width:64px; height:64px; background:#185FA5; border-radius:16px;
-                  display:flex; align-items:center; justify-content:center; }
-    .logo-titre { font-size:20px; font-weight:700; color:#111; }
-    .logo-sous   { font-size:13px; color:#888; }
-
-    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:20px; }
-    label  { font-size:13px; font-weight:500; color:#444; }
-    .tel-wrap { display:flex; align-items:center;
-                border:1.5px solid #D1D9E6; border-radius:12px;
-                overflow:hidden; transition:border-color .15s; }
-    .tel-wrap:focus-within { border-color:#185FA5; }
-    .indicatif { padding:0 12px; font-size:14px; color:#555;
-                 background:#F5F7FA; height:52px;
-                 display:flex; align-items:center;
-                 border-right:1px solid #D1D9E6; white-space:nowrap; }
-    input[type=tel] { flex:1; height:52px; padding:0 16px; font-size:16px;
-                      border:none; outline:none; color:#111; background:white; }
-
-    .erreur { font-size:12px; color:#D32F2F; margin-top:4px; }
-
-    .btn-login { width:100%; height:52px; background:#185FA5; color:white;
-                  border:none; border-radius:12px; font-size:16px; font-weight:600;
-                  cursor:pointer; display:flex; align-items:center;
-                  justify-content:center; gap:8px; transition:opacity .15s; }
-    .btn-login:disabled { opacity:.5; cursor:default; }
-    .btn-login:not(:disabled):active { opacity:.85; }
-
-    .spinner { width:20px; height:20px; border-radius:50%;
-               border:2.5px solid rgba(255,255,255,.3);
-               border-top-color:white;
-               animation:spin .7s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-
-    .lien-inscription { text-align:center; margin-top:24px;
-                         font-size:13px; color:#888; }
-    .lien-inscription a { color:#185FA5; font-weight:500;
-                           text-decoration:none; cursor:pointer; }
-
-    .bandeau-err { background:#FCEBEB; color:#791F1F; border-radius:10px;
-                   padding:12px 16px; font-size:13px; margin-bottom:16px; }
-  `],
+    // Aucun style en dur : uniquement des classes utilitaires Bootstrap
     template: `
-<div class="card">
+<!-- Conteneur plein écran, centré verticalement et horizontalement -->
+<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light p-3">
 
-  <div class="logo">
-    <div class="logo-icon">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M16 4L4 10v8c0 5.5 5 10.5 12 13 7-2.5 12-7.5 12-13V10L16 4z"
-              fill="white" fill-opacity=".2" stroke="white" stroke-width="1.5"
-              stroke-linejoin="round"/>
-        <circle cx="16" cy="14" r="4" fill="white"/>
-        <path d="M9 24c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="white"
-              stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <div>
-      <div class="logo-titre">Espace Parent</div>
-      <div class="logo-sous">{{titleApp}}</div>
-    </div>
-  </div>
+  <!-- Colonne responsive : pleine largeur sur mobile, réduite sur grand écran -->
+  <div class="row justify-content-center w-100">
+    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
 
-  @if (erreurMsg()) {
-    <div class="bandeau-err">{{ erreurMsg() }}</div>
-  }
+      <div class="card shadow-sm border-0 rounded-4 p-4">
 
-  <div class="field">
-    <label for="tel">Votre numéro de téléphone</label>
-    <div class="tel-wrap">
-      <div class="indicatif">🇨🇲 +237</div>
-      <input id="tel" type="tel" [formControl]="ctrlTel"
-             placeholder="6XXXXXXXX"
-             inputmode="numeric"
-             autocomplete="tel">
-    </div>
-    @if (ctrlTel.invalid && ctrlTel.touched) {
-      <div class="erreur">Entrez un numéro valide (9 chiffres)</div>
-    }
-  </div>
+        <!-- Logo + titre de l'application -->
+        <div class="d-flex flex-column align-items-center gap-2 mb-4">
+          <div class="rounded-4 d-inline-flex align-items-center justify-content-center">
+            <img src="assets/logo-csb.png"  width="70" height="70" viewBox="0 0 24 24" fill="none" alt="Logo" >
+          </div>
+          <div class="text-center">
+            <div class="fw-bold fs-5">Espace Parent</div>
+            <div class="small text-muted">{{ titleApp }}</div>
+          </div>
+        </div>
 
-  <button class="btn-login"
+        <!-- Message d'erreur global (ex: numéro non reconnu, erreur réseau) -->
+        @if (erreurMsg()) {
+          <div class="alert alert-danger py-2 small mb-3">{{ erreurMsg() }}</div>
+        }
+
+        <!-- Champ téléphone -->
+        <div class="mb-3">
+          <label for="tel" class="form-label small">Votre numéro de téléphone</label>
+
+          <!-- input-group Bootstrap : indicatif + numéro -->
+          <div class="input-group has-validation">
+            <span class="input-group-text">🇨🇲 +237</span>
+            <input
+              id="tel"
+              type="tel"
+              class="form-control"
+              [class.is-invalid]="ctrlTel.invalid && ctrlTel.touched"
+              [formControl]="ctrlTel"
+              placeholder="6XXXXXXXX"
+              inputmode="numeric"
+              autocomplete="tel">
+            <div class="invalid-feedback">
+              Entrez un numéro valide (9 chiffres)
+            </div>
+          </div>
+        </div>
+
+        <!-- Bouton de connexion avec état de chargement -->
+        <button
+          class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
           (click)="seConnecter()"
           [disabled]="ctrlTel.invalid || chargement()">
-    @if (chargement()) {
-      <div class="spinner"></div>
-      Connexion…
-    } @else {
-      Se connecter
-    }
-  </button>
+          @if (chargement()) {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Connexion…
+          } @else {
+            Se connecter
+          }
+        </button>
 
-  <div class="lien-inscription">
-    Pas encore inscrit ?
-    <a (click)="allerInscription()">Créer un compte</a>
+        <!-- Lien vers l'inscription -->
+        <div class="text-center small text-muted mt-3">
+          Pas encore inscrit ?
+          <a class="link-primary text-decoration-none" role="button" (click)="allerInscription()">
+            Créer un compte
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Accès admin discret : zone cliquable confortable, marqueur visuel discret -->
+      <div class="text-center mt-3">
+        <a class="d-inline-block p-2 text-decoration-none" role="button" (click)="allerAdmin()">
+          <span class="d-inline-block rounded-circle bg-secondary" style="width:6px; height:6px;"></span>
+        </a>
+      </div>
+
+    </div>
   </div>
-
 </div>
   `
 })
@@ -125,16 +102,18 @@ export class ParentLoginComponent {
 
     private svc = inject(ParentService);
     private router = inject(Router);
-    titleApp = titleApp
+    titleApp = titleApp;
 
     chargement = this.svc.chargement;
     erreurMsg = signal<string | null>(null);
 
+    // Numéro camerounais : exactement 9 chiffres après l'indicatif +237
     ctrlTel = new FormControl('', [
         Validators.required,
         Validators.pattern(/^[0-9]{9}$/),
     ]);
 
+    // Tente la connexion et redirige ou affiche l'erreur correspondante
     async seConnecter(): Promise<void> {
         this.ctrlTel.markAsTouched();
         if (this.ctrlTel.invalid) return;
@@ -152,5 +131,10 @@ export class ParentLoginComponent {
 
     allerInscription(): void {
         this.router.navigate(['/espace-parent/inscription']);
+    }
+
+    // Accès discret à la connexion admin (lien quasi invisible en bas de page)
+    allerAdmin(): void {
+        this.router.navigate(['/admin/login']);
     }
 }

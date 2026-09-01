@@ -1,6 +1,6 @@
 // app.routes.ts — routes principales avec guards
 import { Router, Routes } from '@angular/router';
-import { authGuard, permGuard, adminGuard } from './core/guards/auth.guard';
+import { authGuard, permGuard, adminGuard, sessionGuard } from './core/guards/auth.guard';
 import { PARENT_ROUTES } from './features/parents/parent.routes';
 import { inject } from '@angular/core';
 import { AuthService } from './core/services/auth.service';
@@ -10,21 +10,21 @@ import { AuthService } from './core/services/auth.service';
 const routes: Routes = [
   // ── Auth (publique) ──────────────────────────────────────────────
   {
-    path: 'auth',
+    path: 'admin',
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
 
   {
     path: 'paiement/recus/:id',
     loadComponent: () => import('./features/paiements/components/recu/recu.component').then(r => r.RecuComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard,sessionGuard]
   },
 
   // ── Application (protégée) ───────────────────────────────────────
   {
     path: '',
     loadComponent: () => import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard,sessionGuard],
     children: [
 
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

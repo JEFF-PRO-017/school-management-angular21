@@ -6,14 +6,14 @@
 //   - Rafraîchissement automatique toutes les 10 min
 //   - Calculs enrichis (moyennes, pension, notifications)
 //   - CRUD tables tampon (inscription, paiement initié)
-import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 
 import { Famille, Eleve, Paiement, Absence, Note, Sequence, SEQUENCES } from '../models/last_index';
-import { ParentSession, DashboardParent, PARENT_SESSION_KEY, PARENT_DATA_KEY, EleveParent, PaiementParent, NotifParent, WizardState, SHEET_TAMPON, DemandePaiement, REFRESH_INTERVAL_MS, H_TAMPON } from '../models/parent.models';
+import { DashboardParent, PARENT_DATA_KEY, EleveParent, PaiementParent, NotifParent, SHEET_TAMPON, DemandePaiement, REFRESH_INTERVAL_MS, H_TAMPON } from '../models/parent.models';
 import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
-import { SheetsQueueServiceService } from './sheets-queue.service';
 import { SHEET, H } from './@data';
-// import { H, SHEET } from './data.service';
+import { Session } from '../models/auth/session.model';
+import { SessionService } from './@session/session.service';
 
 // ─────────────────────────────────────────────────────────────
 
@@ -24,11 +24,11 @@ export class ParentService {
   // Exposé public pour que les composants enfants puissent
   // appeler les méthodes tampon directement si besoin
   readonly sheets = inject(GoogleSheetsService);
-  private queue = inject(SheetsQueueServiceService);
+  private sessionService = inject(SessionService);
 
   // ── State ────────────────────────────────────────────────────
 
-  readonly session = signal<ParentSession | null>(this.chargerSession());
+  readonly session = signal<Session | null>(this.chargerSession());
   readonly dashboard = signal<DashboardParent | null>(this.chargerCache());
   readonly chargement = signal(false);
   readonly erreur = signal<string | null>(null);
@@ -48,18 +48,6 @@ export class ParentService {
 
   private _refreshTimer: ReturnType<typeof setInterval> | null = null;
 
-
-  public async ensureSheetsTampom(): Promise<void> {
-    const entries = Object.entries(SHEET_TAMPON) as [keyof typeof SHEET_TAMPON, string][];
-    await Promise.all(
-      entries
-        .filter(([key]) => key in H_TAMPON)
-        .map(([key, name]) => this.sheets.createSheet({
-          sheetName: name,
-          headers: H_TAMPON[key as keyof typeof H_TAMPON] as unknown as string[],
-        }))
-    );
-  }
   // ── Auth ─────────────────────────────────────────────────────
 
   async login(tel: string): Promise<'ok' | 'introuvable' | 'erreur'> {
@@ -81,14 +69,14 @@ export class ParentService {
 
       if (!famille) { this.chargement.set(false); return 'introuvable'; }
 
-      const session: ParentSession = {
+      const session: Session = {
         id_famille: famille.id_famille,
         nom_famille: famille.nom_famille,
         tel: clean,
-        expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 jours
+        expires_at: Date.now() + 1 * 24 * 60 * 60 * 1000, // 1 jour
       };
       this.session.set(session);
-      localStorage.setItem(PARENT_SESSION_KEY, JSON.stringify(session));
+      this.sessionService.set(session);
 
       await this.chargerDonnees(famille.id_famille);
       this.demarrerRefresh();
@@ -105,7 +93,7 @@ export class ParentService {
   logout(): void {
     this.session.set(null);
     this.dashboard.set(null);
-    localStorage.removeItem(PARENT_SESSION_KEY);
+    this.sessionService.clear();
     localStorage.removeItem(PARENT_DATA_KEY);
     this.arreterRefresh();
   }
@@ -115,7 +103,7 @@ export class ParentService {
   async rafraichir(): Promise<void> {
     const s = this.session();
     if (!s) return;
-    await this.chargerDonnees(s.id_famille);
+    await this.chargerDonnees(s?.id_famille ?? '');
   }
 
   private async chargerDonnees(idFamille: string): Promise<void> {
@@ -289,45 +277,6 @@ export class ParentService {
 
   // ── Tables tampon ────────────────────────────────────────────
 
-  async soumettreInscription(wizard: WizardState): Promise<boolean> {
-    try {
-      const now = new Date().toISOString();
-      const f = wizard.famille;
-
-      await this.sheets.addRow({
-        sheetName: SHEET_TAMPON.familles,
-        rowData: [
-          f.id_famille ?? `FAM-TMP-${Date.now()}`,
-          f.nom_famille ?? '', f.tel_pere ?? '', f.tel_mere ?? '',
-          f.tel_autre ?? '', f.adresse_texte ?? '', now, 'en_attente',
-        ],
-      });
-
-      for (const e of wizard.eleves) {
-        await this.sheets.addRow({
-          sheetName: SHEET_TAMPON.eleves,
-          rowData: [
-            e.id_eleve ?? `ELV-TMP-${Date.now()}`,
-            f.id_famille ?? '', e.id_classe ?? '',
-            e.nom ?? '', e.prenom ?? '', e.date_naissance ?? '',
-            e.sexe ?? '', 'actif', now, 'en_attente',
-          ],
-        });
-      }
-
-      const p = wizard.pension;
-      await this.sheets.addRow({
-        sheetName: SHEET_TAMPON.pensions,
-        rowData: [
-          `PEN-TMP-${Date.now()}`, f.id_famille ?? '',
-          p.montant_total_attendu ?? 0, p.annee_scolaire ?? '',
-          p.montant_reduction ?? 0, p.commentaire ?? '', now, 'en_attente',
-        ],
-      });
-
-      return true;
-    } catch { return false; }
-  }
 
   async initierPaiement(demande: Omit<DemandePaiement, 'id' | 'date_demande' | 'statut'>): Promise<boolean> {
     try {
@@ -357,11 +306,10 @@ export class ParentService {
 
   // ── Helpers privés ───────────────────────────────────────────
 
-  private chargerSession(): ParentSession | null {
+  private chargerSession(): Session | null {
     try {
-      const raw = localStorage.getItem(PARENT_SESSION_KEY);
-      if (!raw) return null;
-      const s: ParentSession = JSON.parse(raw);
+      const s = this.sessionService.get();
+      if (!s) return null;
       return s.expires_at > Date.now() ? s : null;
     } catch { return null; }
   }

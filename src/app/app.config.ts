@@ -4,7 +4,7 @@ import { provideRouter, withPreloading, PreloadAllModules } from '@angular/route
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { APP_ROUTES } from './app.routes';
-import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { authInterceptor, sessionInterceptor } from './core/interceptors/auth.interceptor';
 import { rateLimitInterceptor } from './core/interceptors/rate-limit.interceptor';
 import { ParentService } from './core/services/parent.service';
 import { DataServiceBase } from './core/services/@data/_data.base.service';
@@ -19,7 +19,7 @@ export const appConfig: ApplicationConfig = {
 
     // Ordre important : auth d'abord (ajoute le token),
     // puis rate-limit (gère les 429 sur la requête déjà authentifiée)
-    provideHttpClient(withInterceptors([authInterceptor, rateLimitInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, rateLimitInterceptor,sessionInterceptor])),
 
     provideAnimationsAsync(),
 
@@ -27,9 +27,6 @@ export const appConfig: ApplicationConfig = {
       const data = inject(DataServiceBase);
       const data_parent = inject(ParentService);
 
-      setTimeout(async () => {
-        await data_parent.ensureSheetsTampom();
-      }, 300);
       setTimeout(async () => {
         await data.ensureSheets();
       }, 600);

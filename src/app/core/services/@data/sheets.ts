@@ -19,8 +19,7 @@ export const SHEET = {
 
 export const H = {
     familles: ['id_famille', 'nom_famille', 'tel_pere', 'tel_mere', 'tel_autre',
-        'latitude', 'longitude', 'adresse_texte',
-        'montant_total_attendu', 'annee_scolaire', 'montant_reduction', 'commentaire'],
+        'latitude', 'longitude', 'adresse_texte','status'],
     eleves: ['id_eleve', 'id_famille', 'id_classe', 'nom', 'prenom', 'date_naissance',
         'date_inscription', 'statut', 'lieu_naissance', 'sexe', 'matricule', 'verifie'],
     classes: ['id_classe', 'nom_classe', 'niveau', 'cycle', 'annee_scolaire',
