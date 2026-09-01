@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 
 export const NOTES_ROUTES: Routes = [
   {
-    path: '',
+    path: 'enregistrement',
     loadComponent: () =>
       import('./notes-saisie/notes-saisie.component').then(m => m.NotesSaisieComponent),
   },

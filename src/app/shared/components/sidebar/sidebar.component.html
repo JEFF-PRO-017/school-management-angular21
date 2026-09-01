@@ -1,0 +1,39 @@
+<!-- sidebar.component.html — menu généré depuis sections/items, 100% Bootstrap -->
+<nav class="d-flex flex-column flex-grow-1 bg-white" style="min-height:0">
+
+  <!-- Logo : image réelle de l'école, 28px suffit à cette taille (le fichier 72px reste net) -->
+  <div class="d-flex align-items-center gap-2 px-3 py-3 border-bottom">
+    <img src="assets/icons/icon-72x72.png" width="28" height="28" alt="Logo" class="rounded-2 flex-shrink-0">
+    <div>
+      <div class="small fw-semibold">{{ titleApp }}</div>
+      <div class="text-muted" style="font-size:10px">{{ sectionLabel() }}</div>
+    </div>
+  </div>
+
+  <!-- Navigation : une itération par section, une par lien -->
+  <div class="flex-grow-1 overflow-auto py-2 px-2" style="min-height:0">
+    @for (section of visibleSections(); track section.title) {
+      @if (section.title) {
+        <div class="text-uppercase text-muted px-2 pt-3 pb-1" style="font-size:10px; letter-spacing:.04em">
+          {{ section.title }}
+        </div>
+      }
+      @for (item of section.items; track item.route) {
+        <a [routerLink]="item.route"
+           routerLinkActive="bg-primary-subtle text-primary fw-medium"
+           [target]="item.external ? '_blank' : undefined"
+           [rel]="item.external ? 'noopener' : null"
+           class="d-flex align-items-center gap-2 text-decoration-none text-body-secondary rounded-2 px-2 py-2 mb-1"
+           [class.ps-4]="item.indent"
+           style="font-size:13px">
+          @if (item.icon) {
+            <fa-icon [icon]="item.icon" class="flex-shrink-0" style="width:15px"></fa-icon>
+          }
+          {{ item.label }}
+        </a>
+      }
+    }
+  </div>
+
+  <div class="px-3 py-2 border-top text-muted" style="font-size:11px">v1.0.0</div>
+</nav>

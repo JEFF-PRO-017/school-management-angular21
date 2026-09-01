@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   { id: 'notes', label: 'Notes', section: 'both' },
   { id: 'bulletins', label: 'Bulletins', section: 'both' },
   { id: 'absences', label: 'Absences', section: 'both' },
+  { id: 'historique_absences', label: 'Historique absences', section: 'both' },
   { id: 'whatsapp', label: 'WhatsApp', section: 'both' },
   { id: 'users', label: 'Gestion utilisateurs', section: 'both' },
   { id: 'matieres', label: 'Matières', section: 'both' },

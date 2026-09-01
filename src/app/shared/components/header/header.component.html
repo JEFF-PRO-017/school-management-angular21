@@ -1,0 +1,90 @@
+<!-- header.component.html — barre supérieure, Bootstrap + Font Awesome -->
+<header class="d-flex align-items-center gap-2 px-3 bg-white border-bottom" style="height:56px">
+
+  <!-- Logo + burger : visibles uniquement sur mobile -->
+  <div class="d-flex d-md-none align-items-center gap-2">
+    <button class="btn btn-sm btn-light border-0 p-2" (click)="toggleMenu.emit()" aria-label="Ouvrir le menu">
+      <fa-icon [icon]="icons.faBars"></fa-icon>
+    </button>
+    <img src="assets/icons/icon-72x72.png" width="22" height="22" alt="Logo" class="rounded-1">
+    <span class="fw-semibold small text-primary">{{ titleApp }}</span>
+  </div>
+
+  <div class="flex-grow-1"></div>
+
+  <!-- Section active (primaire / secondaire) -->
+  <span class="badge rounded-pill text-bg-primary-subtle fw-normal">
+    {{ section() === 'primaire' ? 'Primaire' : 'Secondaire' }}
+  </span>
+
+  <!-- File d'attente : n'apparaît que s'il y a des opérations en attente -->
+  @if (queueSize() > 0) {
+    <div class="dropdown">
+      <button class="btn btn-sm btn-warning-subtle border-0 d-flex align-items-center gap-1"
+              data-bs-toggle="dropdown" title="{{ queueSize() }} opération(s) en attente">
+        <fa-icon [icon]="icons.faClockRotateLeft"></fa-icon>
+        {{ queueSize() }} en attente
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:240px">
+        <li class="px-3 py-2">
+          <div class="small fw-medium">File d'attente</div>
+          <div class="small text-muted">{{ queueSize() }} opération(s) non synchronisée(s)</div>
+        </li>
+        <li>
+          <button class="dropdown-item text-danger small d-flex align-items-center gap-2" (click)="viderQueue()">
+            <fa-icon [icon]="icons.faTrash"></fa-icon> Vider la queue
+          </button>
+        </li>
+      </ul>
+    </div>
+  }
+
+  <!-- Rechargement des données -->
+  <div class="dropdown">
+    <button class="btn btn-sm btn-light border" data-bs-toggle="dropdown"
+            [disabled]="reloading()" title="Données locales">
+      @if (reloading()) {
+        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+      } @else {
+        <fa-icon [icon]="icons.faArrowsRotate"></fa-icon>
+      }
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:260px">
+      <li class="px-3 py-2">
+        <div class="small fw-medium">Données locales</div>
+        <div class="small text-muted">Forcer un rechargement depuis Google Sheets</div>
+      </li>
+      <li><button class="dropdown-item small" (click)="recharger()">Actualiser les données</button></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><button class="dropdown-item text-danger small" (click)="invaliderEtRecharger()">Vider le cache + recharger</button></li>
+    </ul>
+  </div>
+
+  <!-- Statut réseau : masqué sur mobile pour gagner de la place -->
+  <div class="d-none d-md-flex align-items-center gap-1">
+    <span class="rounded-circle" [class.bg-success]="online()" [class.bg-danger]="!online()"
+          style="width:7px;height:7px"></span>
+    <span class="small text-muted">{{ online() ? 'En ligne' : 'Hors ligne' }}</span>
+  </div>
+
+  <!-- Compte utilisateur -->
+  <div class="dropdown">
+    <button class="btn btn-sm rounded-circle bg-primary-subtle fw-semibold border-0"
+            style="width:34px;height:34px" data-bs-toggle="dropdown">
+      {{ initiales() }}
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+      <li class="px-3 py-2">
+        <div class="small fw-medium">{{ user()?.nom }}</div>
+        <div class="small text-muted text-capitalize">{{ user()?.role }}</div>
+      </li>
+      <li><hr class="dropdown-divider"></li>
+      <li>
+        <button class="dropdown-item small text-danger d-flex align-items-center gap-2" (click)="logout()">
+          <fa-icon [icon]="icons.faRightFromBracket"></fa-icon> Déconnexion
+        </button>
+      </li>
+    </ul>
+  </div>
+
+</header>

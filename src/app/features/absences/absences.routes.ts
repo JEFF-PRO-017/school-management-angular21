@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 
 export const ABSENCES_ROUTES: Routes = [
   {
-    path: '',
+    path: 'enregistrement',
     loadComponent: () =>
       import('./saisie/absences-saisie.component').then(m => m.AbsencesSaisieComponent),
   },
