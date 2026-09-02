@@ -65,7 +65,7 @@ export class ParentService {
       );
 
       if (!famille) { this.chargement.set(false); return 'introuvable'; }
-      if (famille.status === 'NON-ACTIF') { this.chargement.set(false); return 'non-actif'; }
+      if (famille.status !== 'ACTIF') { this.chargement.set(false); return 'non-actif'; }
 
       const session: Session = { id_famille: famille.id_famille, nom_famille: famille.nom_famille, tel: clean, expires_at: 0, };
       this.session.set(session);
