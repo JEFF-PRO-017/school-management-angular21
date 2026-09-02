@@ -4,6 +4,7 @@ import { GetServices, PatchServices } from '../../../core/services/@data';
 import { DeleteServices } from '../../../core/services/@data/_delete.services';
 import { CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
 import { EntityValidationTableComponent } from './entity-validation-table.component';
+import { RefreshServices } from '../../../core/services/@data/_refresh.services';
 
 @Component({
   selector: 'app-familles-validation',
@@ -33,6 +34,7 @@ import { EntityValidationTableComponent } from './entity-validation-table.compon
 })
 export class FamillesValidationComponent implements OnInit {
   private get = inject(GetServices);
+  private refresh = inject(RefreshServices);
   private patch = inject(PatchServices);
   private del = inject(DeleteServices);
 
@@ -56,8 +58,9 @@ export class FamillesValidationComponent implements OnInit {
   async charger(): Promise<void> {
     this.loading.set(true);
     try {
+      await this.refresh.refreshFamilles()
       const all = await this.get.getFamilles();
-      this.familles.set((all ?? []).filter(f => f.status !== 'ACTIF'));
+      this.familles.set((all ?? []).filter(f => f.status == 'NON-ACTIF'));
     } finally {
       this.loading.set(false);
     }

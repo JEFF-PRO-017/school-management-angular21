@@ -39,10 +39,10 @@ export  class RefreshServices {
         this.cache.setNotes(parse<Note>(raw, H.notes));
     }
 
-    async refreshSoldes(): Promise<void> {
-        const raw = await this.sheets.fetchRaw(SHEET.soldes);
-        this.cache.setSoldes(parse<SoldeSnap>(raw, H.soldes));
-    }
+    // async refreshSoldes(): Promise<void> {
+    //     const raw = await this.sheets.fetchRaw(SHEET.soldes);
+    //     this.cache.setSoldes(parse<SoldeSnap>(raw, H.soldes));
+    // }
 
     async refreshBulletins(): Promise<void> {
         const raw = await this.sheets.fetchRaw(SHEET.bulletins);

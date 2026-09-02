@@ -6,6 +6,7 @@ import { DeleteServices } from '../../../core/services/@data/_delete.services';
 import { CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
 import { EntityValidationTableComponent } from './entity-validation-table.component';
 import { FamilleApercuDialogComponent } from './famille-apercu-dialog.component';
+import { RefreshServices } from '../../../core/services/@data/_refresh.services';
 
 @Component({
   selector: 'app-eleves-validation',
@@ -41,6 +42,7 @@ export class ElevesValidationComponent implements OnInit {
   private get = inject(GetServices);
   private patch = inject(PatchServices);
   private del = inject(DeleteServices);
+  private refresh = inject(RefreshServices);
   private dialog = inject(MatDialog);
 
   eleves = signal<EleveEnrichi[]>([]);
@@ -63,8 +65,9 @@ export class ElevesValidationComponent implements OnInit {
   async charger(): Promise<void> {
     this.loading.set(true);
     try {
+      await this.refresh.refreshEleves();
       const all = await this.get.getEleves();
-      this.eleves.set((all ?? []).filter(e => e.statut !== 'ACTIF'));
+      this.eleves.set((all ?? []).filter(e => e.statut === 'NON-ACTIF'));
     } finally {
       this.loading.set(false);
     }
@@ -82,12 +85,12 @@ export class ElevesValidationComponent implements OnInit {
 
   async supprimer(rows: EleveEnrichi[]): Promise<void> {
     this.busy.set(true);
-    // try {
-    //   for (const e of rows) await this.del.deleteEleve(e.id_eleve);
-    //   await this.charger();
-    // } finally {
-    //   this.busy.set(false);
-    // }
+    try {
+      for (const e of rows) await this.del.deleteEleve(e.id_eleve);
+      await this.charger();
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   voirFamille(e: EleveEnrichi): void {

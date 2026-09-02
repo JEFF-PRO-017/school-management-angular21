@@ -47,4 +47,10 @@ export class DeleteServices {
         this.queue.enqueue({ sheetName: SHEET.paiements, rowIndex: row - 1 }, 'deleteRow');
     }
 
+    async deleteEleve(id: string): Promise<void> {
+        this.cache.removeEleve(id);
+        const row = await this.sheets.findRowById(SHEET.eleves, id);
+        if (row === -1) return;
+        this.queue.enqueue({ sheetName: SHEET.eleves, rowIndex: row - 1 }, 'deleteRow');
+    }
 }
