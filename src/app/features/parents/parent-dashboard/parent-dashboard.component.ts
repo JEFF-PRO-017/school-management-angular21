@@ -1,458 +1,380 @@
 // parent-dashboard.component.ts — Tableau de bord parent
-// Mobile-first, cartes résumé, insolvable en rouge, notifications
+// Mobile-first (Bootstrap grid), cartes résumé, insolvable en rouge, notifications.
+// Icônes : @fortawesome/angular-fontawesome + @fortawesome/free-solid-svg-icons
+//
+// ⚠️ PRÉ-REQUIS (si pas déjà fait) :
+//   npm install @fortawesome/fontawesome-svg-core @fortawesome/free-solid-svg-icons @fortawesome/angular-fontawesome
 import {
   Component, inject, signal, computed,
-  ChangeDetectionStrategy, ChangeDetectorRef
+  ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import {
+  faBell, faArrowRotateRight, faTriangleExclamation, faChartLine,
+  faCalendarDays, faCreditCard, faCalendarCheck, faUserPlus,
+  faRightFromBracket, faSackDollar, faCircleInfo, IconDefinition,
+} from '@fortawesome/free-solid-svg-icons';
 import { ParentService } from '../../../core/services/parent.service';
-
+import { GetServices } from '../../../core/services/@data';
+import { SessionService } from '../../../core/services/@session/session.service';
+import { FamilleEnrichi } from '../../../core/models';
 
 @Component({
   selector: 'app-parent-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
-  styles: [`
-    :host { display:block; min-height:100dvh; background:#F0F4F8;
-            padding-bottom:24px; }
-
-    /* ── Header ── */
-    .header { background:#185FA5; color:white; padding:16px 20px 20px;
-              position:sticky; top:0; z-index:100; }
-    .header-top { display:flex; align-items:center; justify-content:space-between; }
-    .header-nom { font-size:16px; font-weight:600; }
-    .header-sous { font-size:12px; opacity:.8; margin-top:2px; }
-    .header-actions { display:flex; align-items:center; gap:8px; }
-    .btn-icon { width:36px; height:36px; border:none; border-radius:50%;
-                background:rgba(255,255,255,.2); color:white; cursor:pointer;
-                display:flex; align-items:center; justify-content:center; }
-    .btn-icon:active { background:rgba(255,255,255,.35); }
-    .badge-notif { position:absolute; top:-4px; right:-4px; width:16px; height:16px;
-                   background:#EF4444; border-radius:50%; font-size:10px;
-                   color:white; display:flex; align-items:center; justify-content:center;
-                   font-weight:700; }
-    .btn-icon-wrap { position:relative; }
-
-    /* ── Bandeau insolvable ── */
-    .bandeau-insolvable { background:#FEE2E2; border-left:4px solid #EF4444;
-                           margin:12px 16px 0; border-radius:10px;
-                           padding:12px 14px; font-size:13px; color:#7F1D1D; }
-    .bandeau-insolvable strong { display:block; margin-bottom:2px; }
-
-    /* ── Notifications ── */
-    .notifs { margin:12px 16px 0; display:flex; flex-direction:column; gap:6px; }
-    .notif { border-radius:10px; padding:10px 14px; font-size:13px;
-             display:flex; gap:10px; align-items:flex-start; }
-    .notif--absence  { background:#FEF3C7; color:#78350F; }
-    .notif--note     { background:#ECFDF5; color:#064E3B; }
-    .notif--paiement { background:#FEE2E2; color:#7F1D1D; }
-    .notif--rdv      { background:#EEF2FF; color:#1E1B4B; }
-    .notif--info     { background:#EBF3FC; color:#0C447C; }
-    .notif-emoji { font-size:18px; flex-shrink:0; line-height:1.3; }
-    .notif-texte { flex:1; }
-    .notif-titre { font-weight:600; font-size:12px; }
-    .notif-corps { font-size:12px; margin-top:2px; opacity:.85; }
-    .notif-close { background:none; border:none; cursor:pointer;
-                   opacity:.5; font-size:16px; padding:0; line-height:1; }
-
-    /* ── Section titre ── */
-    .section { margin:16px 16px 0; }
-    .section-titre { font-size:11px; font-weight:600; color:#9CA3AF;
-                     text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
-
-    /* ── Cartes résumé (2 colonnes) ── */
-    .cartes { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .carte { background:white; border-radius:14px; padding:16px;
-             box-shadow:0 1px 4px rgba(0,0,0,.06); cursor:pointer;
-             transition:transform .1s; }
-    .carte:active { transform:scale(.97); }
-    .carte-icon { width:38px; height:38px; border-radius:10px;
-                  display:flex; align-items:center; justify-content:center;
-                  margin-bottom:10px; }
-    .carte-icon--blue  { background:#EBF3FC; }
-    .carte-icon--green { background:#DCFCE7; }
-    .carte-icon--amber { background:#FEF3C7; }
-    .carte-icon--red   { background:#FEE2E2; }
-    .carte-val { font-size:22px; font-weight:700; color:#111; line-height:1; }
-    .carte-lbl { font-size:11px; color:#9CA3AF; margin-top:4px; }
-
-    /* ── Paiement ── */
-    .carte-paiement { background:white; border-radius:14px; padding:18px;
-                       box-shadow:0 1px 4px rgba(0,0,0,.06); }
-    .carte-paiement--rouge { border:1.5px solid #EF4444; }
-    .pai-row { display:flex; justify-content:space-between;
-               align-items:center; margin-bottom:6px; }
-    .pai-lbl  { font-size:13px; color:#555; }
-    .pai-val  { font-size:13px; font-weight:600; color:#111; }
-    .pai-val--vert  { color:#059669; }
-    .pai-val--rouge { color:#DC2626; }
-    .progress-track { height:10px; background:#E5E7EB; border-radius:99px;
-                       overflow:hidden; margin:12px 0; }
-    .progress-fill  { height:100%; border-radius:99px; transition:width .4s; }
-    .progress-fill--vert  { background:linear-gradient(90deg,#10B981,#059669); }
-    .progress-fill--amber { background:linear-gradient(90deg,#FBBF24,#D97706); }
-    .progress-fill--rouge { background:linear-gradient(90deg,#F87171,#DC2626); }
-    .pai-taux { text-align:right; font-size:11px; color:#9CA3AF; }
-    .btn-payer { width:100%; height:44px; border:none; border-radius:10px;
-                  background:#185FA5; color:white; font-size:14px; font-weight:600;
-                  cursor:pointer; margin-top:12px; transition:opacity .15s; }
-    .btn-payer:active { opacity:.85; }
-
-    /* ── Élèves ── */
-    .eleve-card { background:white; border-radius:14px; padding:16px;
-                   box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:10px;
-                   cursor:pointer; transition:transform .1s; }
-    .eleve-card:active { transform:scale(.98); }
-    .eleve-top { display:flex; align-items:center; gap:12px; }
-    .eleve-av  { width:42px; height:42px; border-radius:50%; flex-shrink:0;
-                  background:#EBF3FC; color:#185FA5;
-                  display:flex; align-items:center; justify-content:center;
-                  font-size:14px; font-weight:700; }
-    .eleve-nom { font-size:15px; font-weight:600; color:#111; }
-    .eleve-cls { font-size:12px; color:#9CA3AF; margin-top:1px; }
-    .eleve-stats { display:grid; grid-template-columns:1fr 1fr 1fr;
-                   gap:8px; margin-top:12px; }
-    .stat { text-align:center; }
-    .stat-val { font-size:17px; font-weight:700; color:#111; }
-    .stat-lbl { font-size:10px; color:#9CA3AF; }
-    .stat-val--ok  { color:#059669; }
-    .stat-val--warn{ color:#D97706; }
-    .stat-val--bad { color:#DC2626; }
-
-    /* ── Refresh + Logout ── */
-    .footer-bar { display:flex; justify-content:center; gap:12px;
-                  margin:20px 16px 0; }
-    .btn-refresh { flex:1; height:44px; border:1.5px solid #D1D9E6;
-                   border-radius:10px; background:white; font-size:13px;
-                   color:#555; cursor:pointer; display:flex;
-                   align-items:center; justify-content:center; gap:6px; }
-    .btn-logout  { flex:1; height:44px; border:1.5px solid #FCA5A5;
-                   border-radius:10px; background:white; font-size:13px;
-                   color:#DC2626; cursor:pointer; display:flex;
-                   align-items:center; justify-content:center; gap:6px; }
-
-    /* ── Spinner overlay ── */
-    .spinner-overlay { position:fixed; inset:0; background:rgba(255,255,255,.7);
-                        display:flex; align-items:center; justify-content:center;
-                        z-index:200; }
-    .spinner-ring { width:40px; height:40px; border-radius:50%;
-                    border:4px solid #E5E7EB; border-top-color:#185FA5;
-                    animation:spin .8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-
-    .empty { text-align:center; padding:32px 16px; color:#9CA3AF; font-size:13px; }
-  `],
+  imports: [RouterLink, FaIconComponent],
   template: `
-<div>
+<div class="pb-4" style="background:var(--bs-body-bg)">
 
+  <!-- Overlay de chargement initial (premier chargement des données) -->
   @if (chargement()) {
-    <div class="spinner-overlay"><div class="spinner-ring"></div></div>
+    <div class="position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75
+                d-flex align-items-center justify-content-center" style="z-index:1050">
+      <div class="spinner-border text-primary"></div>
+    </div>
   }
 
-  <!-- ── Header ── -->
-  <div class="header">
-    <div class="header-top">
+  <!-- ── En-tête ── -->
+  <div class="bg-primary text-white p-3 sticky-top shadow-sm">
+    <div class="d-flex align-items-center justify-content-between">
       <div>
-        <div class="header-nom">Bonjour, {{ nomFamille() }}</div>
-        <div class="header-sous">{{ dateAujourdhui() }}</div>
+        <div class="fw-semibold fs-6">Bonjour, {{ nomFamille() }}</div>
+        <div class="small opacity-75 text-capitalize">{{ dateAujourdhui() }}</div>
       </div>
-      <div class="header-actions">
+      <div class="d-flex align-items-center gap-2">
 
         <!-- Notifications -->
-        <div class="btn-icon-wrap">
-          <button class="btn-icon" (click)="allerNotifications()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 22c1.1 0 2-.9 2-2H10c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
-                    fill="white"/>
-            </svg>
+        <div class="position-relative">
+          <button class="btn btn-outline-light btn-sm rounded-circle p-2" (click)="allerNotifications()">
+            <fa-icon [icon]="faBell"></fa-icon>
           </button>
           @if (nbNotifs() > 0) {
-            <div class="badge-notif">{{ nbNotifs() }}</div>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {{ nbNotifs() }}
+            </span>
           }
         </div>
 
-        <!-- Refresh -->
-        <button class="btn-icon" (click)="rafraichir()" [disabled]="chargement()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
-                  fill="white"/>
-          </svg>
+        <!-- Actualiser -->
+        <button class="btn btn-outline-light btn-sm rounded-circle p-2"
+                (click)="rafraichir()" [disabled]="rafraichissement()">
+          <fa-icon [icon]="faArrowRotateRight" [class.fa-spin]="rafraichissement()"></fa-icon>
         </button>
-
       </div>
     </div>
+
+    <!-- Barre de chargement affichée pendant l'actualisation -->
+    @if (rafraichissement()) {
+      <div class="progress rounded-0 position-absolute bottom-0 start-0 w-100" style="height:3px">
+        <div class="progress-bar progress-bar-striped progress-bar-animated bg-white" style="width:100%"></div>
+      </div>
+    }
   </div>
 
   <!-- ── Bandeau insolvable ── -->
   @if (insolvable()) {
-    <div class="bandeau-insolvable">
-      <strong>⚠️ Rendez-vous de paiement dépassé</strong>
+    <div class="alert alert-danger border-start border-4 border-danger rounded-3 mx-3 mt-3 mb-0">
+      <strong class="d-block"><fa-icon [icon]="faTriangleExclamation" class="me-1"></fa-icon> Solde impayé</strong>
       Votre solde est en retard. Contactez l'administration.
     </div>
   }
 
   <!-- ── Notifications urgentes ── -->
   @if (notifsUrgentes().length > 0) {
-    <div class="notifs">
+    <div class="d-flex flex-column gap-2 mx-3 mt-3">
       @for (n of notifsUrgentes(); track n.id) {
-        <div [class]="'notif notif--' + n.type">
-          <div class="notif-emoji">{{ emojiNotif(n.type) }}</div>
-          <div class="notif-texte">
-            <div class="notif-titre">{{ n.titre }}</div>
-            <div class="notif-corps">{{ n.corps }}</div>
+        <div class="alert d-flex align-items-start gap-2 mb-0 py-2" [class]="'alert-' + couleurNotif(n.type)">
+          <fa-icon [icon]="iconeNotif(n.type)" class="fs-5"></fa-icon>
+          <div class="flex-fill">
+            <div class="fw-semibold small">{{ n.titre }}</div>
+            <div class="small opacity-75">{{ n.corps }}</div>
           </div>
-          <button class="notif-close" (click)="fermerNotif(n.id)">✕</button>
+          <button type="button" class="btn-close" style="font-size:11px" (click)="fermerNotif(n.id)"></button>
         </div>
       }
     </div>
   }
 
-  <!-- ── Résumé 4 cartes ── -->
-  <div class="section">
-    <div class="section-titre">Résumé</div>
-    <div class="cartes">
+  <!-- ── Résumé (4 cartes, 2 colonnes en mobile / 4 en desktop) ── -->
+  <div class="mx-3 mt-4">
+    <div class="text-uppercase text-muted small fw-semibold mb-2">Résumé</div>
+    <div class="row row-cols-2 row-cols-md-4 g-2">
 
-      <div class="carte" >
-        <div class="carte-icon carte-icon--blue">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" fill="#185FA5"/>
-          </svg>
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+          <fa-icon [icon]="faChartLine" class="fs-3 text-primary mb-2"></fa-icon>
+          <div class="fs-4 fw-bold">{{ moyTrimResume() }}</div>
+          <div class="small text-muted">Moy. trimestrielle</div>
         </div>
-        <div class="carte-val">{{ moyTrimResume() }}</div>
-        <div class="carte-lbl">Moy. trimestrielle</div>
       </div>
 
-      <div class="carte" >
-        <div class="carte-icon carte-icon--amber">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"
-                  fill="#D97706"/>
-          </svg>
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+          <fa-icon [icon]="faCalendarDays" class="fs-3 text-warning mb-2"></fa-icon>
+          <div class="fs-4 fw-bold" [class.text-danger]="totalAbsences() >= 3">
+            {{ totalAbsences() }}
+          </div>
+          <div class="small text-muted">Absence(s)</div>
         </div>
-        <div class="carte-val" [class.stat-val--bad]="totalAbsences() >= 3">
-          {{ totalAbsences() }}
-        </div>
-        <div class="carte-lbl">Absence(s)</div>
       </div>
 
-      <div class="carte" [routerLink]="['/espace-parent/paiement']">
-        <div class="carte-icon carte-icon--red">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"
-                  fill="#DC2626"/>
-          </svg>
-        </div>
-        <div class="carte-val" [class.stat-val--bad]="insolvable()">
-          {{ restePaiement() }}
-        </div>
-        <div class="carte-lbl">Restant (FCFA)</div>
+      <div class="col">
+        <a class="card border-0 shadow-sm rounded-4 h-100 p-3 text-decoration-none text-reset"
+           [routerLink]="['/espace-parent/paiement']">
+          <fa-icon [icon]="faCreditCard" class="fs-3 text-danger mb-2"></fa-icon>
+          <div class="fs-4 fw-bold" [class.text-danger]="insolvable()">{{ restePaiement() }}</div>
+          <div class="small text-muted">Restant (FCFA)</div>
+        </a>
       </div>
 
-      <div class="carte" [routerLink]="['/espace-parent/paiement']">
-        <div class="carte-icon carte-icon--green">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
-                  fill="#059669"/>
-          </svg>
-        </div>
-        <div class="carte-val">
-          {{ prochainRdv() ?? '—' }}
-        </div>
-        <div class="carte-lbl">Prochain RDV</div>
+      <div class="col">
+        <a class="card border-0 shadow-sm rounded-4 h-100 p-3 text-decoration-none text-reset"
+           [routerLink]="['/espace-parent/paiement']">
+          <fa-icon [icon]="faCalendarCheck" class="fs-3 text-success mb-2"></fa-icon>
+          <div class="fs-4 fw-bold">{{ prochainRdv() ?? '—' }}</div>
+          <div class="small text-muted">Prochain RDV</div>
+        </a>
       </div>
 
     </div>
   </div>
 
   <!-- ── Paiement résumé ── -->
-  @if (paiement()) {
-    <div class="section">
-      <div class="section-titre">Pension</div>
-      <div class="carte-paiement" [class.carte-paiement--rouge]="insolvable()">
-        <div class="pai-row">
-          <span class="pai-lbl">Total attendu</span>
-          <span class="pai-val">{{ fcfa(paiement()!.montant_attendu) }} FCFA</span>
+  @if (paiements()) {
+    <div class="mx-3 mt-4">
+      <div class="text-uppercase text-muted small fw-semibold mb-2">Pension</div>
+      <div class="card border-0 shadow-sm rounded-4 p-3" [class.border]="insolvable()" [class.border-danger]="insolvable()">
+
+        <div class="d-flex justify-content-between small py-1">
+          <span class="text-muted">Total attendu</span>
+          <span class="fw-semibold">{{ fcfa(paiements()!.montant_attendu) }} FCFA</span>
         </div>
-        <div class="pai-row">
-          <span class="pai-lbl">Payé</span>
-          <span class="pai-val pai-val--vert">{{ fcfa(paiement()!.montant_paye) }} FCFA</span>
+        <div class="d-flex justify-content-between small py-1">
+          <span class="text-muted">Payé</span>
+          <span class="fw-semibold text-success">{{ fcfa(paiements()!.montant_paye) }} FCFA</span>
         </div>
-        <div class="pai-row">
-          <span class="pai-lbl">Reste à payer</span>
-          <span [class]="paiement()!.reste_a_payer > 0 ? 'pai-val pai-val--rouge' : 'pai-val pai-val--vert'">
-            {{ fcfa(paiement()!.reste_a_payer) }} FCFA
+        <div class="d-flex justify-content-between small py-1">
+          <span class="text-muted">Reste à payer</span>
+          <span class="fw-semibold" [class.text-danger]="paiements()!.reste_a_payer > 0"
+                                     [class.text-success]="paiements()!.reste_a_payer <= 0">
+            {{ fcfa(paiements()!.reste_a_payer) }} FCFA
           </span>
         </div>
-        <div class="progress-track">
-          <div [class]="progressCls()"
-               [style.width.%]="paiement()!.taux_paiement">
-          </div>
+
+        <div class="progress my-2" style="height:10px">
+          <div class="progress-bar" [class]="'bg-' + couleurProgress()"
+               [style.width.%]="paiements()!.taux_paiement"></div>
         </div>
-        <div class="pai-taux">{{ paiement()!.taux_paiement }}% payé</div>
-        @if (paiement()!.reste_a_payer > 0) {
-          <button class="btn-payer"
-                  [routerLink]="['/espace-parent/paiement']">
+        <div class="text-end small text-muted">{{ paiements()!.taux_paiement }}% payé</div>
+
+        @if (paiements()!.reste_a_payer > 0) {
+          <a class="btn btn-primary w-100 mt-2" [routerLink]="['/espace-parent/paiement']">
             Initier un paiement
-          </button>
+          </a>
         }
       </div>
     </div>
   }
 
   <!-- ── Élèves ── -->
-  <div class="section">
-    <div class="section-titre">Mes enfants ({{ eleves().length }})</div>
+  <div class="mx-3 mt-4">
+    <div class="text-uppercase text-muted small fw-semibold mb-2">Mes enfants ({{ eleves().length }})</div>
 
     @if (eleves().length === 0) {
-      <div class="empty">Aucun enfant inscrit</div>
+      <div class="text-center text-muted small py-4">Aucun enfant inscrit</div>
     } @else {
       @for (e of eleves(); track e.id_eleve) {
-        <div class="eleve-card"
-             [routerLink]="['/espace-parent/eleve', e.id_eleve]">
-          <div class="eleve-top">
-            <div class="eleve-av">
+        <a class="card border-0 shadow-sm rounded-4 p-3 mb-2 text-decoration-none text-reset d-block"
+           [routerLink]="['/espace-parent/eleve', e.id_eleve]">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:42px;height:42px">
               {{ e.nom[0] }}{{ e.prenom[0] }}
             </div>
             <div>
-              <div class="eleve-nom">{{ e.prenom }} {{ e.nom }}</div>
-              <div class="eleve-cls">{{ e.nom_classe }} · {{ e.niveau }}</div>
+              <div class="fw-semibold">{{ e.prenom }} {{ e.nom }}</div>
+              <div class="small text-muted">{{ e.nom_classe }} · {{ e.niveau }}</div>
             </div>
           </div>
-          <div class="eleve-stats">
-            <div class="stat">
-              <div class="stat-val" [class]="moyenneCls(e.moy_trimestrielle)">
+
+          <div class="row row-cols-3 text-center mt-3 g-0">
+            <div class="col">
+              <div class="fw-bold" [class]="'text-' + moyenneCouleur(e.moy_trimestrielle)">
                 {{ e.moy_trimestrielle !== null ? e.moy_trimestrielle.toFixed(1) : '—' }}
               </div>
-              <div class="stat-lbl">Moyenne</div>
+              <div class="small text-muted">Moyenne</div>
             </div>
-            <div class="stat">
-              <div class="stat-val" [class]="absencesCls(e.absences_count)">
+            <div class="col">
+              <div class="fw-bold" [class]="'text-' + absencesCouleur(e.absences_count)">
                 {{ e.absences_count }}
               </div>
-              <div class="stat-lbl">Absences</div>
+              <div class="small text-muted">Absences</div>
             </div>
-            <div class="stat">
-              <div class="stat-val">
+            <div class="col">
+              <div class="fw-bold">
                 {{ e.rang !== null ? e.rang + '/' + e.effectif_classe : '—' }}
               </div>
-              <div class="stat-lbl">Rang</div>
+              <div class="small text-muted">Rang</div>
             </div>
           </div>
-        </div>
+        </a>
       }
     }
 
-    <!-- Ajouter un enfant -->
-    <button class="btn-refresh" style="width:100%;margin-top:4px"
-            [routerLink]="['/espace-parent/ajouter-enfant']">
-      + Ajouter un enfant
-    </button>
+    <a class="btn btn-outline-primary w-100 mt-1" [routerLink]="['/espace-parent/ajouter-enfant']">
+      <fa-icon [icon]="faUserPlus" class="me-1"></fa-icon> Ajouter un enfant
+    </a>
   </div>
 
-  <!-- ── Footer actions ── -->
-  <div class="footer-bar">
-    <button class="btn-refresh" (click)="rafraichir()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
-              fill="currentColor"/>
-      </svg>
-      Actualiser
+  <!-- ── Actions bas de page ── -->
+  <div class="d-flex gap-2 mx-3 mt-4">
+    <button class="btn btn-outline-secondary flex-fill" (click)="rafraichir()" [disabled]="rafraichissement()">
+      <fa-icon [icon]="faArrowRotateRight" [class.fa-spin]="rafraichissement()" class="me-1"></fa-icon> Actualiser
     </button>
-    <button class="btn-logout" (click)="logout()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
-              fill="currentColor"/>
-      </svg>
-      Déconnexion
+    <button class="btn btn-outline-danger flex-fill" (click)="logout()">
+      <fa-icon [icon]="faRightFromBracket" class="me-1"></fa-icon> Déconnexion
     </button>
   </div>
 
 </div>
-  `
+  `,
 })
 export class ParentDashboardComponent {
 
-  private svc    = inject(ParentService);
+  private svc = inject(ParentService);
   private router = inject(Router);
-  private cdr    = inject(ChangeDetectorRef);
+  private cdr = inject(ChangeDetectorRef);
+  private get = inject(GetServices);
+  private sessionService = inject(SessionService);
 
-  chargement    = this.svc.chargement;
-  eleves        = this.svc.eleves;
-  paiement      = this.svc.paiement;
-  insolvable    = this.svc.isInsolvable;
-  nbNotifs      = this.svc.nbNotifNonLues;
+  // ── Icônes FontAwesome utilisées dans le template ────────────────
+  faBell = faBell;
+  faArrowRotateRight = faArrowRotateRight;
+  faTriangleExclamation = faTriangleExclamation;
+  faChartLine = faChartLine;
+  faCalendarDays = faCalendarDays;
+  faCreditCard = faCreditCard;
+  faCalendarCheck = faCalendarCheck;
+  faUserPlus = faUserPlus;
+  faRightFromBracket = faRightFromBracket;
 
-  nomFamille = computed(() => this.svc.famille()?.nom_famille ?? 'Parent');
+  chargement = this.svc.chargement;
+  // true uniquement pendant un clic sur "Actualiser" (affiche la barre de progression)
+  rafraichissement = signal(false);
+
+  private session = this.sessionService.get();
+
+  // ── Données brutes (famille connectée, enrichie) ────────────────
+  private dashboard = computed(() =>
+    this.get.getFamilles().find((f: FamilleEnrichi) => f.id_famille === this.session?.id_famille) ?? null
+  );
+
+  eleves = computed(() => this.dashboard()?.eleves ?? []);
+  paiements = computed(() => this.dashboard()?.paiement ?? null);
+  moratoires = computed(() => this.dashboard()?.moratoires ?? []);
+
+  notifications = computed(() =>
+    (this.dashboard()?.notifications ?? []).filter((n: { lue: boolean }) => !n.lue)
+  );
+
+  // Insolvable = il reste un montant à payer sur la pension
+  insolvable = computed(() => (this.paiements()?.reste_a_payer ?? 0) > 0);
+  nbNotifs = computed(() => this.notifications().length);
+
+  nomFamille = computed(() => this.dashboard()?.nom_famille ?? 'Parent');
 
   notifsUrgentes = computed(() =>
-    this.svc.notifications().filter((n: { urgente: any; type: string; }) => n.urgente || n.type === 'paiement')
+    this.notifications().filter((n: { urgente: boolean; type: string }) => n.urgente || n.type === 'paiement')
   );
 
   moyTrimResume = computed(() => {
     const moys = this.eleves()
-      .map((e:any) => e.moy_trimestrielle)
-      .filter((m:any): m is number => m !== null);
+      .map((e: any) => e.moy_trimestrielle)
+      .filter((m: any): m is number => m !== null);
     if (!moys.length) return '—';
-    const moy = moys.reduce((a: any, b: any) => a + b, 0) / moys.length;
+    const moy = moys.reduce((a: number, b: number) => a + b, 0) / moys.length;
     return moy.toFixed(1);
   });
 
   totalAbsences = computed(() =>
-    this.eleves().reduce((s: any, e: { absences_count: any; }) => s + e.absences_count, 0)
+    this.eleves().reduce((s: number, e: { absences_count: number }) => s + e.absences_count, 0)
   );
 
   restePaiement = computed(() => {
-    const p = this.paiement();
+    const p = this.paiements();
     return p ? this.fcfa(p.reste_a_payer) : '—';
   });
 
   prochainRdv = computed(() => {
-    const rdv = this.paiement()?.prochain_rdv;
+    const rdv = this.paiements()?.prochain_rdv;
     if (!rdv) return null;
     try {
-      return new Date(rdv).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+      return new Date(rdv).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
     } catch { return rdv; }
   });
 
+  // ── Actions ──────────────────────────────────────────────────
   dateAujourdhui(): string {
-    return new Date().toLocaleDateString('fr-FR',
-      { weekday:'long', day:'2-digit', month:'long' });
+    return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' });
   }
 
+  // Actualisation : on attend la fin de l'appel avant de retirer la barre de chargement,
+  // même en cas d'erreur (finally), pour ne jamais bloquer les boutons.
   async rafraichir(): Promise<void> {
-    await this.svc.rafraichir();
-    this.cdr.markForCheck();
+    this.rafraichissement.set(true);
+    try {
+      await this.svc.rafraichir();
+    } finally {
+      this.rafraichissement.set(false);
+      this.cdr.markForCheck();
+    }
   }
 
-  logout(): void { this.svc.logout(); this.router.navigate(['/espace-parent/login']); }
+  logout(): void {
+    this.svc.logout();
+    this.router.navigate(['/espace-parent/login']);
+  }
 
   allerNotifications(): void { this.router.navigate(['/espace-parent/notifications']); }
 
   fermerNotif(id: string): void { this.svc.marquerLue(id); }
 
-  emojiNotif(type: string): string {
-    return { absence:'📅', note:'📊', paiement:'💰', rdv:'🗓️', info:'ℹ️' }[type] ?? '🔔';
+  // ── Aides d'affichage (icône FontAwesome / couleurs Bootstrap) ──
+  // Retourne l'icône FontAwesome selon le type de notification
+  iconeNotif(type: string): IconDefinition {
+    return {
+      absence: faCalendarDays,
+      note: faChartLine,
+      paiement: faSackDollar,
+      rdv: faCalendarCheck,
+      info: faCircleInfo,
+    }[type] ?? faBell;
   }
 
-  progressCls(): string {
-    const t = this.paiement()?.taux_paiement ?? 0;
-    if (t >= 100) return 'progress-fill progress-fill--vert';
-    if (t >= 50)  return 'progress-fill progress-fill--amber';
-    return 'progress-fill progress-fill--rouge';
+  couleurNotif(type: string): string {
+    return { absence: 'warning', note: 'success', paiement: 'danger', rdv: 'info', info: 'primary' }[type] ?? 'secondary';
   }
 
-  moyenneCls(m: number | null): string {
-    if (m === null) return '';
-    if (m >= 10) return 'stat-val--ok';
-    if (m >= 8)  return 'stat-val--warn';
-    return 'stat-val--bad';
+  couleurProgress(): string {
+    const t = this.paiements()?.taux_paiement ?? 0;
+    if (t >= 100) return 'success';
+    if (t >= 50) return 'warning';
+    return 'danger';
   }
 
-  absencesCls(n: number): string {
-    if (n === 0) return 'stat-val--ok';
-    if (n < 3)   return 'stat-val--warn';
-    return 'stat-val--bad';
+  moyenneCouleur(m: number | null): string {
+    if (m === null) return 'body';
+    if (m >= 10) return 'success';
+    if (m >= 8) return 'warning';
+    return 'danger';
+  }
+
+  absencesCouleur(n: number): string {
+    if (n === 0) return 'success';
+    if (n < 3) return 'warning';
+    return 'danger';
   }
 
   fcfa(n: number): string {

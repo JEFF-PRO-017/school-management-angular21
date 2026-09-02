@@ -1,4 +1,5 @@
 import { Absence, Classe, Eleve, Note } from "../academic";
+import { NotifParent } from "../communication";
 import { Paiement } from "../payment";
 import {  Sequence, StatusFamille } from "../shared";
 
@@ -19,6 +20,7 @@ export interface FamilleEnrichi extends Famille {
     paiements?: Paiement[];
     annee_scolaires: AnneeScolaireFamille[];
     moratoires?: Moratoire[];
+    notifications?: NotifParent[];
 }
 export interface AnneeScolaireFamille {
     id_annee_scolaire: string;

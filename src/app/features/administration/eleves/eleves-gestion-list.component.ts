@@ -116,7 +116,7 @@ import { EleveModalComponent, EleveModalData } from './modal/eleve-modal.compone
 
     <ng-template cellDef="actions" let-e>
       <div class="d-flex gap-1 justify-content-center">
-        <button [routerLink]="['/familles', e.id_famille]" class="btn btn-sm btn-outline-secondary icon-btn" title="Voir la famille">
+        <button [routerLink]="['/espace-administration/familles', e.id_famille]" class="btn btn-sm btn-outline-secondary icon-btn" title="Voir la famille">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
             <circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
             <circle cx="11" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/>

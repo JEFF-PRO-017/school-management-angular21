@@ -9,7 +9,7 @@ export class LauncherComponent implements OnInit {
     private router = inject(Router);
 
     ngOnInit(): void {
-        debugger
+        console.log('je viens de passer faut revoir la route et la corriger')
         const session = this.sessionService.get(); // lu depuis le token stocké
         if (session && session.id_user) this.router.navigate(['/admin']);
         else if (session && session.id_famille) this.router.navigate(['/espace-parent']);

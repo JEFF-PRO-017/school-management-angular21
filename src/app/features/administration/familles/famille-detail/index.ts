@@ -147,7 +147,7 @@ export class FamilleDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (!id) { this.router.navigate(['/familles']); return; }
+    if (!id) { this.router.navigate(['/espace-administration/familles']); return; }
     this.id.set(id)
   }
 

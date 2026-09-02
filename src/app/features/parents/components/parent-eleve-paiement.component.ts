@@ -195,18 +195,18 @@ export class ParentPaiementComponent {
   async soumettre(): Promise<void> {
     if (this.formPaiement.invalid) return;
     this.envoi.set(true);
-    const ok = await this.svc.initierPaiement({
-      id_famille:    this.svc.session()?.id_famille ?? '',
-      montant:       +(this.formPaiement.value.montant ?? 0),
-      mode_paiement: this.formPaiement.value.mode_paiement as any,
-      reference:     this.formPaiement.value.reference ?? '',
-      commentaire:   this.formPaiement.value.commentaire ?? '',
-    });
-    this.envoi.set(false);
-    if (ok) {
-      this.envoiOk.set(true);
-      this.formPaiement.reset();
-    }
+    // const ok = await this.svc.initierPaiement({
+    //   id_famille:    this.svc.session()?.id_famille ?? '',
+    //   montant:       +(this.formPaiement.value.montant ?? 0),
+    //   mode_paiement: this.formPaiement.value.mode_paiement as any,
+    //   reference:     this.formPaiement.value.reference ?? '',
+    //   commentaire:   this.formPaiement.value.commentaire ?? '',
+    // });
+    // this.envoi.set(false);
+    // if (ok) {
+    //   this.envoiOk.set(true);
+    //   this.formPaiement.reset();
+    // }
   }
 
   progressCls(): string {

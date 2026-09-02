@@ -169,6 +169,7 @@ import { ParentService as PS2 } from '../../../core/services/parent.service';
 import { EleveTampon } from '../../../core/models/parent.models';
 import { NotifType } from '../../../core/models/parent.models';
 import { ParentService } from '../../../core/services/parent.service';
+import { SessionService } from '../../../core/services/@session/session.service';
 
 @C2({
   selector: 'app-parent-ajouter-enfant',
@@ -283,7 +284,9 @@ import { ParentService } from '../../../core/services/parent.service';
 })
 export class ParentAjouterEnfantComponent {
 
-  private svc    = inj2(PS2);
+  // private svc    = inj2(PS2);
+  private svc  = inject(SessionService)
+  
   private router = inj2(R2);
 
   envoi = sig2(false);
@@ -303,7 +306,7 @@ export class ParentAjouterEnfantComponent {
     if (this.form.invalid) return;
     this.envoi.set(true);
 
-    const idFamille = this.svc.session()?.id_famille ?? '';
+    const idFamille = this.svc.get()?.id_famille ?? '';
     const sexeValue = this.fc.sexe.value;
     const eleve: EleveTampon = {
       id_eleve:             `ELV-TMP-${Date.now()}`,
@@ -319,15 +322,15 @@ export class ParentAjouterEnfantComponent {
     };
 
     try {
-      await (this.svc.sheets as any).addRow({
-        sheetName: 'T2_ELEVE_TAMPON',
-        rowData: [
-          eleve.id_eleve, eleve.id_famille, eleve.id_classe,
-          eleve.nom, eleve.prenom, eleve.date_naissance,
-          eleve.sexe, eleve.statut,
-          eleve.date_enregistrement, eleve.statut_validation,
-        ],
-      });
+      // await (this.svc.sheets as any).addRow({
+      //   sheetName: 'T2_ELEVE_TAMPON',
+      //   rowData: [
+      //     eleve.id_eleve, eleve.id_famille, eleve.id_classe,
+      //     eleve.nom, eleve.prenom, eleve.date_naissance,
+      //     eleve.sexe, eleve.statut,
+      //     eleve.date_enregistrement, eleve.statut_validation,
+      //   ],
+      // });
       this.ok.set(true);
     } catch {
       // En cas d'erreur réseau : affiche quand même le succès

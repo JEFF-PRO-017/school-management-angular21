@@ -101,7 +101,7 @@ export class SidebarComponent {
           visible: () => this.isAdmin() || this.can('validation_parents'),
         },
         {
-          label: 'Aperçu espace parent', route: '/espace-administration/espace-parent/login', indent: true, external: true,
+          label: 'Aperçu espace parent', route: '/espace-parent/login', indent: true, external: true,
           visible: () => this.isAdmin() || this.can('validation_parents'),
         },
       ],
