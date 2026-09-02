@@ -19,7 +19,8 @@ export const PERMISSIONS = [
   { id: 'whatsapp', label: 'WhatsApp', section: 'both' },
   { id: 'users', label: 'Gestion utilisateurs', section: 'both' },
   { id: 'matieres', label: 'Matières', section: 'both' },
-  { id: 'paiement', label: 'Paiement', section: 'both' }
+  { id: 'paiement', label: 'Paiement', section: 'both' },
+  { id: 'pointages', label: 'Pointages', section: 'both' },
 ] as const;
 
 export type PermissionId = typeof PERMISSIONS[number]['id'];

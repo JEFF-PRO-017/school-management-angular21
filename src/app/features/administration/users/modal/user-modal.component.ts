@@ -318,7 +318,7 @@ export class UserModalComponent implements OnInit {
     const map: Record<Role, PermissionId[]> = {
       admin: PERMISSIONS.map(p => p.id),
       caissier: ['insolvables', 'familles'],
-      enseignant: ['notes', 'bulletins', 'absences', 'eleves'],
+      enseignant: ['notes', 'absences', 'pointages','historique_absences'],
       surveillant: ['absences', 'eleves'],
     };
     this.perms.set(new Set(map[role] ?? []));
