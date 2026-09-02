@@ -1,40 +1,38 @@
 {
+  "id": "/espace-parent/login",
   "name": "GSB Berceau du Savoir — Espace Parent",
-  "short_name": "GSB Berceau du Savoir",
-  "description": "Suivez la scolarité de vos enfants",
+  "short_name": "GSB Berceau",
+  "description": "Suivez la scolarité, les moratoires , les paiements et les résultats de vos enfants",
   "start_url": "/espace-parent/login",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#F0F4F8",
   "theme_color": "#185FA5",
   "lang": "fr",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
-    {
-      "src": "assets/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "assets/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "assets/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "assets/icons/icon-48x48.png",  "sizes": "48x48",  "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-72x72.png",  "sizes": "72x72",  "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-96x96.png",  "sizes": "96x96",  "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-128x128.png","sizes": "128x128","type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-144x144.png","sizes": "144x144","type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-152x152.png","sizes": "152x152","type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-192x192.png","sizes": "192x192","type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-384x384.png","sizes": "384x384","type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512x512.png","sizes": "512x512","type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/icon-maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mes enfants",  "short_name": "Enfants",   "url": "/espace-parent/enfants",   "icons": [{ "src": "assets/icons/shortcut-enfants.png",   "sizes": "96x96" }] },
+    { "name": "Paiements",    "short_name": "Paiements", "url": "/espace-parent/paiements", "icons": [{ "src": "assets/icons/shortcut-paiements.png", "sizes": "96x96" }] },
+    { "name": "Résultats",    "short_name": "Résultats", "url": "/espace-parent/resultats", "icons": [{ "src": "assets/icons/shortcut-resultats.png","sizes": "96x96" }] }
   ],
   "screenshots": [
-    {
-      "src": "assets/screenshots/dashboard.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Tableau de bord parent"
-    }
+    { "src": "assets/screenshots/dashboard.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Tableau de bord parent" }
   ]
 }
