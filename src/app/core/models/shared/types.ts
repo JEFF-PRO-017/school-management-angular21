@@ -1,7 +1,7 @@
 // shared/types.ts — Primitives partagés entre tous les domaines
 
 export type Section       = 'primaire' | 'secondaire';
-export type Role          = 'admin' | 'enseignant' | 'caissier' | 'surveillant';
+export type Role          = 'admin' | 'enseignant' | 'caissier' | 'surveillant'|'secretaire';
 export type Sequence      = 'SEQ1' | 'SEQ2' | 'SEQ3' | 'SEQ4' | 'SEQ5' | 'SEQ6';
 export type ModePaiement  = 'cash' | 'mobile' | 'virement';
 

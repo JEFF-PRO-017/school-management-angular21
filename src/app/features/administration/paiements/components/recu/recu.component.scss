@@ -23,10 +23,15 @@
       background: #ECECEA;
   }
 
+  img {
+      max-width: 35%;
+      height: auto;
+  }
+
   body {
       font-family: 'Public Sans', sans-serif;
       color: var(--ink);
-      display: flex;
+      //   display: flex;
       justify-content: center;
   }
 

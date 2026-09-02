@@ -18,6 +18,7 @@ export interface UserModalData { user?: AppUser; }
 
 const ROLES: { val: Role; label: string }[] = [
   { val: 'admin', label: 'Administrateur' },
+  { val: 'secretaire', label: 'Secrétaire' },
   { val: 'caissier', label: 'Caissier' },
   { val: 'enseignant', label: 'Enseignant' },
   { val: 'surveillant', label: 'Surveillant' },
@@ -318,8 +319,9 @@ export class UserModalComponent implements OnInit {
     const map: Record<Role, PermissionId[]> = {
       admin: PERMISSIONS.map(p => p.id),
       caissier: ['insolvables', 'familles'],
-      enseignant: ['notes', 'absences', 'pointages','historique_absences'],
+      enseignant: ['notes', 'absences', 'pointages', 'historique_absences'],
       surveillant: ['absences', 'eleves'],
+      secretaire: [ 'insolvables', 'familles', 'eleves','classes','matieres'],
     };
     this.perms.set(new Set(map[role] ?? []));
   }
