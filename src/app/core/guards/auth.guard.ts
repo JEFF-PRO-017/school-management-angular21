@@ -17,7 +17,7 @@ import { SessionService } from '../services/@session/session.service';
 export const authGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
-  return auth.isLogged() ? true : router.createUrlTree(['/auth/login']);
+  return auth.isLogged() ? true : router.createUrlTree(['/admin/login']);
 };
 
 // ── Guard : permission spécifique ────────────────────────────────
@@ -29,22 +29,16 @@ export const permGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const router  = inject(Router);
   const perm    = route.data['perm'] as PermissionId | undefined;
   if (!perm || auth.hasPermission(perm) || auth.isAdmin()) return true;
-  return router.createUrlTree(['/dashboard']);
+  return router.navigate(['/espace-administration/dashboard']);
 };
 
 // ── Guard : admin uniquement ─────────────────────────────────────
 export const adminGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
-  return auth.isAdmin() ? true : router.createUrlTree(['/dashboard']);
+  return auth.isAdmin() ? true : router.navigate(['/espace-administration/dashboard']);
 };
 
-export const consultantGuard: CanActivateFn = () => {
-  const auth = inject(AuthService);
-  const router = inject(Router);
-  if (auth.isAdmin() || auth.hasPermission('validation_parents')) return true;
-  return router.createUrlTree(['/dashboard']);
-}
 
 
 export const sessionGuard: CanActivateFn = () => {
@@ -58,7 +52,7 @@ export const sessionGuard: CanActivateFn = () => {
   // On lit la session AVANT de la supprimer, pour savoir vers quel login rediriger
   const session = sessionService.get();
   const route = sessionService.getLoginRoute(session);
-  sessionService.clear();
+  // sessionService.clear();
 
   // createUrlTree = redirection directe, sans appel supplémentaire à router.navigate
   return router.createUrlTree(route);

@@ -90,7 +90,7 @@ export class AuthService {
     this._user.set(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(SECTION_KEY);
-    this.sessionService.clear();
+    // this.sessionService.clear();
     this.cache.invalidateAll();         // vide les données locales
     this.router.navigate(['/admin/login']);
   }

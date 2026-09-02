@@ -1,6 +1,6 @@
 {
-  "name": "CSB Berceau du Savoir — Espace Parent",
-  "short_name": "EspaceParent",
+  "name": "GSB Berceau du Savoir — Espace Parent",
+  "short_name": "GSB Berceau du Savoir",
   "description": "Suivez la scolarité de vos enfants",
   "start_url": "/espace-parent/login",
   "display": "standalone",

@@ -19,7 +19,7 @@ export const appConfig: ApplicationConfig = {
 
     // Ordre important : auth d'abord (ajoute le token),
     // puis rate-limit (gère les 429 sur la requête déjà authentifiée)
-    provideHttpClient(withInterceptors([authInterceptor, rateLimitInterceptor,sessionProlongement])),
+    provideHttpClient(withInterceptors([authInterceptor, rateLimitInterceptor, sessionProlongement])),
 
     provideAnimationsAsync(),
 
@@ -31,8 +31,8 @@ export const appConfig: ApplicationConfig = {
         await data.ensureSheets();
       }, 600);
     }), provideServiceWorker('ngsw-worker.js', {
-            enabled: !isDevMode(),
-            registrationStrategy: 'registerWhenStable:30000'
-          })
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000'
+    })
   ],
 };

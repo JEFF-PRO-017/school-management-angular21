@@ -84,7 +84,7 @@ export class SheetsQueueServiceService {
     // On lit la session AVANT de la supprimer, pour savoir vers quel login rediriger
     const session = this.sessionService.get();
     const route = this.sessionService.getLoginRoute(session);
-    this.sessionService.clear();
+    // this.sessionService.clear();
 
     // createUrlTree = redirection directe, sans appel supplémentaire à router.navigate
     this.router.navigate(route);

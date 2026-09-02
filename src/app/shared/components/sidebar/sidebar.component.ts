@@ -53,55 +53,55 @@ export class SidebarComponent {
   private sections: NavSection[] = [
     {
       items: [
-        { label: 'Tableau de bord', route: '/dashboard', icon: faGaugeHigh, visible: () => true },
+        { label: 'Tableau de bord', route: '/espace-administration/dashboard', icon: faGaugeHigh, visible: () => true },
       ],
     },
     {
       title: 'Référentiels',
       items: [
-        { label: 'Familles', route: '/familles', icon: faPeopleGroup, visible: () => this.can('familles') },
-        { label: 'Élèves', route: '/eleves', icon: faUserGraduate, visible: () => this.can('eleves') },
-        { label: 'Classes', route: '/classes', icon: faChalkboard, visible: () => this.can('classes') },
-        { label: 'Matières', route: '/matieres', icon: faBook, visible: () => this.can('matieres') },
+        { label: 'Familles', route: '/espace-administration/familles', icon: faPeopleGroup, visible: () => this.can('familles') },
+        { label: 'Élèves', route: '/espace-administration/eleves', icon: faUserGraduate, visible: () => this.can('eleves') },
+        { label: 'Classes', route: '/espace-administration/classes', icon: faChalkboard, visible: () => this.can('classes') },
+        { label: 'Matières', route: '/espace-administration/matieres', icon: faBook, visible: () => this.can('matieres') },
       ],
     },
     {
       title: 'Finances',
       items: [
-        { label: 'Paiement', route: '/paiement', icon: faMoneyBillWave, visible: () => this.can('paiement') },
-        { label: 'Insolvables', route: '/insolvables', icon: faTriangleExclamation, visible: () => this.can('insolvables') },
+        { label: 'Paiement', route: '/espace-administration/paiement', icon: faMoneyBillWave, visible: () => this.can('paiement') },
+        { label: 'Insolvables', route: '/espace-administration/insolvables', icon: faTriangleExclamation, visible: () => this.can('insolvables') },
       ],
     },
     {
       title: 'Pédagogie',
       items: [
-        { label: 'Notes', route: '/notes/enregistrement', icon: faPenToSquare, visible: () => this.can('notes') },
-        { label: 'Bulletins', route: '/notes/bulletins', icon: faFileLines, visible: () => this.can('bulletins') },
-        { label: 'Absences', route: '/absences/enregistrement', icon: faCalendarXmark, visible: () => this.can('absences') },
-        { label: 'Historique', route: '/absences/historique', icon: faClockRotateLeft, visible: () => this.can('historique_absences') },
+        { label: 'Notes', route: '/espace-administration/notes/enregistrement', icon: faPenToSquare, visible: () => this.can('notes') },
+        { label: 'Bulletins', route: '/espace-administration/notes/bulletins', icon: faFileLines, visible: () => this.can('bulletins') },
+        { label: 'Absences', route: '/espace-administration/absences/enregistrement', icon: faCalendarXmark, visible: () => this.can('absences') },
+        { label: 'Historique', route: '/espace-administration/absences/historique', icon: faClockRotateLeft, visible: () => this.can('historique_absences') },
       ],
     },
     {
       title: 'Communication',
       items: [
-        { label: 'WhatsApp', route: '/whatsapp', icon: faComments, visible: () => this.can('whatsapp') },
+        { label: 'WhatsApp', route: '/espace-administration/whatsapp', icon: faComments, visible: () => this.can('whatsapp') },
       ],
     },
     {
       title: 'Administration',
       items: [
-        { label: 'Utilisateurs', route: '/users', icon: faUserGear, visible: () => this.can('users') },
+        { label: 'Utilisateurs', route: '/espace-administration/users', icon: faUserGear, visible: () => this.can('users') },
       ],
     },
     {
       title: 'Espace parent',
       items: [
         {
-          label: 'Inscriptions tampon', route: '/consultant', icon: faClipboardList,
+          label: 'Inscriptions tampon', route: '/espace-administration/consultant', icon: faClipboardList,
           visible: () => this.isAdmin() || this.can('validation_parents'),
         },
         {
-          label: 'Aperçu espace parent', route: '/espace-parent/login', indent: true, external: true,
+          label: 'Aperçu espace parent', route: '/espace-administration/espace-parent/login', indent: true, external: true,
           visible: () => this.isAdmin() || this.can('validation_parents'),
         },
       ],

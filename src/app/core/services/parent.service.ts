@@ -86,7 +86,7 @@ export class ParentService {
   logout(): void {
     this.session.set(null);
     this.dashboard.set(null);
-    this.sessionService.clear();
+    // this.sessionService.clear();
     localStorage.removeItem(PARENT_DATA_KEY);
     this.arreterRefresh();
   }

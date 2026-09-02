@@ -3,7 +3,7 @@
 // Pattern identique à recu.service.ts : buildDoc() privé, generer() public
 import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
-import { EleveData } from '../../../features/insolvables/insolvables-list/insolvables-list.component';
+import { EleveData } from '../../../features/administration/insolvables/insolvables-list/insolvables-list.component';
 import { _fmtDate, _fcfa, _trunc, _dernierRdvFamille, InfosEcole, BLANC, BLEU_L, BLEU_T, ECOLE_DEFAULT, GRIS_H, GRIS_L, HL, ML, MR, NOIR, RGB, ROUGE, VERT, WL } from './index';
 
 @Injectable({ providedIn: 'root' })

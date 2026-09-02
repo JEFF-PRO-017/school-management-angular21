@@ -2,7 +2,7 @@ import { inject, Injectable } from "@angular/core";
 import { ANNEE_SCOLAIRE, POURCENT_PENSION } from "../shared";
 import { AnneeScolaireFamille, EleveEnrichi, FamilleEnrichi } from "./famille.model";
 import { Classe, Eleve } from "../academic";
-import { EleveData } from "../../../features/insolvables/insolvables-list/insolvables-list.component";
+import { EleveData } from "../../../features/administration/insolvables/insolvables-list/insolvables-list.component";
 import { CacheService } from "../../services/cache.service";
 
 /** Données financières d'une famille pour l'année scolaire en cours. */
