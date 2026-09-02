@@ -18,8 +18,8 @@ import { EtapeEnfantsComponent, GroupeCycle } from './Leaflet/etape-enfants.comp
 import { EtapeSuccesComponent } from './soumission/etape-succes.component';
 import { EtapeRecapComponent, EnfantRecap } from './enfants/etape-recap.component';
 import { Eleve, Famille } from '../../../core/models';
-import { AddServices } from '../../../core/services/@data';
-import { GoogleSheetsService } from '../../../core/services/@google-sheets/google-sheets.service';
+import { AddServices, H, SHEET, toRow } from '../../../core/services/@data';
+import { GoogleSheetsService, RowConfig } from '../../../core/services/@google-sheets/google-sheets.service';
 
 export interface WizardState {
   etape: 1 | 2 | 3 | 4;
@@ -261,6 +261,7 @@ export class ParentInscriptionComponent implements OnInit {
   // ── Soumission finale ────────────────────────────────────────────
   async soumettre(): Promise<void> {
     try {
+      
       this.envoi.set(true);
       const idFamille = `FAM-TMP-${Date.now()}`;
       const f: Famille = {
@@ -289,10 +290,18 @@ export class ParentInscriptionComponent implements OnInit {
         verifie: false,
       }))
 
-      await this.add.addFamille(f);
+      const fconfig: RowConfig = {
+        sheetName: SHEET.familles,
+        rowData: toRow(f, H.familles)
+      };
+      await this.sheets.addRow(fconfig);
 
       for (const e of es) {
-        await this.add.addEleve(e)
+        const ec: RowConfig = {
+          sheetName: SHEET.eleves,
+          rowData: toRow(e, H.eleves)
+        };
+        await this.sheets.addRow(ec);
       }
       this.envoi.set(false);
       localStorage.removeItem(WIZARD_CACHE_KEY);
