@@ -85,10 +85,7 @@ export class TransfertEleveDialogComponent {
 
   // Toutes les classes disponibles (admin = toutes, enseignant = ses classes)
   classesDisponibles = computed(() => {
-    const all = this.cache.getClasses() ?? [];
-    if (this.auth.isAdmin()) return all;
-    const assigned = this.auth.getClassesAssignees();
-    return all.filter(c => assigned.includes(c.id_classe));
+    return this.auth.getClassesAssignees()
   });
 
   classeActuelle = computed(() =>

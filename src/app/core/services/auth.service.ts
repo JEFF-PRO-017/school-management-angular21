@@ -3,7 +3,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CacheService } from './cache.service';
 import { compare, hash } from 'bcryptjs';
-import { AppUser, AppUserEnrichi, PermissionId, Section } from '../models';
+import { AppUser, AppUserEnrichi, Classe, MatiereConfig, PermissionId, Section } from '../models';
 import { AddServices, GetServices, H, SHEET, toRow } from './@data';
 import { DataServiceBase } from './@data/_data.base.service';
 import { SessionService } from './@session/session.service';
@@ -111,11 +111,23 @@ export class AuthService {
     return roles.includes(u.role);
   }
 
-  getClassesAssignees(): string[] {
-    const u = this._user();
-    if (!u || this.isAdmin()) return [];
-    return [];
-  }
+  getClassesAssignees = computed<Classe[] | any[]>(() => {
+    const all = this.get.getClasses();
+    if (this.isAdmin()) return all;
+    const user = this.user();
+    if (!user) return [];
+    // .some() → booléen (bug corrigé : .filter() renvoyait toujours un tableau truthy)
+    return all.filter(c => c.matieres?.some(m => m.id_enseignant === user.id));
+  });
+
+  getMatieresAssignees = (classes: Classe[]) => {
+    const all = this.get.getMatieres();
+    if (this.isAdmin()) return all;
+    const user = this.user();
+    if (!user) return [];
+    return all.filter(m => m.id_enseignant === user.id);
+  };
+  
 
   // ── Helpers privés ────────────────────────────────────────────────
 

@@ -170,7 +170,9 @@ export class ClassesListComponent {
   private cdr    = inject(ChangeDetectorRef);
 
   anneeScolaire = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
+  //TODO a corrige, CENTRALISER CETTE VARIABLE DANS UN SERVICE
   pageSize      = 10;
+  
 
   // ── Filtres ──────────────────────────────────────────────────────
   filtreCycle = signal('Tous');

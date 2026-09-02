@@ -356,10 +356,7 @@ export class BulletinsComponent implements OnInit {
   private _groupes  = signal<GroupeMatiere[]>([]);
 
   classesDisponibles = computed(() => {
-    const all = this.get.getClasses() ?? [];
-    return this.auth.isAdmin()
-      ? all
-      : all.filter(c => this.auth.getClassesAssignees().includes(c.id_classe));
+    return this.auth.getClassesAssignees()
   });
 
   rows = computed(() => {

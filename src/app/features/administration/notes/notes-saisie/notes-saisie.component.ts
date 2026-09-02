@@ -26,14 +26,15 @@ import { Note, Sequence, Eleve, MatiereConfig, SEQUENCES } from '../../../../cor
 import { TransfertEleveDialogComponent } from '../transfert-eleve-dialog/transfert-eleve-dialog.component';
 import { AddServices, GetServices } from '../../../../core/services/@data';
 import { DeleteServices } from '../../../../core/services/@data/_delete.services';
+import { Classe } from '../../../../core/models';
 
 // ── Types internes ─────────────────────────────────────────────────────────
 
 /** Une cellule : valeur courante + valeur d'origine pour détecter les modifs */
 interface Cell {
   key: string;
-  valeur:string| number | null;
-  origine: string| number | null;
+  valeur: string | number | null;
+  origine: string | number | null;
 }
 
 /** Une ligne du tableau = un élève */
@@ -57,9 +58,9 @@ export class NotesSaisieComponent implements OnInit {
   private snack = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
-  private get =inject(GetServices)
   private add = inject(AddServices)
   private delete = inject(DeleteServices)
+  private get = inject(GetServices)
 
   readonly sequences: Sequence[] = SEQUENCES;
   ctrlClasse = new FormControl('');
@@ -77,16 +78,18 @@ export class NotesSaisieComponent implements OnInit {
   // ── Computed ──────────────────────────────────────────────────────────────
 
   classesDisponibles = computed(() => {
-    const all = this.get.getClasses() ?? [];
-    if (this.auth.isAdmin()) return all;
-    return all.filter(c => this.auth.getClassesAssignees().includes(c.id_classe));
+    return this.auth.getClassesAssignees()
   });
 
   matieres = (): MatiereConfig[] => {
     const id = this.ctrlClasse.value;
     if (!id) return [];
-    return (this.get.getClasses() ?? []).find(c => c.id_classe === id)?.matieres ?? [];
-  };
+    const matieresIdClasse = (this.classesDisponibles() ?? []).find(c => c.id_classe === id)?.matieres ?? [];
+    if (this.auth.isAdmin()) return matieresIdClasse;
+    else if (this.auth.user()) return matieresIdClasse.filter((m: { id_enseignant: string | undefined; }) => m.id_enseignant === this.auth.user()?.id);
+    return [];
+  }
+
 
   /** Sous-ensemble de matieres() actuellement actif */
   matieresActives = (() =>
@@ -164,7 +167,7 @@ export class NotesSaisieComponent implements OnInit {
     const idClasse = this.ctrlClasse.value!;
     const matieres = this.matieresActives();
 
-    const eleves = (this.get.getClasses() ?? [])
+    const eleves = ((this.classesDisponibles() ?? []) as Classe[])
       .find(c => c.id_classe === idClasse)?.eleves
       ?.slice().sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom))
       ?? [];
@@ -177,7 +180,13 @@ export class NotesSaisieComponent implements OnInit {
           return { key: `${eleve.id_eleve}_${seq}_${mat.nom_matiere}`, valeur: val, origine: val };
         });
       });
-      const ligne: Ligne = { eleve, cells, moySeq: [], moyTrim: null };
+
+      const ligne: Ligne = {
+        eleve: eleve as unknown as Eleve,
+        cells,
+        moySeq: [],
+        moyTrim: null,
+      };
       this._calcMoyennes(ligne);
       return ligne;
     });
@@ -211,7 +220,7 @@ export class NotesSaisieComponent implements OnInit {
       actives.forEach(m => {
         const mi = this.realMatIdx(m);
         const v = ligne.cells[si]?.[mi]?.valeur;
-        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true;  }
+        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true; }
         totCoeff += (+m.coefficient);
       });
       return has && totCoeff > 0 ? pts / totCoeff : null;

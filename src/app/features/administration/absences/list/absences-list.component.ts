@@ -2,12 +2,13 @@
 import {
   Component, inject, signal, computed,
   ChangeDetectionStrategy, ChangeDetectorRef,
+  OnInit,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { EleveEnrichi, Absence } from '../../../../core/models';
-import { WhatsappService } from '../../../../core/services';
+import { EleveEnrichi, Absence, Classe } from '../../../../core/models';
+import { AuthService, WhatsappService } from '../../../../core/services';
 import { GetServices } from '../../../../core/services/@data';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../../shared/components/table/table.component';
 
@@ -178,38 +179,56 @@ interface LigneAbsence {
   `,
   styles: [`.icon-btn { width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; }`],
 })
-export class AbsencesListComponent {
+export class AbsencesListComponent implements OnInit {
 
   private get = inject(GetServices);
-  private wa    = inject(WhatsappService);
+  private wa = inject(WhatsappService);
   private snack = inject(MatSnackBar);
-  private cdr   = inject(ChangeDetectorRef);
+  private cdr = inject(ChangeDetectorRef);
+  private auth = inject(AuthService);
 
   readonly pageSize = 15;
   trackByLigne = (l: LigneAbsence) => l.eleve.id_eleve;
 
+
+  ngOnInit(): void {
+    const classes = this.classes();
+  }
+
+  userCourant = computed(() => this.auth.user());
+  isAdmin = computed(() => this.auth.isAdmin());
+
+  classes = computed<Classe[] | any[]>(() => {
+    const all = this.get.getClasses();
+    if (this.isAdmin()) return all;
+    const user = this.userCourant();
+    if (!user) return [];
+    // .some() → booléen (bug corrigé : .filter() renvoyait toujours un tableau truthy)
+    return all.filter(c => c.matieres?.some(m => m.id_enseignant === user.id));
+  });
+
   columns: TableColumn<LigneAbsence>[] = [
-    { id: 'check',    header: '',              width: '32px', exportable: false },
-    { id: 'eleve',    header: 'Élève',         sortable: true, accessor: l => l.nomEleve },
-    { id: 'classe',   header: 'Classe',        align: 'center', sortable: true, accessor: l => l.nomClasse },
-    { id: 'nbAbs',    header: 'Nb absences',   align: 'center', sortable: true, headerBg: '#EBF3FC', headerColor: '#0C447C', accessor: l => l.nbAbs },
-    { id: 'date',     header: 'Date · heure',  align: 'center', exportable: false },
-    { id: 'justifie', header: 'Justifié',      align: 'center', exportable: false },
-    { id: 'contact',  header: 'Contact parent', exportable: false },
-    { id: 'wa',       header: 'WA',            align: 'center', exportable: false },
+    { id: 'check', header: '', width: '32px', exportable: false },
+    { id: 'eleve', header: 'Élève', sortable: true, accessor: l => l.nomEleve },
+    { id: 'classe', header: 'Classe', align: 'center', sortable: true, accessor: l => l.nomClasse },
+    { id: 'nbAbs', header: 'Nb absences', align: 'center', sortable: true, headerBg: '#EBF3FC', headerColor: '#0C447C', accessor: l => l.nbAbs },
+    { id: 'date', header: 'Date · heure', align: 'center', exportable: false },
+    { id: 'justifie', header: 'Justifié', align: 'center', exportable: false },
+    { id: 'contact', header: 'Contact parent', exportable: false },
+    { id: 'wa', header: 'WA', align: 'center', exportable: false },
   ];
 
   selection = signal<Set<string>>(new Set());
 
-  ctrlSearch     = new FormControl('');
-  filtrePeriode  = signal<Periode>('week');
-  filtreClasse   = signal('');
-  filtreMinAbs   = signal(0);
+  ctrlSearch = new FormControl('');
+  filtrePeriode = signal<Periode>('week');
+  filtreClasse = signal('');
+  filtreMinAbs = signal(0);
   filtreJustifie = signal<Justifie>('');
 
   private searchSignal = toSignal(this.ctrlSearch.valueChanges, { initialValue: '' });
 
-  optsPeriode  = [
+  optsPeriode = [
     { val: '' as Periode, lbl: 'Toutes' }, { val: 'today' as Periode, lbl: 'Auj.' },
     { val: 'week' as Periode, lbl: 'Semaine' }, { val: 'month' as Periode, lbl: 'Mois' },
   ];
@@ -220,13 +239,13 @@ export class AbsencesListComponent {
     { val: '' as Justifie, lbl: 'Tous' }, { val: 'oui' as Justifie, lbl: 'Justifiées' }, { val: 'non' as Justifie, lbl: 'Non-just.' },
   ];
 
-  classes = computed(() => this.get.getClasses());
+  // classes = computed(() => this.get.getClasses());
 
   // ── Pipeline principal : petites fonctions composées ──────────
   lignes = computed<LigneAbsence[]>(() => {
     const classe = this.filtreClasse();
     const minAbs = this.filtreMinAbs();
-    const q      = (this.searchSignal() ?? '').toLowerCase();
+    const q = (this.searchSignal() ?? '').toLowerCase();
     return this.get.getEleves()
       .filter(e => !classe || e.id_classe === classe)
       .map(e => this.construireLigne(e))
@@ -235,7 +254,7 @@ export class AbsencesListComponent {
       .sort((a, b) => b.nbAbs - a.nbAbs);
   });
 
-  private construireLigne(e: EleveEnrichi |any): LigneAbsence {
+  private construireLigne(e: EleveEnrichi | any): LigneAbsence {
     const abs = this.absencesFiltrees(e);
     return {
       eleve: e,
@@ -249,7 +268,7 @@ export class AbsencesListComponent {
   }
 
   private absencesFiltrees(e: EleveEnrichi | any): Absence[] {
-    const debut    = this.debutPeriode(this.filtrePeriode());
+    const debut = this.debutPeriode(this.filtrePeriode());
     const justifie = this.filtreJustifie();
     return (e.absences ?? []).filter((a: { date: any; justifie: any; }) =>
       (!debut || a.date >= debut) &&
@@ -265,17 +284,17 @@ export class AbsencesListComponent {
   private debutPeriode(p: Periode): string | null {
     const now = new Date();
     if (p === 'today') return now.toISOString().slice(0, 10);
-    if (p === 'week')  { const d = new Date(now); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10); }
+    if (p === 'week') { const d = new Date(now); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10); }
     if (p === 'month') return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
     return null;
   }
 
-  resumeSous     = computed(() => `${this.lignes().length} élève(s) · ${this.totalAbsences()} absence(s)`);
-  totalAbsences  = computed(() => this.lignes().reduce((s, l) => s + l.nbAbs, 0));
+  resumeSous = computed(() => `${this.lignes().length} élève(s) · ${this.totalAbsences()} absence(s)`);
+  totalAbsences = computed(() => this.lignes().reduce((s, l) => s + l.nbAbs, 0));
 
   // ── Sélection (cross-page) ────────────────────────────────────
-  toutSelectionne     = computed(() => this.lignes().length > 0 && this.lignes().every(l => this.selection().has(l.eleve.id_eleve)));
-  selectionPartielle  = computed(() => this.selection().size > 0 && !this.toutSelectionne());
+  toutSelectionne = computed(() => this.lignes().length > 0 && this.lignes().every(l => this.selection().has(l.eleve.id_eleve)));
+  selectionPartielle = computed(() => this.selection().size > 0 && !this.toutSelectionne());
 
   toggleLigne(id: string, e: Event): void {
     const checked = (e.target as HTMLInputElement).checked;
