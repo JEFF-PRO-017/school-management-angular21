@@ -23,7 +23,7 @@ import { BilanTrimestre } from '../note.service';
       } @else {
         @for (e of eleves; track e.id_eleve) {
           <a class="card border-0 shadow-sm rounded-4 p-3 mb-2 text-decoration-none text-reset d-block"
-             [routerLink]="['/espace-parent/eleve', e.id_eleve]">
+             [routerLink]="['/espace-parent/enfants', e.id_eleve]">
 
             <div class="d-flex align-items-center gap-3">
               <div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center flex-shrink-0"
