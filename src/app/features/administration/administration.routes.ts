@@ -79,7 +79,7 @@ export const ADMINISTRATION_ROUTES: Routes = [
         path: 'consultant',
         canActivate: [permGuard],
         data: { perm: 'validation_parents' },
-        loadChildren: () => import('./validation/validation-page.component').then(m => m.ValidationPageComponent),
+        loadComponent: () => import('./validation/validation-page.component').then(m => m.ValidationPageComponent),
     },
 
 ]

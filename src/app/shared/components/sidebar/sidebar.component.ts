@@ -98,11 +98,11 @@ export class SidebarComponent {
       items: [
         {
           label: 'Inscriptions tampon', route: '/espace-administration/consultant', icon: faClipboardList,
-          visible: () => this.isAdmin() || this.can('validation_parents'),
+          visible: () => this.can('validation_parents'),
         },
         {
           label: 'Aperçu espace parent', route: '/espace-parent/login', indent: true, external: true,
-          visible: () => this.isAdmin() || this.can('validation_parents'),
+          visible: () => this.can('validation_parents'),
         },
       ],
     },
