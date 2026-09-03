@@ -23,7 +23,7 @@ export interface FamilleApercuData { famille: Famille | FamilleEnrichi; }
     <li>Statut : <span class="badge text-bg-secondary">{{ data.famille.status }}</span></li>
     @if (isFamilleEnrichi) {
       <li class="mt-2">👨‍👩‍👧 {{ enrichie.eleves?.length ?? 0 }} enfant(s)</li>
-      <li>⏳ {{ enrichie.moratoires?.length ?? 0 }} moratoire(s)</li>
+      <!-- <li>⏳ {{ enrichie.moratoires?.length ?? 0 }} moratoire(s)</li> -->
     }
   </ul>
 </div>
