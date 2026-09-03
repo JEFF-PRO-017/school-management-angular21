@@ -10,7 +10,7 @@ import { FamilleEnrichi } from '../../../../../core/models/family';
   template: `
 <div class="d-flex align-items-center flex-wrap gap-2 pb-3 border-bottom">
 
-  <a routerLink="/familles" class="btn btn-sm btn-outline-secondary px-2">
+  <a routerLink="/espace-administration/familles" class="btn btn-sm btn-outline-secondary px-2">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
       <path d="M10 3L5 8l5 5" stroke="currentColor"
             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>

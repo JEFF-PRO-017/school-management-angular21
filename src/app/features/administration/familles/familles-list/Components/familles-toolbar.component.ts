@@ -46,7 +46,7 @@ export interface ClasseOpt { id: string; nom: string; }
     Filtres
   </button>
 
-  <a routerLink="/familles/carte"
+  <a routerLink="/espace-administration/familles/carte"
      class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
       <path d="M8 1a5 5 0 0 1 5 5c0 3.5-5 9-5 9S3 9.5 3 6a5 5 0 0 1 5-5z"

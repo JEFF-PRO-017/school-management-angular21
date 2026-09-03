@@ -34,7 +34,7 @@ type FiltreActif = 'tous' | 'actif' | 'inactif';
     <span class="bl-sep"></span>
 
     <!-- Journal -->
-    <a routerLink="/whatsapp/alertes" class="bl-btn">
+    <a routerLink="/espace-administration/whatsapp/alertes" class="bl-btn">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
         <path d="M2 12V4l5 4 5-4v8H2z" stroke="currentColor"
               stroke-width="1.3" stroke-linejoin="round"/>

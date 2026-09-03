@@ -15,7 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
       </mat-icon>
       <h1 class="mt-3 text-primary">404</h1>
       <p class="text-muted">Page introuvable</p>
-      <a routerLink="/dashboard" mat-raised-button color="primary">
+      <a routerLink="/espace-administration/dashboard" mat-raised-button color="primary">
         Retour à l'accueil
       </a>
     </div>

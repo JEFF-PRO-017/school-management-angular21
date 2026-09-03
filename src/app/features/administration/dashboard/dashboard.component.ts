@@ -55,7 +55,7 @@ import { AuthService }   from '../../../core/services/auth.service';
     <div class="db-actions">
 
       @if (canPaiements()) {
-        <a routerLink="/paiements/nouveau" class="db-btn db-btn--primary">
+        <a routerLink="/espace-administration/paiements/nouveau" class="db-btn db-btn--primary">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
             <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
@@ -64,14 +64,14 @@ import { AuthService }   from '../../../core/services/auth.service';
       }
 
       @if (isAdmin()) {
-        <a routerLink="/eleves/nouveau" class="db-btn">
+        <a routerLink="/espace-administration/eleves/nouveau" class="db-btn">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/>
             <path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5M11 8v4M13 10h-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
           </svg>
           Nouvel élève
         </a>
-        <a routerLink="/familles/nouveau" class="db-btn">
+        <a routerLink="/espace-administration/familles/nouveau" class="db-btn">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
             <circle cx="5" cy="5" r="2" stroke="currentColor" stroke-width="1.3"/>
             <circle cx="11" cy="5" r="2" stroke="currentColor" stroke-width="1.3"/>
@@ -82,7 +82,7 @@ import { AuthService }   from '../../../core/services/auth.service';
       }
 
       @if (canNotes()) {
-        <a routerLink="/notes" class="db-btn">
+        <a routerLink="/espace-administration/notes" class="db-btn">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
             <path d="M3 12V5l5-3 5 3v7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             <rect x="6" y="8" width="4" height="4" rx=".5" stroke="currentColor" stroke-width="1.3"/>
@@ -92,7 +92,7 @@ import { AuthService }   from '../../../core/services/auth.service';
       }
 
       @if (canPaiements()) {
-        <a routerLink="/insolvables" class="db-btn db-btn--warn">
+        <a routerLink="/espace-administration/insolvables" class="db-btn db-btn--warn">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
             <path d="M8 2L1 13h14L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
             <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
