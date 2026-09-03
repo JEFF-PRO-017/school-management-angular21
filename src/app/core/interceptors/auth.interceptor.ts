@@ -18,13 +18,11 @@ export const sessionProlongement: HttpInterceptorFn = (req, next) => {
   const sessionService = inject(SessionService);
 
 
-  console.log('sessionInterceptor : sessionService.doitEtreRenouvelee()', sessionService.get());
 
   // Session valide mais proche de l'expiration (moins de 5 min) : on la prolonge
   if (sessionService.doitEtreRenouvelee()) {
     sessionService.renouveler();
   }
-  console.log('sessionInterceptor : session prolongée, expires_at =', sessionService.get()?.expires_at);
 
   return next(req);
 };

@@ -19,7 +19,7 @@ export const PARENT_ROUTES: Routes = [
   {
     path: 'dashboard',
     loadComponent: () =>
-      import('./parent-dashboard/parent-dashboard.component').then(m => m.ParentDashboardComponent),
+      import('./dashboard/parent-dashboard.component').then(m => m.ParentDashboardComponent),
   },
   {
     path: 'paiement',
