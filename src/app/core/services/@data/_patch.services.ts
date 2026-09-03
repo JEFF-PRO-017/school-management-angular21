@@ -1,6 +1,6 @@
 import { inject, Injectable } from "@angular/core";
 import { AddServices, concatStrings, GetServices, toRow } from ".";
-import { SHEET_TAMPON, H_TAMPON, DemandePaiement, MsgTemplate, AppUser, FraisConfig, FamilleTampon, EleveTampon, PensionTampon, MatiereConfig, AnneeScolaireFamille, Famille, Paiement } from "../../models";
+import { SHEET_TAMPON, H_TAMPON, DemandePaiement, MsgTemplate, AppUser, FraisConfig, FamilleTampon, EleveTampon, PensionTampon, MatiereConfig, AnneeScolaireFamille, Famille, Paiement, Moratoire } from "../../models";
 import { SHEET, H } from "./sheets";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { CacheService } from "../cache.service";
@@ -72,4 +72,10 @@ export class PatchServices {
         this.queue.enqueue({ sheetName: SHEET.paiements, row, col: 1, values: toRow(p, H.paiements) }, 'updateRow');
     }
 
+    async updateMoratoire(m: Moratoire): Promise<void> {
+        this.cache.upsertMoratoire(m)
+        const row = await this.sheets.findRowById(SHEET.moratoires, m.id_moratoire);
+        if (row === -1) return this.addsv.addMoratoire(m);
+        this.queue.enqueue({ sheetName: SHEET.moratoires, row, col: 1, values: toRow(m, H.moratoires) }, 'updateRow');
+    }
 }

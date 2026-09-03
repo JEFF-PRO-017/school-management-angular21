@@ -110,7 +110,8 @@ export class ParentHeaderComponent implements OnInit {
 
   /** Retour naturel vers la fenêtre précédente. */
   goBack(): void {
-    this.location.back();
+    // this.location.back();
+    this.router.navigate(['/espace-parent/dashboard'])
   }
 
   // --- Actions du menu 3 points (routes provisoires) ---

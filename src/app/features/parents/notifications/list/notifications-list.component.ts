@@ -1,15 +1,18 @@
 // notifications-list.component.ts
 // Page "Liste des notifications" — espace parent.
-// Tri : urgentes non lues en premier, puis non lues, puis lues (géré par le service).
-// Filtres : par type + lues/non lues. Chaque ligne est cliquable -> détail.
+// Lecture : ParentService.famille()?.notifications (TOUTES, pas seulement les non lues
+// exposées par ParentService.notifications() qui sert aux badges/compteurs ailleurs).
+// Tri (urgentes non lues > non lues > lues) : NotifService.trierParPriorite (métier pur).
 
 import { Component, ChangeDetectionStrategy, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { NotifParent } from '../../../../core/models';
+import { ParentService } from '../../../../core/services';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
 import { NotifService } from '../notif.service';
+
 
 
 @Component({
@@ -56,7 +59,7 @@ import { NotifService } from '../notif.service';
               [class.bg-light]="!n.lue"
               (click)="onOuvrir(n)">
 
-              <i class="bi fs-5" [class]="iconeDe(n.type)"
+              <i class="bi fs-5" [class]="notifService.iconeDe(n.type)"
                  [class.text-danger]="n.urgente"
                  [class.text-secondary]="!n.urgente"></i>
 
@@ -84,7 +87,10 @@ export class NotificationsListComponent {
   filtreType = signal<string>('');
   filtreLecture = signal<string>('');
 
-  private toutesNotifications = computed(() => this.notifService.notificationsTriees());
+  /** Lecture centralisée + tri métier : aucune donnée gérée localement ici. */
+  private toutesNotifications = computed(() =>
+    this.notifService.trierParPriorite(this.parentService.famille()?.notifications ?? [])
+  );
 
   notifications = computed(() => {
     const type = this.filtreType();
@@ -96,20 +102,10 @@ export class NotificationsListComponent {
   });
 
   constructor(
-    private notifService: NotifService,
+    private parentService: ParentService,
+    protected notifService: NotifService,
     private router: Router,
   ) {}
-
-  iconeDe(type: NotifParent['type']): string {
-    const icones: Record<NotifParent['type'], string> = {
-      absence: 'bi-calendar-x',
-      note: 'bi-journal-text',
-      rdv: 'bi-calendar-event',
-      paiement: 'bi-cash-coin',
-      info: 'bi-info-circle',
-    };
-    return icones[type] ?? 'bi-bell';
-  }
 
   onFiltreType(e: Event): void {
     this.filtreType.set((e.target as HTMLSelectElement).value);

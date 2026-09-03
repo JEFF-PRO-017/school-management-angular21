@@ -2,29 +2,30 @@
 // Page "Initier un paiement" — espace parent.
 // Route : /espace-parent/paiements/create
 //
-// Formulaire HTML simple avec ReactiveFormsModule + validateurs Angular natifs.
-// Modale de confirmation (recopie du mot "CONFIRMER") avant l'envoi réel.
-//
-// ⚠️ Ajuste les chemins d'import selon ton arborescence réelle.
+// Lecture (id_famille) : ParentService.famille().
+// Écriture : AddServices.addPaiement (déjà réel, aucune addition requise).
 
 import { Component, ChangeDetectionStrategy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Paiement } from '../../../../core/models';
-import { SessionService } from '../../../../core/services/@session/session.service';
+import { ParentService } from '../../../../core/services';
+import { AddServices } from '../../../../core/services/@data';
+import { BreadcrumbComponent } from '../../components/breadcrumb.component';
 import { ConfirmWordModalComponent } from '../../components/confirm-word-modal.component';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
-import { PaiementService } from '../paiement.service';
+
 
 
 @Component({
   selector: 'app-paiement-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, ParentHeaderComponent, ConfirmWordModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ParentHeaderComponent, BreadcrumbComponent, ConfirmWordModalComponent],
   template: `
     <app-parent-header titre="Initier un paiement"></app-parent-header>
+    <app-breadcrumb [items]="fil"></app-breadcrumb>
 
     <div class="container-fluid p-3" style="max-width:640px">
 
@@ -88,6 +89,11 @@ import { PaiementService } from '../paiement.service';
 export class PaiementFormComponent {
   @ViewChild('confirmEnvoi') confirmEnvoi!: ConfirmWordModalComponent;
 
+  fil = [
+    { label: 'Paiements', route: '/espace-parent/paiements' },
+    { label: 'Initier un paiement' },
+  ];
+
   form: FormGroup;
   envoiEnCours = false;
   erreurEnvoi = '';
@@ -95,8 +101,8 @@ export class PaiementFormComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private paiementService: PaiementService,
-    private sessionService: SessionService,
+    private parentService: ParentService,
+    private addServices: AddServices,
   ) {
     this.form = this.fb.group({
       montant_verse: [null, [Validators.required, Validators.min(1)]],
@@ -133,10 +139,11 @@ export class PaiementFormComponent {
 
     try {
       const valeurs = this.form.value;
+      const idFamille = this.parentService.famille()?.id_famille ?? '';
 
       const nouveauPaiement: Paiement = {
-        id_paiement: this.paiementService.generateId(),
-        id_famille: this.sessionService.get()?.id_famille ?? '',
+        id_paiement: `PAI-${Date.now()}`,
+        id_famille: idFamille,
         montant_verse: valeurs.montant_verse ?? 0,
         date_paiement: new Date().toISOString().slice(0, 10),
         mode_paiement: valeurs.mode_paiement ?? 'cash',
@@ -145,7 +152,7 @@ export class PaiementFormComponent {
         statut: 'crée',
       };
 
-      await this.paiementService.createPaiement(nouveauPaiement);
+      await this.addServices.addPaiement(nouveauPaiement);
       this.router.navigate(['/espace-parent/paiements']);
     } catch (err) {
       this.erreurEnvoi = "Une erreur est survenue lors de l'envoi du paiement. Veuillez réessayer.";

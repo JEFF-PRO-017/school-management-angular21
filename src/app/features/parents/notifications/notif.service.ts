@@ -1,39 +1,15 @@
 // notif.service.ts
-// Service dédié aux notifications côté espace parent.
-//
-// Lecture : basée sur CacheService.getFamilles() -> FamilleEnrichi.notifications
-// Tri : notifications urgentes non lues en premier, puis non lues, puis lues.
-//
-// ⚠️ Marquage "lu" géré en mémoire uniquement pour l'instant (TODO : brancher
-//    sur une vraie persistance — aucune méthode dédiée n'existait dans
-//    AddServices/PatchServices au moment de la génération).
-// ⚠️ Ajuste les chemins d'import selon ton arborescence réelle.
+// Service MÉTIER uniquement (aucun accès aux données).
+// Lecture : ParentService.famille()?.notifications (toutes) et
+//           ParentService.notifications() (non lues, déjà exposé pour badges/compteurs).
+// Écriture ("marquer comme lue") : ParentService.marquerLue(id) — méthode déjà réelle,
+// ne pas la dupliquer ici.
 
-import { Injectable, inject, signal, computed } from "@angular/core";
-import { NotifParent } from "../../../core/models";
-import { SessionService } from "../../../core/services/@session/session.service";
-import { CacheService } from "../../../core/services/cache.service";
-
+import { Injectable } from '@angular/core';
+import { NotifParent } from '../../../core/models';
 
 @Injectable({ providedIn: 'root' })
 export class NotifService {
-  private cache = inject(CacheService);
-  private sessionService = inject(SessionService);
-
-  private session = this.sessionService.get();
-
-  private notificationsSignal = signal<NotifParent[]>([]);
-  private initialized = false;
-
-  private ensureInit(): void {
-    if (this.initialized) return;
-    const famille = this.cache
-      .getFamilles()
-      .find((f: any) => f.id_famille === this.session?.id_famille);
-    this.notificationsSignal.set(famille?.notifications ?? []);
-    this.initialized = true;
-  }
-
   /** Score de priorité : plus petit = plus prioritaire (urgente+non lue en premier). */
   private prioriteDe(n: NotifParent): number {
     const urgente = n.urgente ?? false;
@@ -44,52 +20,46 @@ export class NotifService {
   }
 
   /**
-   * Liste triée par priorité (urgentes non lues > non lues > lues),
-   * puis par date décroissante au sein de chaque groupe.
+   * Trie une liste de notifications : urgentes non lues > non lues > lues,
+   * puis par date décroissante au sein de chaque groupe. Défensif si liste vide/undefined.
    */
-  notificationsTriees = computed(() => {
-    this.ensureInit();
-    return [...this.notificationsSignal()].sort((a, b) => {
-      const diffPriorite = this.prioriteDe(a) - this.prioriteDe(b);
-      if (diffPriorite !== 0) return diffPriorite;
+  trierParPriorite(liste: NotifParent[] | undefined | null): NotifParent[] {
+    return [...(liste ?? [])].sort((a, b) => {
+      const diff = this.prioriteDe(a) - this.prioriteDe(b);
+      if (diff !== 0) return diff;
       return (b.date ?? '').localeCompare(a.date ?? '');
     });
-  });
-
-  getById(id: string): NotifParent | undefined {
-    this.ensureInit();
-    return this.notificationsSignal().find(n => n.id === id);
   }
 
-  /** Index de la notification dans la liste triée (pour la navigation swipe). */
-  getIndexTrie(id: string): number {
-    return this.notificationsTriees().findIndex(n => n.id === id);
+  iconeDe(type: NotifParent['type'] | undefined): string {
+    const icones: Record<string, string> = {
+      absence: 'bi-calendar-x',
+      note: 'bi-journal-text',
+      rdv: 'bi-calendar-event',
+      paiement: 'bi-cash-coin',
+      info: 'bi-info-circle',
+    };
+    return icones[type ?? 'info'] ?? 'bi-bell';
   }
 
-  getSuivante(id: string): NotifParent | undefined {
-    const liste = this.notificationsTriees();
-    const idx = this.getIndexTrie(id);
-    return idx >= 0 && idx < liste.length - 1 ? liste[idx + 1] : undefined;
+  /**
+   * Trouve la position et les voisins (précédente/suivante) d'une notification
+   * au sein d'une liste déjà triée (même ordre que la page liste, pour une
+   * navigation swipe cohérente).
+   */
+  trouverVoisins(listeTriee: NotifParent[], id: string): {
+    index: number;
+    total: number;
+    precedente?: NotifParent;
+    suivante?: NotifParent;
+  } {
+    const liste = listeTriee ?? [];
+    const index = liste.findIndex(n => n.id === id);
+    return {
+      index,
+      total: liste.length,
+      precedente: index > 0 ? liste[index - 1] : undefined,
+      suivante: index >= 0 && index < liste.length - 1 ? liste[index + 1] : undefined,
+    };
   }
-
-  getPrecedente(id: string): NotifParent | undefined {
-    const liste = this.notificationsTriees();
-    const idx = this.getIndexTrie(id);
-    return idx > 0 ? liste[idx - 1] : undefined;
-  }
-
-  /** Marque une notification comme lue (silencieux, pas de re-tri visuel immédiat nécessaire). */
-  marquerCommeLue(id: string): void {
-    this.ensureInit();
-    this.notificationsSignal.update(list =>
-      list.map(n => (n.id === id ? { ...n, lue: true } : n))
-    );
-    // TODO: persister le marquage "lu" (AddServices/PatchServices n'exposaient
-    // aucune méthode dédiée aux notifications au moment de la génération).
-  }
-
-  nbNonLues = computed(() => {
-    this.ensureInit();
-    return this.notificationsSignal().filter(n => !n.lue).length;
-  });
 }

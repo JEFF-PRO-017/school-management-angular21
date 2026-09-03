@@ -2,7 +2,7 @@ import { inject, Injectable } from "@angular/core";
 import { CacheService } from "../cache.service";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { SheetsQueueServiceService } from "../sheets-queue.service";
-import { Famille, Classe, FraisConfig, Enseignant, MatiereConfig, AnneeScolaireFamille, PointageResult, Eleve, Note, Paiement, AppUser } from "../../models";
+import { Famille, Classe, FraisConfig, Enseignant, MatiereConfig, AnneeScolaireFamille, PointageResult, Eleve, Note, Paiement, AppUser, Moratoire } from "../../models";
 import { SHEET, H } from "./sheets";
 import { deconcatString } from "./helpers";
 
@@ -56,6 +56,9 @@ export class DataServiceBase {
 
         this.sheets.fetchRaw(SHEET.paiements).then(r =>
             this.cache.setPaiements(this.parse<Paiement>(r, H.paiements))
+        );
+        this.sheets.fetchRaw(SHEET.moratoires).then(r =>
+            this.cache.setMoratoires(this.parse<Moratoire>(r, H.moratoires))
         );
 
     }

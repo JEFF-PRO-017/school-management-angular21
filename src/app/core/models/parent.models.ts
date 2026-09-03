@@ -3,6 +3,7 @@
 // Étend les modèles principaux avec les tables tampon
 // et les types spécifiques à l'espace parent.
 
+import { FamilleEnrichi } from './family';
 import { Famille, Eleve, Paiement, Absence, Note, Sequence } from './last_index';
 
 // ── Session parent ────────────────────────────────────────────────
@@ -50,7 +51,7 @@ export interface PaiementParent {
 }
 
 export interface DashboardParent {
-  famille:    Famille;
+  famille:    FamilleEnrichi;
   eleves:     EleveParent[];
   paiement:   PaiementParent;
   notifications: NotifParent[];

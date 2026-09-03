@@ -7,7 +7,7 @@ import {
   MsgTemplate, LogAlerte, PermissionId
 } from '../models/last_index';
 import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
-import { AnneeScolaireFamille } from '../models/family';
+import { AnneeScolaireFamille, Moratoire } from '../models/family';
 import { AppUser, AppUserEnrichi, PointageResult, Absence, Paiement, PaiementEnrichi } from '../models';
 
 
@@ -37,6 +37,10 @@ export class CacheService {
   private _elevesTampon = signal<EleveTampon[]>([]);
   private _pensionsTampon = signal<PensionTampon[]>([]);
   private _demandesPaiement = signal<DemandePaiement[]>([]);
+
+  private _moratoire = signal<Moratoire[]>([])
+
+
 
   // ── Section active — injectée depuis AuthService via setSection() ─
   // Permet de filtrer les classes par section sans passer par le composant
@@ -91,7 +95,7 @@ export class CacheService {
   // RÈGLE RESPECTÉE : on crée un NOUVEL objet avec { ...f } pour chaque famille
   // On ne mute jamais un objet existant dans un computed()
   private _famillesEnrichies = computed<Famille[] | any[]>(() => {
-    const anneeSvc = this._anneeSvc() //N3
+    const anneeSvc = this._anneeSvcEnrichies() //N3
     const elevesEnrichis = this._elevesEnrichis();   // N2
     const paiementsParFam = this._paiementsParFamille(); // N1
 
@@ -103,6 +107,16 @@ export class CacheService {
     }));
 
   });
+
+  private _anneeSvcEnrichies = computed<AnneeScolaireFamille[]>(() => {
+    const moratoires = this._moratoire()
+
+    return this._anneeSvc().map(a => ({
+      ...a,
+      moratoires: moratoires.filter(m => m.id_annee_scolaire === a.id_annee_scolaire)
+    }))
+
+  })
 
   // ── Niveau 3 : matières enrichies ─────────────────────────────
   private _matieresEnrichies = computed<MatiereConfig[]>(() => {
@@ -191,11 +205,12 @@ export class CacheService {
   setPaiements(d: Paiement[]) { this._paiements.set(d); }
   setAnneeSvc(a: AnneeScolaireFamille[]) { this._anneeSvc.set(a); }
   setPointages(p: PointageResult[]) { this._pointages.set(p) }
+  setMoratoires(m: Moratoire[]) { this._moratoire.set(m) }
 
   // ── Upsert / remove ───────────────────────────────────────────
   upsertFamille(f: Famille) { this._familles.update(l => upsert(l, f, 'id_famille')); }
   removeFamille(id: string) { this._familles.update(l => l.filter(x => x.id_famille !== id)); }
-  removePaiement(id: string) {  this._paiements.update(l => l.filter(x => x.id_paiement !== id)); }
+  removePaiement(id: string) { this._paiements.update(l => l.filter(x => x.id_paiement !== id)); }
 
   upsertEleve(e: Eleve) { this._eleves.update(l => upsert(l, e, 'id_eleve')); }
   removeEleve(id: string) { this._eleves.update(l => l.filter(x => x.id_eleve !== id)); }
@@ -209,6 +224,8 @@ export class CacheService {
   upsertMatiere(m: MatiereConfig) { this._matieres.update(l => upsert(l, m, 'id_matiere')); }
 
   upsertAnneeSvc(a: AnneeScolaireFamille) { this._anneeSvc.update(l => upsert(l, a, 'id_annee_scolaire')) }
+
+  upsertMoratoire(m: Moratoire) { this._moratoire.update(l => upsert(l, m, 'id_moratoire')) }
 
   // ── Absences ──────────────────────────────────────────────────────
   getAbsences(): Absence[] { return this._absences(); }

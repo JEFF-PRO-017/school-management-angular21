@@ -1,103 +1,60 @@
 // eleve.service.ts
-// Service dédié aux enfants côté espace parent.
+// Service MÉTIER uniquement (aucun accès aux données).
+// Lecture : ParentService.famille()?.eleves (EleveEnrichi[]).
 //
-// Lecture : basée sur CacheService.getFamilles() -> FamilleEnrichi.eleves
+// ⚠️ Fonction demandée à récupérer pour ton propre service :
+//    `calculerMoyenneGenerale`. Elle est volontairement autonome
+//    (aucune dépendance à un autre service) pour être copiable telle quelle.
 //
-// ⚠️ IMPORTANT : la méthode `calculerMoyenneGenerale` (et `calculerMoyenneMatiere`)
-//    ci-dessous est la fonction demandée à récupérer pour ton propre service.
-//    Elle est volontairement autonome (aucune dépendance à CacheService/session)
-//    pour que tu puisses la copier telle quelle.
-//
-// ⚠️ Ajuste les chemins d'import selon ton arborescence réelle.
+// Logique alignée sur celle déjà utilisée dans ParentService (calcMoySeq/calcMoyTrim) :
+// moyenne pondérée par le coefficient de chaque matière (eleve.classe.matieres),
+// généralisée à TOUTES les séquences présentes (pas seulement SEQ1-3).
+// Si aucun coefficient n'est disponible (classe/matières non enrichies),
+// on retombe sur une moyenne simple non pondérée — valeur par défaut sûre.
 
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { EleveEnrichi, Note } from '../../../core/models';
-import { SessionService } from '../../../core/services/@session/session.service';
-import { CacheService } from '../../../core/services/cache.service';
 
 @Injectable({ providedIn: 'root' })
 export class EleveService {
-  private cache = inject(CacheService);
-  private sessionService = inject(SessionService);
-
-  private session = this.sessionService.get();
-
-  private enfantsSignal = signal<EleveEnrichi[]>([]);
-  private initialized = false;
-
-  private ensureInit(): void {
-    if (this.initialized) return;
-    const famille = this.cache
-      .getFamilles()
-      .find((f: any) => f.id_famille === this.session?.id_famille);
-    this.enfantsSignal.set(famille?.eleves ?? []);
-    this.initialized = true;
-  }
-
-  enfantsFamille = computed(() => {
-    this.ensureInit();
-    return this.enfantsSignal();
-  });
-
-  getById(idEleve: string): EleveEnrichi | undefined {
-    this.ensureInit();
-    return this.enfantsSignal().find(e => e.id_eleve === idEleve);
-  }
-
-  getIndex(idEleve: string): number {
-    return this.enfantsFamille().findIndex(e => e.id_eleve === idEleve);
-  }
-
-  getSuivant(idEleve: string): EleveEnrichi | undefined {
-    const liste = this.enfantsFamille();
-    const idx = this.getIndex(idEleve);
-    return idx >= 0 && idx < liste.length - 1 ? liste[idx + 1] : undefined;
-  }
-
-  getPrecedent(idEleve: string): EleveEnrichi | undefined {
-    const liste = this.enfantsFamille();
-    const idx = this.getIndex(idEleve);
-    return idx > 0 ? liste[idx - 1] : undefined;
-  }
-
-  // =========================================================================
-  // CALCUL DE LA MOYENNE — fonction autonome à déplacer dans ton propre service
-  // =========================================================================
-
-  /**
-   * Convertit une note (qui peut être number ou string) en nombre exploitable.
-   * Retourne null si la valeur n'est pas convertible (ex: note non saisie).
-   */
-  private parseNote(valeur: number | string): number | null {
+  /** Convertit une note (number | string) en nombre exploitable, ou null si invalide. */
+  private parseNote(valeur: number | string | undefined | null): number | null {
+    if (valeur === undefined || valeur === null) return null;
     const n = typeof valeur === 'string' ? parseFloat(valeur.replace(',', '.')) : valeur;
     return Number.isFinite(n) ? n : null;
   }
 
-  /**
-   * Calcule la moyenne générale d'un élève, toutes matières et séquences confondues.
-   * Chaque note est ramenée sur 20 avant d'être moyennée (moyenne simple, non pondérée).
-   *
-   * @param eleve Élève enrichi (doit contenir eleve.sequences)
-   * @returns Moyenne générale sur 20, arrondie à 2 décimales (0 si aucune note valide)
-   */
-  calculerMoyenneGenerale(eleve: EleveEnrichi): number {
-    const toutesNotes: Note[] = (eleve.sequences ?? []).flatMap(s => s.notes_eleve ?? []);
-    const notesSur20 = toutesNotes
-      .map(n => {
-        const obtenue = this.parseNote(n.note_obtenue);
-        if (obtenue === null || !n.note_sur) return null;
-        return (obtenue / n.note_sur) * 20;
-      })
-      .filter((v): v is number => v !== null);
-
-    if (notesSur20.length === 0) return 0;
-    const moyenne = notesSur20.reduce((somme, v) => somme + v, 0) / notesSur20.length;
-    return Math.round(moyenne * 100) / 100;
+  /** Coefficient d'une matière pour la classe de l'élève (1 par défaut si non trouvé). */
+  private coefficientDe(eleve: EleveEnrichi, matiere: string): number {
+    const config = eleve.classe?.matieres?.find((m: any) => m.nom_matiere === matiere);
+    const c = config ? +(config as any).coefficient : NaN;
+    return Number.isFinite(c) && c > 0 ? c : 1;
   }
 
   /**
-   * Calcule la moyenne d'un élève pour une matière donnée, toutes séquences confondues.
+   * Moyenne générale d'un élève, toutes matières et séquences confondues,
+   * pondérée par coefficient de matière. Chaque note est ramenée sur 20.
+   * Retourne 0 si aucune note valide (valeur par défaut sûre).
    */
+  calculerMoyenneGenerale(eleve: EleveEnrichi): number {
+    const toutesNotes: Note[] = (eleve.sequences ?? []).flatMap(s => s.notes_eleve ?? []);
+    let pointsPonderes = 0;
+    let sommeCoefficients = 0;
+
+    for (const n of toutesNotes) {
+      const obtenue = this.parseNote(n.note_obtenue);
+      if (obtenue === null || !n.note_sur) continue;
+      const sur20 = (obtenue / n.note_sur) * 20;
+      const coeff = this.coefficientDe(eleve, n.matiere ?? '');
+      pointsPonderes += sur20 * coeff;
+      sommeCoefficients += coeff;
+    }
+
+    if (sommeCoefficients === 0) return 0;
+    return Math.round((pointsPonderes / sommeCoefficients) * 100) / 100;
+  }
+
+  /** Moyenne d'une matière donnée pour un élève, toutes séquences confondues. */
   calculerMoyenneMatiere(eleve: EleveEnrichi, matiere: string): number {
     const notesMatiere: Note[] = (eleve.sequences ?? [])
       .flatMap(s => s.notes_eleve ?? [])
@@ -115,4 +72,24 @@ export class EleveService {
     const moyenne = notesSur20.reduce((somme, v) => somme + v, 0) / notesSur20.length;
     return Math.round(moyenne * 100) / 100;
   }
+
+  getIndex(liste: any[], idEleve: string): number {
+    return liste.findIndex(e => e.id_eleve === idEleve);
+  }
+
+  getSuivant(liste: any[], idEleve: string): EleveEnrichi | undefined {
+    const idx = this.getIndex(liste, idEleve);
+    return idx >= 0 && idx < liste.length - 1 ? liste[idx + 1] : undefined;
+  }
+
+  getPrecedent(liste: any[], idEleve: string): EleveEnrichi | undefined {
+    const idx = this.getIndex(liste, idEleve);
+    return idx > 0 ? liste[idx - 1] : undefined;
+  }
+
+  getById(liste:any[] ,idEleve: string): EleveEnrichi | undefined {
+    return liste.find(e => e.id_eleve === idEleve);
+  }
+
+
 }

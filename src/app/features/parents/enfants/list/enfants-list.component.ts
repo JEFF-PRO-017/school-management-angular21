@@ -1,14 +1,14 @@
 // enfants-list.component.ts
 // Page "Liste des enfants" — espace parent.
-// Interface adaptée mobile : cartes empilées, cliquables vers le détail.
+// Lecture : ParentService.famille()?.eleves (source centralisée).
 
-import { Component, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { EleveEnrichi } from '../../../../core/models';
+import { ParentService } from '../../../../core/services';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
-import { EleveService } from '../eleve.service';
 
 
 
@@ -38,7 +38,7 @@ import { EleveService } from '../eleve.service';
               </div>
 
               <div class="flex-grow-1">
-                <div class="fw-semibold">{{ e.prenom }} {{ e.nom }}</div>
+                <div class="fw-semibold">{{ e.prenom || '—' }} {{ e.nom || '' }}</div>
                 <div class="small text-muted">
                   {{ e.classe?.nom_classe ?? 'Classe non renseignée' }}
                 </div>
@@ -52,16 +52,21 @@ import { EleveService } from '../eleve.service';
     </div>
   `,
 })
-export class EnfantsListComponent {
-  enfants = computed(() => this.eleveService.enfantsFamille());
+export class EnfantsListComponent implements OnInit {
+  /** Lecture centralisée : famille() est la seule source, exposée par ParentService. */
+  enfants = computed(() => this.parentService.famille()?.eleves ?? []);
 
   constructor(
-    private eleveService: EleveService,
+    private parentService: ParentService,
     private router: Router,
-  ) {}
+  ) { }
+
+  ngOnInit(): void {
+    console.log('enfants', this.enfants())
+  }
 
   initiales(e: EleveEnrichi): string {
-    return `${e.prenom?.charAt(0) ?? ''}${e.nom?.charAt(0) ?? ''}`.toUpperCase();
+    return `${e.prenom?.charAt(0) ?? ''}${e.nom?.charAt(0) ?? ''}`.toUpperCase() || '?';
   }
 
   onOuvrir(e: EleveEnrichi): void {

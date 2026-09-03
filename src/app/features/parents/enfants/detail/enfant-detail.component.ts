@@ -1,18 +1,19 @@
 // enfant-detail.component.ts
 // Page "Détail d'un enfant" — espace parent.
 // Route : /espace-parent/enfants/:id
-//
-// Structure : infos élève en haut, onglets Évaluations (par défaut) / Absences,
-// tableaux réutilisant TableComponent. Navigation swipe gauche/droite entre enfants.
+// Lecture : ParentService.elevesEnrichis() (centralisé).
+// Calculs (moyennes) et navigation prev/next : EleveService (métier pur).
 
 import { Component, ChangeDetectionStrategy, computed, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EleveEnrichi, Absence } from '../../../../core/models';
+import { ParentService } from '../../../../core/services';
 import { TableComponent, TableColumn } from '../../../../shared/components/table/table.component';
 import { BreadcrumbComponent } from '../../components/breadcrumb.component';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { EleveService } from '../eleve.service';
+
 
 
 interface LigneMatiere {
@@ -35,7 +36,6 @@ type Onglet = 'evaluations' | 'absences';
     @if (enfant) {
       <div class="container-fluid p-3">
 
-        <!-- Infos élève -->
         <div class="d-flex align-items-center gap-3 mb-3">
           <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
                style="width:56px;height:56px;font-weight:600;font-size:1.1rem">
@@ -50,7 +50,6 @@ type Onglet = 'evaluations' | 'absences';
           </div>
         </div>
 
-        <!-- Onglets -->
         <ul class="nav nav-tabs mb-3">
           <li class="nav-item">
             <button class="nav-link" [class.active]="ongletActif() === 'evaluations'" (click)="ongletActif.set('evaluations')">
@@ -126,13 +125,14 @@ export class EnfantDetailComponent {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private parentService: ParentService,
     private eleveService: EleveService,
   ) {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
-        this.enfant = this.eleveService.getById(id);
-        this.ongletActif.set('evaluations'); // reset onglet à chaque changement d'élève
+        this.enfant = this.eleveService.getById(this.parentService.elevesEnrichis(), id);
+        this.ongletActif.set('evaluations');
       }
     });
   }
@@ -141,17 +141,15 @@ export class EnfantDetailComponent {
     return `${e.prenom?.charAt(0) ?? ''}${e.nom?.charAt(0) ?? ''}`.toUpperCase();
   }
 
-  fil = computed(() => [
-    { label: 'Mes enfants', route: '/espace-parent/enfants' },
-    { label: this.enfant ? `${this.enfant.prenom ?? ''} ${this.enfant.nom ?? ''}`.trim() : 'Détail' },
-  ]);
+  fil() {
+    return [
+      { label: 'Mes enfants', route: '/espace-parent/enfants' },
+      { label: this.enfant ? `${this.enfant.prenom ?? ''} ${this.enfant.nom ?? ''}`.trim() : 'Détail' },
+    ];
+  }
 
-  moyenneGenerale = computed(() => {
-    if (!this.enfant) return 0;
-    return this.eleveService.calculerMoyenneGenerale(this.enfant);
-  });
+  moyenneGenerale = computed(() => this.eleveService.calculerMoyenneGenerale(this.enfant as EleveEnrichi));
 
-  /** Construit les lignes du tableau : une ligne par matière, une colonne par séquence. */
   lignesMatieres = computed<LigneMatiere[]>(() => {
     if (!this.enfant?.sequences) return [];
 
@@ -176,13 +174,11 @@ export class EnfantDetailComponent {
     });
   });
 
-  /** Séquences réellement présentes dans les notes de l'élève, triées. */
   private sequencesPresentes = computed<string[]>(() => {
     if (!this.enfant?.sequences) return [];
     return [...new Set(this.enfant.sequences.map(s => s.sequence ?? '—'))].sort();
   });
 
-  /** Colonnes générées dynamiquement : Matière, une colonne par séquence, Moyenne. */
   colonnesEvaluations = computed<TableColumn<LigneMatiere>[]>(() => {
     const colonnesSequences: TableColumn<LigneMatiere>[] = this.sequencesPresentes().map(seq => ({
       id: seq,
@@ -204,7 +200,6 @@ export class EnfantDetailComponent {
     ];
   });
 
-  // ── Navigation gestuelle entre enfants ──────────────────────
   @HostListener('touchstart', ['$event'])
   onTouchStart(e: TouchEvent): void {
     this.touchStartX = e.changedTouches[0].screenX;
@@ -218,14 +213,15 @@ export class EnfantDetailComponent {
 
   private traiterSwipe(): void {
     if (!this.enfant) return;
+    const liste = this.parentService.elevesEnrichis();
     const delta = this.touchEndX - this.touchStartX;
     if (Math.abs(delta) < this.seuilSwipe) return;
 
     if (delta < 0) {
-      const suivant = this.eleveService.getSuivant(this.enfant.id_eleve);
+      const suivant = this.eleveService.getSuivant(liste, this.enfant.id_eleve);
       if (suivant) this.router.navigate(['/espace-parent/enfants', suivant.id_eleve]);
     } else {
-      const precedent = this.eleveService.getPrecedent(this.enfant.id_eleve);
+      const precedent = this.eleveService.getPrecedent(liste, this.enfant.id_eleve);
       if (precedent) this.router.navigate(['/espace-parent/enfants', precedent.id_eleve]);
     }
   }

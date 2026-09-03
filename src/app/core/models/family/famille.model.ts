@@ -1,7 +1,7 @@
 import { Absence, Classe, Eleve, Note } from "../academic";
 import { NotifParent } from "../communication";
 import { Paiement } from "../payment";
-import {  Sequence, StatusFamille } from "../shared";
+import { Sequence, StatusFamille } from "../shared";
 
 export interface Famille {
     id_famille: string;
@@ -19,7 +19,6 @@ export interface FamilleEnrichi extends Famille {
     eleves?: EleveEnrichi[];
     paiements?: Paiement[];
     annee_scolaires: AnneeScolaireFamille[];
-    moratoires?: Moratoire[];
     notifications?: NotifParent[];
 }
 export interface AnneeScolaireFamille {
@@ -32,8 +31,9 @@ export interface AnneeScolaireFamille {
     montant_reduction_special: number;
     anciennete: number;
     format_montant: number;
-    format_statut : 'physique'|'cash',
-    application_montant:number
+    format_statut: 'physique' | 'cash',
+    application_montant: number,
+    moratoires?: Moratoire[];
 }
 
 export interface Moratoire {
@@ -45,7 +45,7 @@ export interface Moratoire {
     commentaire?: string;
     numero_moratoire?: string;
     regler: boolean;
-    statut: 'ACTIF'|'NON-ACTIF'
+    statut: 'ACTIF' | 'NON-ACTIF'
 }
 
 export interface MoratoireEnrichi extends Moratoire {
@@ -56,6 +56,6 @@ export interface EleveEnrichi extends Eleve {
     famille?: FamilleEnrichi;
     classe?: Classe;
     sequences?: { sequence: Sequence; notes_eleve: Note[] }[];
-    absences?:Absence[];
+    absences?: Absence[];
 }
 

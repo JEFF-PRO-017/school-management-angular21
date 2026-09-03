@@ -14,7 +14,8 @@ export const SHEET = {
     absences: 'F13_ABSENCES',
     users: 'F14_USERS',
     anneesvc: 'F15_ANNEESVC',
-    pointages: 'F16_POINTAGES'
+    pointages: 'F16_POINTAGES',
+    moratoires:'F17_MORATOIRES'
 } as const;
 
 export const H = {
@@ -45,7 +46,8 @@ export const H = {
     users: ['id', 'username', 'mot_de_passe', 'nom', 'role', 'is_admin', 'section', 'permissions', 'tel','status'],
     anneesvc: ['id_annee_scolaire', 'id_famille', 'annee_scolaire', 'commentaire', 'montant_total_attendu', 'montant_reduction',
         'montant_reduction_special', 'anciennete', 'format_montant', 'format_statut', 'application_montant'],
-    pointages: ['id_pointage', 'id_matiere', 'id_enseignants', 'date_debut', 'date_fin', 'duree']
+    pointages: ['id_pointage', 'id_matiere', 'id_enseignants', 'date_debut', 'date_fin', 'duree'],
+    moratoires: ['id_moratoire','id_famille','id_annee_scolaire','date_debut','date_fin','commentaire','numero_moratoire','regler','statut']
 } as const;
 
 export const BLOC = 1000;

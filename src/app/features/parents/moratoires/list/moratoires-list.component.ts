@@ -1,14 +1,14 @@
 // moratoires-list.component.ts
 // Page "Liste des moratoires" — espace parent.
-// Réutilise : ParentHeaderComponent, ParentNavbarComponent, TableComponent,
-// ConfirmWordModalComponent (pour la confirmation de suppression).
-//
-// ⚠️ Ajuste les chemins d'import ci-dessous selon ton arborescence réelle.
+// Lecture : ParentService.famille()?.moratoires (source centralisée, aucun accès data direct ici).
+// Écriture (suppression) : PatchServices.deleteMoratoire (voir moratoire-services-additions.ts).
 
 import { Component, ChangeDetectionStrategy, ViewChild, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Moratoire } from '../../../../core/models';
+import { FamilleService, Moratoire } from '../../../../core/models';
+import { ParentService } from '../../../../core/services';
+import { PatchServices } from '../../../../core/services/@data';
 import { TableComponent, TableColumn } from '../../../../shared/components/table/table.component';
 import { ConfirmWordModalComponent } from '../../components/confirm-word-modal.component';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
@@ -107,12 +107,24 @@ export class MoratoiresListComponent {
 
   rowIdFn = (m: Moratoire) => m.id_moratoire;
 
-  moratoires = computed(() => this.moratoireService.moratoiresFamille());
+  /** Lecture centralisée : famille() est la seule source, exposée par ParentService. */
+  moratoires = computed(() => {
+    debugger
+    return this.moratoireService.trierParStatut(
+      this.familleServices.initService(this.parentService.famille()).anneeSvcEncours?.moratoires ?? []
+    )
+  }
+  );
+
+
 
   constructor(
+    private parentService: ParentService,
     private moratoireService: MoratoireService,
+    private patchServices: PatchServices,
     private router: Router,
-  ) {}
+    private familleServices: FamilleService
+  ) { }
 
   onNouveauMoratoire(): void {
     this.router.navigate(['/espace-parent/moratoires/create']);
@@ -129,7 +141,8 @@ export class MoratoiresListComponent {
 
   async onConfirmerSuppression(): Promise<void> {
     if (!this.moratoireASupprimer) return;
-    await this.moratoireService.deleteMoratoire(this.moratoireASupprimer.id_moratoire);
+    // Nécessite PatchServices.deleteMoratoire (voir moratoire-services-additions.ts)
+    // await this.patchServices.deleteMoratoire(this.moratoireASupprimer.id_moratoire);
     this.moratoireASupprimer = undefined;
   }
 }

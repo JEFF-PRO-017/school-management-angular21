@@ -1,18 +1,17 @@
 // paiements-list.component.ts
 // Page "Liste des paiements" — espace parent.
-// Réutilise : ParentHeaderComponent, ParentNavbarComponent, TableComponent.
-// Filtres dédiés : statut + mode de paiement (en plus de la recherche globale du tableau).
-//
-// ⚠️ Ajuste les chemins d'import selon ton arborescence réelle.
+// Lecture : ParentService.famille()?.paiements (source centralisée).
 
 import { Component, ChangeDetectionStrategy, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Paiement } from '../../../../core/models';
+import { ParentService } from '../../../../core/services';
 import { TableComponent, TableColumn } from '../../../../shared/components/table/table.component';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
 import { PaiementService } from '../paiement.service';
+
 
 
 @Component({
@@ -70,7 +69,7 @@ import { PaiementService } from '../paiement.service';
         </ng-template>
 
         <ng-template cellDef="montant_verse" let-p>
-          {{ (p.montant_verse ?? 0) | number }} FCFA
+          {{ formatMontant(p.montant_verse) }}
         </ng-template>
 
       </app-table>
@@ -91,21 +90,29 @@ export class PaiementsListComponent {
   filtreStatut = signal<string>('');
   filtreMode = signal<string>('');
 
-  private paiements = computed(() => this.paiementService.paiementsFamille());
+  /** Lecture centralisée : famille() est la seule source, exposée par ParentService. */
+  private paiements = computed(() =>
+    this.paiementService.trierParDate(this.parentService.famille()?.paiements ?? [])
+  );
 
   paiementsFiltres = computed(() => {
     const statut = this.filtreStatut();
     const mode = this.filtreMode();
-    return this.paiements().filter(p =>
+    return this.paiements().filter((p: Paiement) =>
       (!statut || p.statut === statut) &&
       (!mode || p.mode_paiement === mode)
     );
   });
 
   constructor(
+    private parentService: ParentService,
     private paiementService: PaiementService,
     private router: Router,
   ) {}
+
+  formatMontant(montant: number | undefined): string {
+    return this.paiementService.formatMontant(montant);
+  }
 
   onFiltreStatut(e: Event): void {
     this.filtreStatut.set((e.target as HTMLSelectElement).value);

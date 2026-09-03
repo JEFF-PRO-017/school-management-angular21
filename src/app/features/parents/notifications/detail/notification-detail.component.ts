@@ -2,15 +2,15 @@
 // Page "Détail d'une notification" — espace parent.
 // Route : /espace-parent/notifications/:id
 //
-// - Marque automatiquement la notification comme lue (silencieux) à l'ouverture.
-// - Navigation gestuelle : swipe gauche -> notification suivante,
-//   swipe droite -> notification précédente (basé sur le même ordre trié
-//   que la liste : urgentes non lues > non lues > lues).
+// Lecture : ParentService.famille()?.notifications.
+// Marquage "lu" : ParentService.marquerLue(id) — méthode déjà réelle, non dupliquée ici.
+// Navigation swipe : NotifService.trouverVoisins (métier pur, sur la même liste triée que la page liste).
 
-import { Component, ChangeDetectionStrategy, OnInit, HostListener, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NotifParent } from '../../../../core/models';
+import { ParentService } from '../../../../core/services';
 import { BreadcrumbComponent } from '../../components/breadcrumb.component';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { NotifService } from '../notif.service';
@@ -27,10 +27,10 @@ import { NotifService } from '../notif.service';
     <app-breadcrumb [items]="fil()"></app-breadcrumb>
 
     @if (notification) {
-      <div class="container-fluid p-3" style="max-width:640px" #zoneSwipe>
+      <div class="container-fluid p-3" style="max-width:640px">
 
         <div class="d-flex align-items-center gap-2 mb-3">
-          <i class="bi fs-3" [class]="iconeDe(notification.type)"
+          <i class="bi fs-3" [class]="notifService.iconeDe(notification.type)"
              [class.text-danger]="notification.urgente"
              [class.text-secondary]="!notification.urgente"></i>
           @if (notification.urgente) {
@@ -46,12 +46,12 @@ import { NotifService } from '../notif.service';
 
         <div class="d-flex justify-content-between align-items-center border-top pt-3">
           <button type="button" class="btn btn-outline-secondary btn-sm"
-                  [disabled]="!aPrecedente" (click)="allerPrecedente()">
+                  [disabled]="!voisins.precedente" (click)="allerVers(voisins.precedente)">
             <i class="bi bi-chevron-left"></i> Précédent
           </button>
-          <span class="text-muted small">{{ positionActuelle }} / {{ positionTotale }}</span>
+          <span class="text-muted small">{{ voisins.index + 1 }} / {{ voisins.total }}</span>
           <button type="button" class="btn btn-outline-secondary btn-sm"
-                  [disabled]="!aSuivante" (click)="allerSuivante()">
+                  [disabled]="!voisins.suivante" (click)="allerVers(voisins.suivante)">
             Suivant <i class="bi bi-chevron-right"></i>
           </button>
         </div>
@@ -65,76 +65,49 @@ import { NotifService } from '../notif.service';
     }
   `,
 })
-export class NotificationDetailComponent implements OnInit {
+export class NotificationDetailComponent {
   notification?: NotifParent;
-
-  aPrecedente = false;
-  aSuivante = false;
-  positionActuelle = 0;
-  positionTotale = 0;
+  voisins: { index: number; total: number; precedente?: NotifParent; suivante?: NotifParent } =
+    { index: -1, total: 0 };
 
   private touchStartX = 0;
   private touchEndX = 0;
-  private readonly seuilSwipe = 50; // px minimum pour considérer un swipe
+  private readonly seuilSwipe = 50;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private notifService: NotifService,
+    private parentService: ParentService,
+    protected notifService: NotifService,
   ) {
-    // Recharge les données à chaque changement de :id (navigation entre notifications)
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) this.chargerNotification(id);
     });
   }
 
-  ngOnInit(): void { }
-  
-  fil = computed(() => [
-    { label: 'Mes Notifications', route: '/espace-parent/notifications' },
-    { label: this.notification ? `${this.notification.titre ?? ''}`.trim() : 'Détail' },
-  ]);
-
-
   private chargerNotification(id: string): void {
-    this.notification = this.notifService.getById(id);
+    const listeTriee = this.notifService.trierParPriorite(this.parentService.famille()?.notifications ?? []);
+    this.notification = listeTriee.find(n => n.id === id);
     if (!this.notification) return;
 
     if (!(this.notification.lue ?? false)) {
-      // Marquage silencieux : pas de feedback visuel, pas de re-render de la liste ici.
-      this.notifService.marquerCommeLue(id);
+      // Marquage silencieux via la méthode déjà réelle de ParentService.
+      this.parentService.marquerLue(id);
     }
 
-    const index = this.notifService.getIndexTrie(id);
-    const total = this.notifService.notificationsTriees().length;
-    this.positionActuelle = index + 1;
-    this.positionTotale = total;
-    this.aPrecedente = !!this.notifService.getPrecedente(id);
-    this.aSuivante = !!this.notifService.getSuivante(id);
+    this.voisins = this.notifService.trouverVoisins(listeTriee, id);
   }
 
-  allerPrecedente(): void {
-    if (!this.notification) return;
-    const precedente = this.notifService.getPrecedente(this.notification.id);
-    if (precedente) this.router.navigate(['/espace-parent/notifications', precedente.id]);
+  fil() {
+    return [
+      { label: 'Notifications', route: '/espace-parent/notifications' },
+      { label: this.notification?.titre || 'Détail' },
+    ];
   }
 
-  allerSuivante(): void {
-    if (!this.notification) return;
-    const suivante = this.notifService.getSuivante(this.notification.id);
-    if (suivante) this.router.navigate(['/espace-parent/notifications', suivante.id]);
-  }
-
-  iconeDe(type: NotifParent['type']): string {
-    const icones: Record<NotifParent['type'], string> = {
-      absence: 'bi-calendar-x',
-      note: 'bi-journal-text',
-      rdv: 'bi-calendar-event',
-      paiement: 'bi-cash-coin',
-      info: 'bi-info-circle',
-    };
-    return icones[type] ?? 'bi-bell';
+  allerVers(n?: NotifParent): void {
+    if (n) this.router.navigate(['/espace-parent/notifications', n.id]);
   }
 
   // ── Navigation gestuelle (swipe) ─────────────────────────────
@@ -152,13 +125,7 @@ export class NotificationDetailComponent implements OnInit {
   private traiterSwipe(): void {
     const delta = this.touchEndX - this.touchStartX;
     if (Math.abs(delta) < this.seuilSwipe) return;
-
-    if (delta < 0) {
-      // Glissement vers la gauche -> notification suivante
-      this.allerSuivante();
-    } else {
-      // Glissement vers la droite -> notification précédente
-      this.allerPrecedente();
-    }
+    if (delta < 0) this.allerVers(this.voisins.suivante);
+    else this.allerVers(this.voisins.precedente);
   }
 }

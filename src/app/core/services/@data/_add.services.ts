@@ -1,6 +1,6 @@
 import { inject, Injectable } from "@angular/core";
 import { concatStrings } from ".";
-import { Absence, AnneeScolaireFamille, AppUser, DemandePaiement, EleveTampon, Famille, FamilleTampon, FraisConfig, H_TAMPON, LogAlerte, MatiereConfig, MsgTemplate, Note, Paiement, PensionTampon, PointageResult, SHEET_TAMPON } from "../../models";
+import { Absence, AnneeScolaireFamille, AppUser, DemandePaiement, EleveTampon, Famille, FamilleTampon, FraisConfig, H_TAMPON, LogAlerte, MatiereConfig, Moratoire, MsgTemplate, Note, Paiement, PensionTampon, PointageResult, SHEET_TAMPON } from "../../models";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { CacheService } from "../cache.service";
 import { SheetsQueueServiceService } from "../sheets-queue.service";
@@ -8,7 +8,7 @@ import { toRow } from "./helpers";
 import { H, SHEET } from "./sheets";
 
 @Injectable({ providedIn: 'root' })
-export  class AddServices {
+export class AddServices {
     protected cache = inject(CacheService);
     protected queue = inject(SheetsQueueServiceService);
     protected sheets = inject(GoogleSheetsService);
@@ -40,7 +40,7 @@ export  class AddServices {
     addUser(u: AppUser): void {
         this.cache.upsertUser(u); this.queue.enqueue({ sheetName: SHEET.users, rowData: toRow({ ...u, permissions: concatStrings(u.permissions), is_admin: u.is_admin ? 'OUI' : 'NON' }, H.users) }, 'addRow');
     }
-    
+
     // addLog(l: LogAlerte): void {
     //     this.cache.upsertLog(l); this.queue.enqueue({ sheetName: SHEET.logs, rowData: toRow(l, H.logs) }, 'addRow');
     // }
@@ -83,6 +83,11 @@ export  class AddServices {
 
     async addFamille(f: Famille): Promise<void> {
         this.cache.upsertFamille(f); this.queue.enqueue({ sheetName: SHEET.familles, rowData: toRow(f, H.familles) }, 'addRow');
+    }
+    async addMoratoire(m: Moratoire): Promise<void> {
+        debugger
+        this.cache.upsertMoratoire(m); // ⚠️ à créer dans CacheService si absent, sur le modèle de upsertPaiement
+        this.queue.enqueue({ sheetName: SHEET.moratoires, rowData: toRow(m, H.moratoires) }, 'addRow');
     }
 
 }

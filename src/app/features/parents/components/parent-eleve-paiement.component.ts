@@ -179,9 +179,9 @@ export class ParentPaiementComponent {
   private svc = inject(ParentService);
   readonly router = inject(Router);
 
-  paiement   = this.svc.paiement;
+  paiement   = this.svc.paiementsHistorique();
   historique = computed(() => this.paiement()?.historique ?? []);
-  annee      = computed(() => this.svc.famille()?.annee_scolaire ?? '');
+  annee      = computed(() => this.svc.famille()?.annee_scolaires ?? '');
   envoi      = signal(false);
   envoiOk    = signal(false);
 
