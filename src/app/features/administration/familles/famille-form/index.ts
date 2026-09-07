@@ -126,7 +126,7 @@ export class FamilleModalComponent implements OnInit {
     this.form.patchValue(this.data.famille);
     this.lat = this.data.famille.latitude ?? null;
     this.lng = this.data.famille.longitude ?? null;
-debugger
+
     // Récupère l'AnneeScolaireFamille si FamilleEnrichi
     if (isFamilleEnrichi(this.data.famille)) {
       // Prend celle de l'année courante si elle existe
@@ -147,7 +147,7 @@ debugger
 
   // ── Sauvegarde ────────────────────────────────────────────────
 
-  async save(): Promise<void> {
+  save(): void {
     // 1. Formulaire identité : état natif Angular (form.invalid)
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -167,57 +167,51 @@ debugger
 
     this.enregistrementEnCours = true;
 
-    try {
-      const idFamille = this.familleId || `FAM-${Date.now()}`;
+    const idFamille = this.familleId || `FAM-${Date.now()}`;
 
-      // Famille
-      const famille: Famille = {
-        id_famille: idFamille,
-        nom_famille: this.form.value.nom_famille!,
-        tel_pere: this.form.value.tel_pere ?? '',
-        tel_mere: this.form.value.tel_mere ?? '',
-        tel_autre: this.form.value.tel_autre ?? '',
-        adresse_texte: this.form.value.adresse_texte ?? '',
-        latitude: this.lat ?? undefined,
-        longitude: this.lng ?? undefined,
-        status: 'ACTIF'
-      };
+    // Famille
+    const famille: Famille = {
+      id_famille: idFamille,
+      nom_famille: this.form.value.nom_famille!,
+      tel_pere: this.form.value.tel_pere ?? '',
+      tel_mere: this.form.value.tel_mere ?? '',
+      tel_autre: this.form.value.tel_autre ?? '',
+      adresse_texte: this.form.value.adresse_texte ?? '',
+      latitude: this.lat ?? undefined,
+      longitude: this.lng ?? undefined,
+      status: 'ACTIF'
+    };
 
-      if (this.isEdit) this.patch.updateFamille(famille);
-      else this.add.addFamille(famille);
+    if (this.isEdit) this.patch.updateFamille(famille);
+    else this.add.addFamille(famille);
 
-      // AnneeScolaireFamille — si section active
-      const base = this.anneeScolaireExistante ?? this.fas.creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
+    // AnneeScolaireFamille — si section active
+    const base = this.anneeScolaireExistante ?? this.fas.creerAnneeScolaire(idFamille, ANNEE_SCOLAIRE);
 
-      const annee: AnneeScolaireFamille = {
-        ...base,
-        format_montant: this.fraisValue.format_montant,
-        format_statut: this.fraisValue.format_statut,
-        application_montant: this.fraisValue.application_montant,
-        ...(this.fraisValue.actif && {
-          montant_reduction_special: this.fraisValue.montant_reduction_special,
-          commentaire: this.fraisValue.commentaire,
-        }),
-      };
+    const annee: AnneeScolaireFamille = {
+      ...base,
+      format_montant: this.fraisValue.format_montant,
+      format_statut: this.fraisValue.format_statut,
+      application_montant: this.fraisValue.application_montant,
+      ...(this.fraisValue.actif && {
+        montant_reduction_special: this.fraisValue.montant_reduction_special,
+        commentaire: this.fraisValue.commentaire,
+      }),
+    };
 
-      this.anneeScolaireExistante
-        ? this.patch.updateAnneeSvc(annee)
-        : this.add.addAnneeSvc(annee);
+    this.anneeScolaireExistante
+      ? this.patch.updateAnneeSvc(annee)
+      : this.add.addAnneeSvc(annee);
 
-      this.snackBar.open(
-        this.isEdit ? 'Famille modifiée avec succès' : 'Famille créée avec succès',
-        'OK',
-        { duration: SNACKBAR_DURATION }
-      );
+    this.snackBar.open(
+      this.isEdit ? 'Famille modifiée avec succès' : 'Famille créée avec succès',
+      'OK',
+      { duration: SNACKBAR_DURATION }
+    );
 
-      this.dialogRef.close({ success: true, famille });
+    this.dialogRef.close({ success: true, famille });
+    this.enregistrementEnCours = false;
 
-    } catch (err) {
-      this.snackBar.open('Une erreur est survenue lors de l\'enregistrement', 'OK', {
-        duration: SNACKBAR_DURATION,
-      });
-    } finally {
-      this.enregistrementEnCours = false;
-    }
+
   }
 }

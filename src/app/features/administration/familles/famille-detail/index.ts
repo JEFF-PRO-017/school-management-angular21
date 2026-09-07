@@ -15,7 +15,7 @@ import { EleveModalComponent, EleveModalData } from '../../eleves/modal/eleve-mo
 import { PaiementModalComponent, PaiementModalData } from '../../paiements/modal/paiement-modal.component';
 import { FamilleModalComponent, FamilleModalData } from '../famille-form';
 
-import { EleveEnrichi, FamilleService } from '../../../../core/models/family';
+import { EleveEnrichi, FamilleEnrichi, FamilleService } from '../../../../core/models/family';
 import { Eleve } from '../../../../core/models/academic';
 import { DetailBarComponent } from './components/detail-bar.component';
 import { DetailStatsComponent } from './components/detail-stats.component';
@@ -23,6 +23,7 @@ import { DetailContactsComponent } from './components/detail-contacts.component'
 import { DetailEnfantsComponent } from './components/detail-enfants.component';
 import { DetailPaiementsComponent } from './components/detail-paiements.component';
 import { DataServiceBase, GetServices, PatchServices } from '../../../../core/services/@data';
+import { DeleteServices } from '../../../../core/services/@data/_delete.services';
 
 
 
@@ -71,7 +72,9 @@ import { DataServiceBase, GetServices, PatchServices } from '../../../../core/se
       [enfants]="enfants()"
       (ajouter)="ouvrirAjoutEleve()"
       (modifier)="ouvrirModifEleve($event)"
-      (archiver)="archiverEleve($event)">
+      (archiver)="archiverEleve($event)"
+      (supprimer)="confirmerSuppression($event)"
+      >
     </app-detail-enfants>
 
     <!-- Paiements -->
@@ -102,6 +105,7 @@ export class FamilleDetailComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private fas = inject(FamilleService);
   private patch = inject(PatchServices)
+  private delete = inject(DeleteServices)
 
   // famille = signal<FamilleEnrichi | null>(null);
   id = signal<string>('')
@@ -203,4 +207,15 @@ export class FamilleDetailComponent implements OnInit {
       this.snack.open('Copié !', '', { duration: 1500 })
     );
   }
+
+    confirmerSuppression(e: EleveEnrichi): void {
+      this.dialog.open(ConfirmDialogComponent, {
+        data: { title: 'Supprimer la famille', message: `Supprimer "${e.nom}" ?`, confirm: 'Supprimer' }
+      }).afterClosed().subscribe(ok => {
+        if (!ok) return;
+        this.delete.deleteEleve(e.id_eleve)
+        this.snack.open('Famille supprimée', 'OK', { duration: 3000 });
+        this.cdr.markForCheck();
+      });
+    }
 }

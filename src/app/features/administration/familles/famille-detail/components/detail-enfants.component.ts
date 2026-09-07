@@ -98,6 +98,12 @@ import { TableComponent, CellDefDirective, TableColumn } from '../../../../../sh
                     stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           </button>
+
+          <button class="btn btn-sm btn-outline-danger icon-btn"  style="width:26px;height:26px"  title="Supprimer" (click)="supprimer.emit(e)">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M3 5h10M6 5V3h4v2M6 8v4M10 8v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
       </ng-template>
 
@@ -109,21 +115,22 @@ import { TableComponent, CellDefDirective, TableColumn } from '../../../../../sh
 export class DetailEnfantsComponent {
   enfants = input<EleveEnrichi[]>([]);
 
-  ajouter  = output<void>();
+  ajouter = output<void>();
   modifier = output<Eleve>();
   archiver = output<Eleve>();
+  supprimer = output<Eleve>();
 
   rowIdFn = (e: EleveEnrichi) => e.id_eleve;
 
   columns: TableColumn<EleveEnrichi>[] = [
-    { id: 'eleve',     header: 'Élève',     accessor: e => `${e.nom} ${e.prenom}`, sortable: true, filterable: true },
-    { id: 'classe',    header: 'Classe',    accessor: e => e.classe?.nom_classe ?? '—', sortable: true, align: 'center' },
-    { id: 'sexe',      header: 'Sexe',      accessor: e => e.sexe || '—', align: 'center' },
+    { id: 'eleve', header: 'Élève', accessor: e => `${e.nom} ${e.prenom}`, sortable: true, filterable: true },
+    { id: 'classe', header: 'Classe', accessor: e => e.classe?.nom_classe ?? '—', sortable: true, align: 'center' },
+    { id: 'sexe', header: 'Sexe', accessor: e => e.sexe || '—', align: 'center' },
     { id: 'naissance', header: 'Naissance', accessor: e => e.date_naissance ?? '', sortable: true, align: 'center' },
-    { id: 'absences',  header: 'Absences',  accessor: e => this.nbAbsences(e), sortable: true, align: 'center' },
-    { id: 'verifie',   header: 'Vérifié',   accessor: e => e.verifie ?? '', align: 'center' },
-    { id: 'statut',    header: 'Statut',    accessor: e => e.statut ?? '—', sortable: true, align: 'center' },
-    { id: 'actions',   header: 'Actions',   exportable: false, align: 'center' },
+    { id: 'absences', header: 'Absences', accessor: e => this.nbAbsences(e), sortable: true, align: 'center' },
+    { id: 'verifie', header: 'Vérifié', accessor: e => e.verifie ?? '', align: 'center' },
+    { id: 'statut', header: 'Statut', accessor: e => e.statut ?? '—', sortable: true, align: 'center' },
+    { id: 'actions', header: 'Actions', exportable: false, align: 'center' },
   ];
 
   /** Nombre d'absences de l'élève (basé sur le tableau `absences[]`). */
@@ -143,7 +150,7 @@ export class DetailEnfantsComponent {
   private hash(id: string): number {
     return [...id].reduce((s, c) => s + c.charCodeAt(0), 0) % this.palette.length;
   }
-  avBg(id: string):  string { return this.palette[this.hash(id)].bg; }
+  avBg(id: string): string { return this.palette[this.hash(id)].bg; }
   avTxt(id: string): string { return this.palette[this.hash(id)].txt; }
 
   fmtDate(iso: string): string {

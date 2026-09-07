@@ -23,33 +23,39 @@ import { FamilleEnrichi, FamilleService } from '../../../../../core/models';
     <div class="row g-2 mb-3">
       <div class="col-4">
         <div class="bg-light rounded-2 p-2 text-center">
-          <div class="fw-semibold">{{ fmt(attendu) }}</div>
+          <div class="fw-semibold">{{ fmt(attendu) }} (FCFA)</div>
           <div class="text-muted" style="font-size:9px">Attendu (FCFA)</div>
         </div>
       </div>
       <div class="col-4">
         <div class="bg-light rounded-2 p-2 text-center">
-          <div class="fw-semibold text-success">{{ fmt(verse) }}</div>
+          <div class="fw-semibold text-success">{{ fmt(verse) }} (FCFA)</div>
           <div class="text-muted" style="font-size:9px">Versé</div>
         </div>
       </div>
       <div class="col-4">
         <div class="bg-light rounded-2 p-2 text-center">
           <div class="fw-semibold" [class.text-success]="restant === 0"
-               [class.text-danger]="restant > 0">{{ fmt(restant) }}</div>
+               [class.text-danger]="restant > 0">{{ fmt(restant) }} (FCFA)</div>
           <div class="text-muted" style="font-size:9px">Restant</div>
         </div>
       </div>
       <div class="col-4">
         <div class="bg-light rounded-2 p-2 text-center">
-          <div class="fw-semibold">{{ fmt(reductionSpecial) }}</div>
+          <div class="fw-semibold">{{ fmt(anneeSvc?.montant_reduction_special??0) }} (FCFA) </div>
           <div class="text-muted" style="font-size:9px">Réduction Spéciale</div>
         </div>
       </div>
       <div class="col-4">
         <div class="bg-light rounded-2 p-2 text-center">
-          <div class="fw-semibold">{{ fmt(reductionPourcentage) }}%</div>
-          <div class="text-muted" style="font-size:9px">Réduction %</div>
+          <div class="fw-semibold">{{ fmt(anneeSvc?.montant_reduction??0) }} (FCFA)</div>
+          <div class="text-muted" style="font-size:9px">Réduction </div>
+        </div>
+      </div>
+            <div class="col-4">
+        <div class="bg-light rounded-2 p-2 text-center">
+          <div class="fw-semibold">{{ fmt(anneeSvc?.application_montant??0) }} F App, {{ fmt(anneeSvc?.format_montant??0) }} F Format</div>
+          <div class="text-muted" style="font-size:px">Format {{anneeSvc?.format_statut}} </div>
         </div>
       </div>
     </div>
@@ -99,8 +105,7 @@ export class DetailStatsComponent {
     if (this.attendu <= 0) return 100;
     return Math.min(100, Math.round((this.verse / this.attendu) * 100));
   }
-  get reductionSpecial(): number { return this.fas.anneeSvcEncours(this.f)?.montant_reduction_special ?? 0; }
-  get reductionPourcentage(): number { return this.fas.anneeSvcEncours(this.f)?.montant_reduction ?? 0; }
+  get anneeSvc() { return this.fas.anneeSvcEncours(this.f) }
 
   fmt(n: number): string {
     return new Intl.NumberFormat('fr-FR').format(Math.round(+n));

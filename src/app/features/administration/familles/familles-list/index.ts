@@ -19,6 +19,7 @@ import { FamilleModalComponent, FamilleModalData } from '../famille-form';
 import { FamillesToolbarComponent, FiltreEnfants, FiltreEtat } from './Components/familles-toolbar.component';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../../shared/components/table/table.component';
 import { GetServices } from '../../../../core/services/@data';
+import { DeleteServices } from '../../../../core/services/@data/_delete.services';
 
 export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprimer';
 
@@ -180,6 +181,7 @@ export class FamillesListComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private cdr = inject(ChangeDetectorRef);
+  private delete = inject(DeleteServices)
   fas = inject(FamilleService); // public : utilisé dans les cellDef du template
 
   anneeScolaire = ANNEE_SCOLAIRE;
@@ -199,9 +201,9 @@ export class FamillesListComponent implements OnInit {
     { id: 'reductionPct', header: 'Reduction %Enfants', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.montant_reduction ?? 0 },
     { id: 'attendu', header: 'Attendu', align: 'center', sortable: true, accessor: f => this.fas.montantAttentu(f) },
     { id: 'verse', header: 'Versé', align: 'center', sortable: true, accessor: f => this.fas.montantVerse(f) },
-    { id: 'format_statut', header: 'Format ', align: 'center', sortable: true, accessor: f =>  this.fas.anneeSvcEncours(f)?.format_statut ?? ''},
-    { id: 'format_montant', header: 'Format .M', align: 'center', sortable: true, accessor: f =>  this.fas.anneeSvcEncours(f)?.format_montant ?? 0 },
-    { id: 'application_montant', header: 'App .M', align: 'center', sortable: true, accessor: f =>  this.fas.anneeSvcEncours(f)?.application_montant ?? 0},
+    { id: 'format_statut', header: 'Format ', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.format_statut ?? '' },
+    { id: 'format_montant', header: 'Format .M', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.format_montant ?? 0 },
+    { id: 'application_montant', header: 'App .M', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.application_montant ?? 0 },
     {
       id: 'restant', header: 'Restant', align: 'center', sortable: true,
       accessor: f => this.fas.montantRestant(this.fas.montantAttentu(f), this.fas.montantVerse(f))
@@ -342,6 +344,7 @@ export class FamillesListComponent implements OnInit {
       data: { title: 'Supprimer la famille', message: `Supprimer "${f.nom_famille}" ?`, confirm: 'Supprimer' }
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
+      this.delete.deleteFamille(f.id_famille)
       this.snack.open('Famille supprimée', 'OK', { duration: 3000 });
       this.cdr.markForCheck();
     });
