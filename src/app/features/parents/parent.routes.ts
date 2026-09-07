@@ -44,7 +44,10 @@ export const PARENT_ROUTES: Routes = [
   { path: 'notifications/:id', loadComponent: () => import('./notifications/detail/notification-detail.component').then(m => m.NotificationDetailComponent) },
 
   { path: 'enfants', loadComponent: () => import('./enfants/list/enfants-list.component').then(m => m.EnfantsListComponent) },
-  { path: 'enfants/:id', loadComponent: () => import('./enfants/detail/enfant-detail.component').then(m => m.EnfantDetailComponent) }, 
+  { path: 'enfants/create', loadComponent: () => import('./enfants/form/ajouter-enfant.component').then(m => m.AjouterEnfantComponent) },
+  { path: 'enfants/:id/edit', loadComponent: () => import('./enfants/edit/modifier-enfant.component').then(m => m.ModifierEnfantComponent) },
+  { path: 'enfants/:id', loadComponent: () => import('./enfants/detail/enfant-detail.component').then(m => m.EnfantDetailComponent) },
+
   // // ── Fallback ─────────────────────────────────────────────────
   {
     path: '',
