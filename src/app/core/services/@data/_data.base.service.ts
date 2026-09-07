@@ -1,4 +1,4 @@
-import { inject, Injectable } from "@angular/core";
+import { inject, Injectable, signal } from "@angular/core";
 import { CacheService } from "../cache.service";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { SheetsQueueServiceService } from "../sheets-queue.service";
@@ -14,7 +14,10 @@ export class DataServiceBase {
     protected queue = inject(SheetsQueueServiceService);
     protected sheets = inject(GoogleSheetsService);
 
+    reloading = signal(false);
+
     public async initAppData(): Promise<void> {
+        this.reloading.set(true)
         // // await this.ensureSheets();
 
         // // Groupe A — données statiques (batchGet)
@@ -70,6 +73,8 @@ export class DataServiceBase {
         await this.sheets.fetchRaw(SHEET.moratoires).then(r =>
             this.cache.setMoratoires(this.parse<Moratoire>(r, H.moratoires))
         );
+
+        this.reloading.set(false)
 
     }
 

@@ -19,7 +19,7 @@ export class HeaderComponent {
   @Output() toggleMenu = new EventEmitter<void>();
 
   private auth = inject(AuthService);
-  private data = inject(DataServiceBase);
+  readonly data = inject(DataServiceBase);
   private queue = inject(SheetsQueueServiceService);
   titleApp = titleApp;
 
@@ -28,7 +28,6 @@ export class HeaderComponent {
 
   user = this.auth.user;
   online = signal(navigator.onLine);
-  reloading = signal(false);
 
   section = computed(() => this.auth.getSectionActive());
 
@@ -57,12 +56,12 @@ export class HeaderComponent {
 
   /** Recharge depuis Sheets sans vider le cache d'abord */
   async recharger(): Promise<void> {
-    if (this.reloading()) return;
-    this.reloading.set(true);
+    if (this.data.reloading()) return;
+    this.data.reloading.set(true);
     try {
       await this.data.initAppData();
     } finally {
-      this.reloading.set(false);
+      this.data.reloading.set(false);
     }
   }
 
@@ -72,13 +71,13 @@ export class HeaderComponent {
       'Vider toutes les données locales et recharger depuis Google Sheets ?\n' +
       'La page se rechargera automatiquement.'
     )) return;
-    if (this.reloading()) return;
-    this.reloading.set(true);
+    if (this.data.reloading()) return;
+    this.data.reloading.set(true);
     try {
       this.data.invalidateCache();
       await this.data.initAppData();
     } finally {
-      this.reloading.set(false);
+      this.data.reloading.set(false);
     }
   }
 

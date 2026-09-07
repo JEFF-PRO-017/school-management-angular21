@@ -42,8 +42,8 @@
   <!-- Rechargement des données -->
   <div class="dropdown">
     <button class="btn btn-sm btn-light border" data-bs-toggle="dropdown"
-            [disabled]="reloading()" title="Données locales">
-      @if (reloading()) {
+            [disabled]="data.reloading()" title="Données locales">
+      @if (data.reloading()) {
         <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
       } @else {
         <fa-icon [icon]="icons.faArrowsRotate"></fa-icon>
