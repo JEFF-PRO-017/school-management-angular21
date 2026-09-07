@@ -13,7 +13,7 @@ import { ANNEE_SCOLAIRE } from '../../../../core/models/shared';
 
 import { FamilleFormComponent, TEL_PATTERN } from './components/famille-form.component';
 import { FamilleFraisComponent, FraisFormValue } from './components/famille-frais.component';
-import { AnneeScolaireFamille,  Famille, FamilleEnrichi, FamilleService } from '../../../../core/models/family';
+import { AnneeScolaireFamille, Famille, FamilleEnrichi, FamilleService } from '../../../../core/models/family';
 import { AddServices, PatchServices } from '../../../../core/services/@data';
 
 export interface FamilleModalData { famille: Famille | FamilleEnrichi | null; }
@@ -86,7 +86,7 @@ export class FamilleModalComponent implements OnInit {
   private fas = inject(FamilleService);
   private snackBar = inject(MatSnackBar);
   private add = inject(AddServices)
-  private patch  = inject(PatchServices)
+  private patch = inject(PatchServices)
 
   isEdit = false;
   familleId = '';
@@ -191,15 +191,15 @@ export class FamilleModalComponent implements OnInit {
 
       const annee: AnneeScolaireFamille = {
         ...base,
-        format_montant:       this.fraisValue.format_montant,
-        format_statut:        this.fraisValue.format_statut,
-        application_montant:  this.fraisValue.application_montant,
+        format_montant: this.fraisValue.format_montant,
+        format_statut: this.fraisValue.format_statut,
+        application_montant: this.fraisValue.application_montant,
         ...(this.fraisValue.actif && {
           montant_reduction_special: this.fraisValue.montant_reduction_special,
           commentaire: this.fraisValue.commentaire,
         }),
       };
-      
+
       this.anneeScolaireExistante
         ? this.patch.updateAnneeSvc(annee)
         : this.add.addAnneeSvc(annee);

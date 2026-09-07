@@ -34,7 +34,7 @@ import { FamilleEnrichi } from '../../../../../core/models/family';
       Payer pension
     </button>
 
-    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled
             (click)="modifier.emit()">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
         <path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="currentColor"

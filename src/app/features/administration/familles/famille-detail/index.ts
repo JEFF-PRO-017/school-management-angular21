@@ -15,13 +15,14 @@ import { EleveModalComponent, EleveModalData } from '../../eleves/modal/eleve-mo
 import { PaiementModalComponent, PaiementModalData } from '../../paiements/modal/paiement-modal.component';
 import { FamilleModalComponent, FamilleModalData } from '../famille-form';
 
-import { FamilleService } from '../../../../core/models/family';
+import { EleveEnrichi, FamilleService } from '../../../../core/models/family';
 import { Eleve } from '../../../../core/models/academic';
 import { DetailBarComponent } from './components/detail-bar.component';
 import { DetailStatsComponent } from './components/detail-stats.component';
 import { DetailContactsComponent } from './components/detail-contacts.component';
 import { DetailEnfantsComponent } from './components/detail-enfants.component';
 import { DetailPaiementsComponent } from './components/detail-paiements.component';
+import { DataServiceBase, GetServices, PatchServices } from '../../../../core/services/@data';
 
 
 
@@ -68,8 +69,6 @@ import { DetailPaiementsComponent } from './components/detail-paiements.componen
     <!-- Enfants -->
     <app-detail-enfants
       [enfants]="enfants()"
-      [soldes]="soldesMap()"
-      [classesMap]="classesNomMap()"
       (ajouter)="ouvrirAjoutEleve()"
       (modifier)="ouvrirModifEleve($event)"
       (archiver)="archiverEleve($event)">
@@ -97,16 +96,17 @@ export class FamilleDetailComponent implements OnInit {
 
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private cache = inject(CacheService);
+  private get = inject(GetServices);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private cdr = inject(ChangeDetectorRef);
   private fas = inject(FamilleService);
+  private patch = inject(PatchServices)
 
   // famille = signal<FamilleEnrichi | null>(null);
   id = signal<string>('')
   famille = computed(() => {
-    return this.cache.getFamilles().find(f => f.id_famille === this.id());
+    return this.get.getFamilles().find(f => f.id_famille === this.id());
   })
   annee = ANNEE_SCOLAIRE;
 
@@ -115,31 +115,17 @@ export class FamilleDetailComponent implements OnInit {
 
   attendu = computed(() => this.fas.montantAttentu(this.famille()));
   verse = computed(() => this.fas.montantVerse(this.famille()));
-
-  enfants = computed<Eleve[]>(() => this.famille()?.eleves ?? []);
-
+  enfants = computed<EleveEnrichi[]>(() => {
+    return this.famille()?.eleves?.filter((e: { statut: string; }) => e.statut != 'NON-ACTIF') ?? []
+  });
   paiements = computed(() => (this.famille()?.paiements ?? []));
 
 
   resumeEnfants = computed(() => {
     const nb = this.enfants().length;
     const cls = this.enfants()
-      .map(e => this.cache.classesMap().get(e.id_classe)?.nom_classe ?? '')
-      .filter(Boolean).join(', ');
+      .map(e => this.get.getClasses().find(c => c.id_classe === e.id_classe)?.nom_classe)
     return `${nb} enfant${nb > 1 ? 's' : ''}${cls ? ' · ' + cls : ''}`;
-  });
-
-  // Maps pour les sous-composants
-  soldesMap = computed<Map<string, number>>(() => {
-    const m = new Map<string, number>();
-    this.cache.getSoldes().forEach(s => m.set(s.id_eleve, +s.reste_a_payer));
-    return m;
-  });
-
-  classesNomMap = computed<Map<string, string>>(() => {
-    const m = new Map<string, string>();
-    this.cache.classesMap().forEach((v, k) => m.set(k, v.nom_classe));
-    return m;
   });
 
   // ── Init ────────────────────────────────────────────────────
@@ -152,7 +138,7 @@ export class FamilleDetailComponent implements OnInit {
   }
 
   getFamille(id: string) {
-        this.id.set(this.id())
+    this.id.set(this.id())
   }
 
   // ── Actions ─────────────────────────────────────────────────
@@ -195,7 +181,7 @@ export class FamilleDetailComponent implements OnInit {
     }).afterClosed().subscribe(r => { this.getFamille(f.id_famille) });
   }
 
-  archiverEleve(e: Eleve): void {
+  archiverEleve(e: EleveEnrichi): void {
     const label = e.statut === 'ACTIF' ? 'archiver' : 'réactiver';
     this.dialog.open(ConfirmDialogComponent, {
       data: { title: `${label} l'élève`, message: `${label} ${e.nom} ${e.prenom} ?`, confirm: label }
@@ -203,10 +189,11 @@ export class FamilleDetailComponent implements OnInit {
       if (!ok) return;
       // Toggle statut using the same casing as Eleve.statut values
       const statut = e.statut === 'ACTIF' ? 'ARCHIVE' : 'ACTIF';
-      // this.data.updateEleve({ ...e, statut }).then(() => {
-      //   this.snack.open(`Élève ${statut === 'ACTIF' ? 'réactivé' : 'archivé'}`, 'OK', { duration: 3000 });
-      // })
-      // this.getFamille(e.id_famille)
+      this.patch.updateEleve({ ...e, statut })
+      const anneeUpdate = this.fas.upateAnneeSvc(this.famille(), e, e.classe)
+      if (!anneeUpdate) return
+      this.patch.updateAnneeSvc(anneeUpdate)
+      this.getFamille(e.id_famille)
     });
   }
 

@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { EleveEnrichi } from '../../../../core/models';
+import { EleveEnrichi, FamilleEnrichi, FamilleService } from '../../../../core/models';
 import { GetServices, PatchServices } from '../../../../core/services/@data';
 import { DeleteServices } from '../../../../core/services/@data/_delete.services';
 import { CellDefDirective, TableColumn } from '../../../../shared/components/table/table.component';
@@ -44,6 +44,7 @@ export class ElevesValidationComponent implements OnInit {
   private del = inject(DeleteServices);
   private refresh = inject(RefreshServices);
   private dialog = inject(MatDialog);
+  private fas = inject(FamilleService);
 
   eleves = signal<EleveEnrichi[]>([]);
   loading = signal(false);

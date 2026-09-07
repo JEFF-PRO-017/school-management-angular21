@@ -161,7 +161,7 @@ export class EleveModalComponent implements OnInit {
     });
   }
 
-  async save(): Promise<void> {
+  save(): void {
     if (this.form.invalid) return;
     const classe = this.classes().find(c => c.id_classe === this.form.value.id_classe)
     if (!classe) return
@@ -179,12 +179,12 @@ export class EleveModalComponent implements OnInit {
       matricule: this.form.value.matricule || undefined,
       verifie: this.isEdit ? (this.form.value.verifie ?? false) : false,
     };
-    debugger
+    
     const anneeUpdate = this.fas.upateAnneeSvc(this.data.famille, eleve, classe)
     if (!anneeUpdate) return
 
-    if (this.isEdit) await this.patch.updateEleve(eleve);
-    else await this.add.addEleve(eleve);
+    if (this.isEdit) this.patch.updateEleve(eleve);
+    else this.add.addEleve(eleve);
 
     this.patch.updateAnneeSvc(anneeUpdate)
 
