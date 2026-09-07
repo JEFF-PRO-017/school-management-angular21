@@ -21,11 +21,6 @@ export const PARENT_ROUTES: Routes = [
     loadComponent: () =>
       import('./dashboard/parent-dashboard.component').then(m => m.ParentDashboardComponent),
   },
-  {
-    path: 'paiement',
-    loadComponent: () =>
-      import('./components/parent-eleve-paiement.component').then(m => m.ParentPaiementComponent),
-  },
   // {
   //   path: 'eleve/:id',
   //   loadComponent: () =>
@@ -37,12 +32,6 @@ export const PARENT_ROUTES: Routes = [
   //     import('./components/parent-notifications-enfant.component')
   //       .then(m => m.ParentNotificationsComponent),
   // },
-  {
-    path: 'ajouter-enfant',
-    loadComponent: () =>
-      import('./components/parent-notifications-enfant.component')
-        .then(m => m.ParentAjouterEnfantComponent),
-  },
 
   { path: 'moratoires', loadComponent: () => import('./moratoires/list/moratoires-list.component').then(m => m.MoratoiresListComponent) },
   { path: 'moratoires/create', loadComponent: () => import('./moratoires/form/moratoire-form.component').then(m => m.MoratoireFormComponent) },

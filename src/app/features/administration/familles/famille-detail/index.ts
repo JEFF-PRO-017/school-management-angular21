@@ -158,7 +158,6 @@ export class FamilleDetailComponent implements OnInit {
 
   ouvrirModification(): void {
     const f = this.famille();
-    debugger
     if (!f) return;
     this.dialog.open(FamilleModalComponent, {
       data: { famille: f } satisfies FamilleModalData,

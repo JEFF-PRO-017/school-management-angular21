@@ -65,7 +65,14 @@ import { ParentHeaderComponent } from '../../components/parent-header.component'
           <button type="button" class="btn btn-outline-secondary" (click)="onAnnuler()">
             Annuler
           </button>
-          <button type="button" class="btn btn-primary" [disabled]="form.invalid || envoiEnCours" (click)="onDemanderConfirmation()">
+          <!-- <button type="button" class="btn btn-primary" [disabled]="form.invalid || envoiEnCours" (click)="onDemanderConfirmation()">
+            @if (envoiEnCours) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Envoyer le paiement
+          </button> -->
+
+          <button type="button" class="btn btn-primary" disabled (click)="onDemanderConfirmation()">
             @if (envoiEnCours) {
               <span class="spinner-border spinner-border-sm me-1"></span>
             }

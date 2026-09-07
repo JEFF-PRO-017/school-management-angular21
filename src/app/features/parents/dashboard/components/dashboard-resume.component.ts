@@ -19,24 +19,24 @@ import { IconComponent } from '../icon.component';
       <div class="row row-cols-2 row-cols-md-4 g-2">
 
         <div class="col">
-          <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+          <a class="card border-0 shadow-sm rounded-4 h-100 p-3  text-decoration-none text-reset"  [routerLink]="['/espace-parent/notifications']" >
             <app-icon name="chart-line" class="fs-3 text-primary mb-2"></app-icon>
             <div class="fs-4 fw-bold">{{notifications}}</div>
             <div class="small text-muted">Notifications (N. Lue) </div>
-          </div>
+</a>
         </div>
 
         <div class="col">
-          <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+          <a class="card border-0 shadow-sm rounded-4 h-100 p-3  text-decoration-none text-reset"  [routerLink]="['/espace-parent/enfants']">
             <app-icon name="calendar-days" class="fs-3 text-warning mb-2"></app-icon>
             <div class="fs-4 fw-bold" [class.text-danger]="totalAbsences >= 3">{{ totalAbsences }}</div>
             <div class="small text-muted">Absence(s)</div>
-          </div>
+</a>
         </div>
 
         <div class="col">
           <a class="card border-0 shadow-sm rounded-4 h-100 p-3 text-decoration-none text-reset"
-             [routerLink]="['/espace-parent/paiement']">
+             [routerLink]="['/espace-parent/paiements']">
             <app-icon name="credit-card" class="fs-3 text-danger mb-2"></app-icon>
             <div class="fs-4 fw-bold" [class.text-danger]="insolvable">{{ montantRestant }}</div>
             <div class="small text-muted">Restant (FCFA)</div>
@@ -45,7 +45,7 @@ import { IconComponent } from '../icon.component';
 
         <div class="col">
           <a class="card border-0 shadow-sm rounded-4 h-100 p-3 text-decoration-none text-reset"
-             [routerLink]="['/espace-parent/paiement']">
+             [routerLink]="['/espace-parent/moratoires']">
             <app-icon name="calendar-check" class="fs-3 text-success mb-2"></app-icon>
             <div class="fs-4 fw-bold">{{ prochainRdv ?? '—' }}</div>
             <div class="small text-muted">Échéance moratoire</div>
@@ -81,7 +81,7 @@ import { IconComponent } from '../icon.component';
         <div class="text-end small text-muted">{{ tauxPaiement }}% payé</div>
 
         @if (insolvable) {
-          <a class="btn btn-primary w-100 mt-2" [routerLink]="['/espace-parent/paiement']">
+          <a class="btn btn-primary w-100 mt-2" [routerLink]="['/espace-parent/paiements/create']">
             Initier un paiement
           </a>
         }

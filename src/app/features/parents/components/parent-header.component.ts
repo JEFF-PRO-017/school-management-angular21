@@ -117,14 +117,14 @@ export class ParentHeaderComponent implements OnInit {
   // --- Actions du menu 3 points (routes provisoires) ---
 
   onEcrireAdministration(): void {
-    this.router.navigate(['/espace-parent/administration']);
+    // this.router.navigate(['/espace-parent/administration']);
   }
 
   onInitierPaiement(): void {
-    this.router.navigate(['/espace-parent/paiements/initier']);
+    this.router.navigate(['/espace-parent/paiements/create']);
   }
 
   onDemandeMoratoire(): void {
-    this.router.navigate(['/espace-parent/moratoires/demande']);
+    this.router.navigate(['/espace-parent/moratoires/create']);
   }
 }

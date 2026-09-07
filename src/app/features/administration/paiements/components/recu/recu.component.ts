@@ -76,7 +76,6 @@ export class RecuComponent implements OnInit {
   }
 
   async imprimer(): Promise<void> {
-    debugger
     await window.print()
     this.marquerImpression();
   }
@@ -88,7 +87,6 @@ retour(): void {
 }
   
   private async marquerImpression(): Promise<void> {
-    debugger
     if (!this.paiement) return;
     this.impressionEnCours.set(true);
     const p = this.paiement;

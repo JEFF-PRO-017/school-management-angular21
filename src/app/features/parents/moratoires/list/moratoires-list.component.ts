@@ -109,7 +109,6 @@ export class MoratoiresListComponent {
 
   /** Lecture centralisée : famille() est la seule source, exposée par ParentService. */
   moratoires = computed(() => {
-    debugger
     return this.moratoireService.trierParStatut(
       this.familleServices.initService(this.parentService.famille()).anneeSvcEncours?.moratoires ?? []
     )

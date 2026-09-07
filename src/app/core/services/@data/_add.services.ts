@@ -85,7 +85,6 @@ export class AddServices {
         this.cache.upsertFamille(f); this.queue.enqueue({ sheetName: SHEET.familles, rowData: toRow(f, H.familles) }, 'addRow');
     }
     async addMoratoire(m: Moratoire): Promise<void> {
-        debugger
         this.cache.upsertMoratoire(m); // ⚠️ à créer dans CacheService si absent, sur le modèle de upsertPaiement
         this.queue.enqueue({ sheetName: SHEET.moratoires, rowData: toRow(m, H.moratoires) }, 'addRow');
     }
