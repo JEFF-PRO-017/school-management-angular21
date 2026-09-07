@@ -36,9 +36,10 @@ export class RecuComponent implements OnInit {
   impressionEnCours = signal(false);
 
   serviceClient = {
-    what: '+237 00 00 00 00',
-    appel: '+237 00 00 00 00'
+    what: '+237 656 48 82 90',
+    appel: '+237 656 48 82 90 '
   }
+  // TODO : A MODIFIER LES NUMEROS APRES
   libelleCopie!: string;
   libelleCopieSuivante(paiement: PaiementEnrichi): string {
     const n = paiement.nb_impressions;
@@ -65,9 +66,10 @@ export class RecuComponent implements OnInit {
       .filter(Boolean)
       .join(', ');
 
-    const fa = this.fas.initService(this.famille)
 
-    this.libelleCopie = this.libelleCopieSuivante(this.paiement)
+    const fa = this.fas.initService(this.famille);
+
+    this.libelleCopie = this.libelleCopieSuivante(this.paiement);
 
     this.montantVerse = fa.montantVerse
     this.montantRestant = fa.montantRestant
@@ -81,7 +83,10 @@ export class RecuComponent implements OnInit {
 
   async telechargerPdf(): Promise<void> {
   }
-
+retour(): void {
+  window.history.back();
+}
+  
   private async marquerImpression(): Promise<void> {
     debugger
     if (!this.paiement) return;

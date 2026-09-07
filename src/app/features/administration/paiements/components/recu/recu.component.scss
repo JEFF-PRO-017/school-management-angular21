@@ -31,8 +31,64 @@
   body {
       font-family: 'Public Sans', sans-serif;
       color: var(--ink);
-      //   display: flex;
+      display: flex;
+      flex-direction: column; // AJOUTÉ — empile toolbar puis page au lieu de les mettre côte à côte
+      align-items: center; // centre horizontalement les deux
+      padding-top: 3mm; // réduit — remonte l'ensemble (au lieu de min-height:100vh qui centrait trop bas)
+  }
+
+  .toolbar {
+      display: flex;
       justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+  }
+
+  .toolbar button {
+      font-family: 'Public Sans', sans-serif;
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      padding: 9px 20px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--navy-deep);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .toolbar button:hover {
+      background: var(--navy-deep);
+      color: #fff;
+      border-color: var(--navy-deep);
+      box-shadow: 0 3px 8px rgba(11, 31, 61, 0.25);
+      transform: translateY(-1px);
+  }
+
+  .toolbar button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  // Bouton principal (Télécharger le PDF) mis en avant en doré
+  .toolbar button:last-child {
+      background: var(--gold);
+      color: #fff;
+      border-color: var(--gold);
+  }
+
+  .toolbar button:last-child:hover {
+      background: var(--gold-light);
+      border-color: var(--gold-light);
+      color: var(--navy-deep);
+  }
+
+  @media print {
+      .toolbar {
+          display: none;
+      }
   }
 
   .page {
@@ -727,18 +783,5 @@
       @page {
           size: A4;
           margin: 0;
-      }
-  }
-
-  .toolbar {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 12px;
-  }
-
-  @media print {
-      .toolbar {
-          display: none;
       }
   }

@@ -68,11 +68,15 @@ export class FamilleService {
         return annees ? annees.find((a: { annee_scolaire: string; }) => a.annee_scolaire === ANNEE_SCOLAIRE) : undefined;
     }
 
-    /** Montant réellement dû (attendu moins les réductions). */
+    /** Montant réellement dû (attendu + frais annexes, moins les réductions). */
     montantAttentu(f: FamilleEnrichi | null): number {
         if (!f) return 0;
         const a = this.anneeSvcEncours(f);
-        return +(a?.montant_total_attendu ?? 0) - +(a?.montant_reduction ?? 0) - +(a?.montant_reduction_special ?? 0);
+        return +(a?.montant_total_attendu ?? 0)
+            + +(a?.format_montant ?? 0)
+            + +(a?.application_montant ?? 0)
+            - +(a?.montant_reduction ?? 0)
+            - +(a?.montant_reduction_special ?? 0);
     }
 
     /** Somme de tous les paiements de la famille. */

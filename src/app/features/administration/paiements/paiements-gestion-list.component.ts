@@ -8,7 +8,6 @@ import { DeleteServices } from '../../../core/services/@data/_delete.services';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../shared/components/table/table.component';
 import { WhatsappModalComponent, WhatsappModalData } from '../../../shared/components/whatsapp-modal/whatsapp-modal.component';
-import { RecuModalComponent, RecuModalData } from './modal/recu-modal.component';
 import { PaiementModalComponent, PaiementModalData } from './modal/paiement-modal.component';
 
 @Component({
