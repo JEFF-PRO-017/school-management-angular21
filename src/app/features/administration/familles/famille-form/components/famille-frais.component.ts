@@ -217,6 +217,7 @@ export class FamilleFraisComponent implements OnChanges {
     this.emitChange();
   }
   ngOnChanges(changes: SimpleChanges): void {
+    debugger
     if (changes['anneeScolaire'] && this.anneeScolaire) {
       this.actif = true;
       this.form.patchValue({

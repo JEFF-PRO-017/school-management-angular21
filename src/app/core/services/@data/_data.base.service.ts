@@ -15,49 +15,59 @@ export class DataServiceBase {
     protected sheets = inject(GoogleSheetsService);
 
     public async initAppData(): Promise<void> {
-        // await this.ensureSheets();
+        // // await this.ensureSheets();
 
-        // Groupe A — données statiques (batchGet)
-        const [rawFam, rawCls,
-            //  rawFrais,
-            rawEns, rawMat, rawAnn, rawPoi] = await this.batchFetch([
-                `${SHEET.familles}!A:L`,
-                `${SHEET.classes}!A:H`,
-                // `${SHEET.frais}!A:I`,
-                `${SHEET.enseignants}!A:F`,
-                `${SHEET.matieres}!A:H`,
-                `${SHEET.anneesvc}!A:H`,
-                `${SHEET.pointages}!A:F`,
-            ]);
-        this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
-        this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
-        // this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
-        this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
-        this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
-        this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc));
-        this.cache.setPointages(this.parse<PointageResult>(rawPoi, H.pointages));
+        // // Groupe A — données statiques (batchGet)
+        // const [rawFam, rawCls,
+        //     //  rawFrais,
+        //     rawEns, rawMat, rawAnn, rawPoi] = await this.batchFetch([
+        //         `${SHEET.familles}!A:L`,
+        //         `${SHEET.classes}!A:H`,
+        //         // `${SHEET.frais}!A:I`,
+        //         `${SHEET.enseignants}!A:F`,
+        //         `${SHEET.matieres}!A:H`,
+        //         `${SHEET.anneesvc}!A:H`,
+        //         `${SHEET.pointages}!A:F`,
+        //     ]);
+        // this.cache.setFamilles(this.parse<Famille>(rawFam, H.familles));
+        // this.cache.setClasses(this.parse<Classe>(rawCls, H.classes));
+        // // this.cache.setFrais(this.parse<FraisConfig>(rawFrais, H.frais));
+        // this.cache.setEnseignants(this.parse<Enseignant>(rawEns, H.enseignants));
+        // this.cache.setMatieres(this.parse<MatiereConfig>(rawMat, H.matieres));
+        // this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(rawAnn, H.anneesvc));
+        // this.cache.setPointages(this.parse<PointageResult>(rawPoi, H.pointages));
 
-
-        // Groupe B — élèves + soldes
-        const [rawElv,
-            //  rawSol
-        ] = await this.batchFetch([
-            `${SHEET.eleves}!A:K`,
-            // `${SHEET.soldes}!A:H`,
-        ]);
-        this.cache.setEleves(this.parse<Eleve>(rawElv, H.eleves));
-
-        // this.cache.setSoldes(this.parse<SoldeSnap>(rawSol, H.soldes));
+        await this.sheets.fetchRaw(SHEET.familles).then(r =>
+            this.cache.setFamilles(this.parse<Famille>(r, H.familles))
+        );
+        await this.sheets.fetchRaw(SHEET.classes).then(r =>
+            this.cache.setClasses(this.parse<Classe>(r, H.classes))
+        );
+        await this.sheets.fetchRaw(SHEET.enseignants).then(r =>
+            this.cache.setEnseignants(this.parse<Enseignant>(r, H.enseignants))
+        );
+        await this.sheets.fetchRaw(SHEET.matieres).then(r =>
+            this.cache.setMatieres(this.parse<MatiereConfig>(r, H.matieres))
+        );
+        await this.sheets.fetchRaw(SHEET.anneesvc).then(r =>
+            this.cache.setAnneeSvc(this.parse<AnneeScolaireFamille>(r, H.anneesvc))
+        );
+        await this.sheets.fetchRaw(SHEET.pointages).then(r =>
+            this.cache.setPointages(this.parse<PointageResult>(r, H.pointages))
+        );
+        await this.sheets.fetchRaw(SHEET.eleves).then(r =>
+            this.cache.setEleves(this.parse<Note>(r, H.eleves))
+        );
 
         // Groupe C — en arrière-plan (pas bloquant)
-        this.sheets.fetchRaw(SHEET.notes).then(r =>
+        await this.sheets.fetchRaw(SHEET.notes).then(r =>
             this.cache.setNotes(this.parse<Note>(r, H.notes))
         );
 
-        this.sheets.fetchRaw(SHEET.paiements).then(r =>
+        await this.sheets.fetchRaw(SHEET.paiements).then(r =>
             this.cache.setPaiements(this.parse<Paiement>(r, H.paiements))
         );
-        this.sheets.fetchRaw(SHEET.moratoires).then(r =>
+        await this.sheets.fetchRaw(SHEET.moratoires).then(r =>
             this.cache.setMoratoires(this.parse<Moratoire>(r, H.moratoires))
         );
 

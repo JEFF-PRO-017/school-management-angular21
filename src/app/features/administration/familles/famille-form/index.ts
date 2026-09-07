@@ -126,7 +126,7 @@ export class FamilleModalComponent implements OnInit {
     this.form.patchValue(this.data.famille);
     this.lat = this.data.famille.latitude ?? null;
     this.lng = this.data.famille.longitude ?? null;
-
+debugger
     // Récupère l'AnneeScolaireFamille si FamilleEnrichi
     if (isFamilleEnrichi(this.data.famille)) {
       // Prend celle de l'année courante si elle existe

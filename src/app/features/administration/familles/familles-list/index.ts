@@ -6,15 +6,15 @@ import { RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { CacheService }    from '../../../../core/services/cache.service';
-import { FamilleService }  from '../../../../core/models/family/famile.service';
-import { ANNEE_SCOLAIRE }  from '../../../../core/models/shared';
-import { FamilleEnrichi }  from '../../../../core/models/family';
+import { CacheService } from '../../../../core/services/cache.service';
+import { FamilleService } from '../../../../core/models/family/famile.service';
+import { ANNEE_SCOLAIRE } from '../../../../core/models/shared';
+import { FamilleEnrichi } from '../../../../core/models/family';
 
-import { ConfirmDialogComponent }   from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { EleveModalComponent, EleveModalData }       from '../../eleves/modal/eleve-modal.component';
+import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { EleveModalComponent, EleveModalData } from '../../eleves/modal/eleve-modal.component';
 import { PaiementModalComponent, PaiementModalData } from '../../paiements/modal/paiement-modal.component';
-import { FamilleModalComponent, FamilleModalData }   from '../famille-form';
+import { FamilleModalComponent, FamilleModalData } from '../famille-form';
 
 import { FamillesToolbarComponent, FiltreEnfants, FiltreEtat } from './Components/familles-toolbar.component';
 import { TableComponent, CellDefDirective, TableColumn } from '../../../../shared/components/table/table.component';
@@ -175,12 +175,12 @@ export type RowAction = 'detail' | 'paiement' | 'modifier' | 'eleve' | 'supprime
 })
 export class FamillesListComponent implements OnInit {
 
-  private cache       = inject(CacheService);
+  private cache = inject(CacheService);
   private get = inject(GetServices);
   private dialog = inject(MatDialog);
-  private snack  = inject(MatSnackBar);
-  private cdr    = inject(ChangeDetectorRef);
-  fas            = inject(FamilleService); // public : utilisé dans les cellDef du template
+  private snack = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
+  fas = inject(FamilleService); // public : utilisé dans les cellDef du template
 
   anneeScolaire = ANNEE_SCOLAIRE;
   readonly pageSize = 10;
@@ -192,25 +192,30 @@ export class FamillesListComponent implements OnInit {
   ];
 
   columns: TableColumn<FamilleEnrichi>[] = [
-    { id: 'famille',           header: 'Famille',            sortable: true, accessor: f => f.nom_famille },
-    { id: 'tel',               header: 'Téléphones',         align: 'center', exportable: false, accessor: f => f.tel_pere ?? '' },
-    { id: 'enfants',           header: 'Enfants',            align: 'center', accessor: f => (f.eleves ?? []).length },
-    { id: 'reductionSpecial',  header: 'Reduction Special',  align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.montant_reduction_special ?? 0 },
-    { id: 'reductionPct',      header: 'Reduction %Enfants', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.montant_reduction ?? 0 },
-    { id: 'attendu',           header: 'Attendu',            align: 'center', sortable: true, accessor: f => this.fas.montantAttentu(f) },
-    { id: 'verse',             header: 'Versé',              align: 'center', sortable: true, accessor: f => this.fas.montantVerse(f) },
-    { id: 'restant',           header: 'Restant',            align: 'center', headerBg: '#EBF3FC', headerColor: '#0C447C',
-      accessor: f => this.fas.montantRestant(this.fas.montantAttentu(f), this.fas.montantVerse(f)) },
-    { id: 'gps',               header: 'GPS',                align: 'center', exportable: false },
-    { id: 'actions',           header: 'Actions',            align: 'center', exportable: false },
+    { id: 'famille', header: 'Famille', sortable: true, accessor: f => f.nom_famille },
+    { id: 'tel', header: 'Téléphones', align: 'center', exportable: false, accessor: f => f.tel_pere ?? '' },
+    { id: 'enfants', header: 'Enfants', align: 'center', accessor: f => (f.eleves ?? []).length },
+    { id: 'reductionSpecial', header: 'Reduction Special', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.montant_reduction_special ?? 0 },
+    { id: 'reductionPct', header: 'Reduction %Enfants', align: 'center', sortable: true, accessor: f => this.fas.anneeSvcEncours(f)?.montant_reduction ?? 0 },
+    { id: 'attendu', header: 'Attendu', align: 'center', sortable: true, accessor: f => this.fas.montantAttentu(f) },
+    { id: 'verse', header: 'Versé', align: 'center', sortable: true, accessor: f => this.fas.montantVerse(f) },
+    { id: 'format_statut', header: 'Format ', align: 'center', sortable: true, accessor: f =>  this.fas.anneeSvcEncours(f)?.format_statut ?? ''},
+    { id: 'format_montant', header: 'Format .M', align: 'center', sortable: true, accessor: f =>  this.fas.anneeSvcEncours(f)?.format_montant ?? 0 },
+    { id: 'application_montant', header: 'App .M', align: 'center', sortable: true, accessor: f =>  this.fas.anneeSvcEncours(f)?.application_montant ?? 0},
+    {
+      id: 'restant', header: 'Restant', align: 'center', sortable: true,
+      accessor: f => this.fas.montantRestant(this.fas.montantAttentu(f), this.fas.montantVerse(f))
+    },
+    { id: 'gps', header: 'GPS', align: 'center', exportable: false },
+    { id: 'actions', header: 'Actions', align: 'center', exportable: false },
   ];
 
   trackByFamille = (f: FamilleEnrichi) => f.id_famille;
 
   // ── Filtres ──────────────────────────────────────────────────
-  private _search  = signal('');
-  private _etat    = signal<FiltreEtat>('tous');
-  private _classe  = signal('');
+  private _search = signal('');
+  private _etat = signal<FiltreEtat>('tous');
+  private _classe = signal('');
   private _enfants = signal<FiltreEnfants>(0);
 
   onFiltresChange(e: { search: string; etat: FiltreEtat; classe: string; enfants: FiltreEnfants }): void {
@@ -227,49 +232,49 @@ export class FamillesListComponent implements OnInit {
 
   classesDispos = computed(() => {
     const cMap = this.cache.classesMap();
-    const ids  = new Set((this.cache.getEleves() ?? []).map(e => e.id_classe));
+    const ids = new Set((this.cache.getEleves() ?? []).map(e => e.id_classe));
     return [...ids]
       .map(id => ({ id, nom: cMap.get(id)?.nom_classe ?? id }))
       .sort((a, b) => a.nom.localeCompare(b.nom));
   });
 
   filtered = computed(() => {
-    const q      = this._search().toLowerCase();
-    const etat   = this._etat();
-    const cls    = this._classe();
-    const nbEnf  = this._enfants();
+    const q = this._search().toLowerCase();
+    const etat = this._etat();
+    const cls = this._classe();
+    const nbEnf = this._enfants();
 
     return (this.get.getFamilles() ?? []).filter((f: FamilleEnrichi) => {
       if (q && !f.nom_famille.toLowerCase().includes(q)
-             && !f.tel_pere?.includes(q)
-             && !f.tel_mere?.includes(q)
-             && !(f.eleves ?? []).some(e => e.nom.toLowerCase().includes(q) || e.prenom.toLowerCase().includes(q))
-            ) return false;
+        && !f.tel_pere?.includes(q)
+        && !f.tel_mere?.includes(q)
+        && !(f.eleves ?? []).some(e => e.nom.toLowerCase().includes(q) || e.prenom.toLowerCase().includes(q))
+      ) return false;
 
       const attendu = this.fas.montantAttentu(f);
-      const verse   = this.fas.montantVerse(f);
+      const verse = this.fas.montantVerse(f);
       const restant = this.fas.montantRestant(attendu, verse);
 
       if (etat === 'no-solde' && !(restant > 0 && attendu > 0)) return false;
-      if (etat === 'solde'    && !(restant === 0 && attendu > 0)) return false;
+      if (etat === 'solde' && !(restant === 0 && attendu > 0)) return false;
       if (etat === 'sans-gps' && !!(f.latitude && f.longitude)) return false;
       if (cls && !(f.eleves ?? []).some(e => e.id_classe === cls)) return false;
 
       const nb = (f.eleves ?? []).length;
       if (nbEnf === 1 && nb !== 1) return false;
       if (nbEnf === 2 && nb !== 2) return false;
-      if (nbEnf === 3 && nb < 3)   return false;
+      if (nbEnf === 3 && nb < 3) return false;
       return true;
     });
   });
 
   // ── Totaux globaux (liste filtrée entière) ───────────────────
-  totalEleves           = computed(() => this.filtered().reduce((s, f) => s + (f.eleves ?? []).length, 0));
-  totalReduction        = computed(() => this.filtered().reduce((s, f) => s + +(this.fas.anneeSvcEncours(f)?.montant_reduction ?? 0), 0));
+  totalEleves = computed(() => this.filtered().reduce((s, f) => s + (f.eleves ?? []).length, 0));
+  totalReduction = computed(() => this.filtered().reduce((s, f) => s + +(this.fas.anneeSvcEncours(f)?.montant_reduction ?? 0), 0));
   totalReductionSpecial = computed(() => this.filtered().reduce((s, f) => s + +(this.fas.anneeSvcEncours(f)?.montant_reduction_special ?? 0), 0));
-  totalAttenduGlobal    = computed(() => this.filtered().reduce((s, f) => s + this.fas.montantAttentu(f), 0));
-  totalVerseGlobal      = computed(() => this.filtered().reduce((s, f) => s + this.fas.montantVerse(f), 0));
-  totalRestantGlobal    = computed(() => Math.max(0, this.totalAttenduGlobal() - this.totalVerseGlobal()));
+  totalAttenduGlobal = computed(() => this.filtered().reduce((s, f) => s + this.fas.montantAttentu(f), 0));
+  totalVerseGlobal = computed(() => this.filtered().reduce((s, f) => s + this.fas.montantVerse(f), 0));
+  totalRestantGlobal = computed(() => Math.max(0, this.totalAttenduGlobal() - this.totalVerseGlobal()));
 
   ngOnInit(): void { this.cache.getClasses(); }
 
@@ -304,9 +309,9 @@ export class FamillesListComponent implements OnInit {
   // ── Actions row ──────────────────────────────────────────────
   onRowAction(action: RowAction, f: FamilleEnrichi): void {
     switch (action) {
-      case 'paiement':  return this.ouvrirModalPaiement(f);
-      case 'modifier':  return this.ouvrirModalFamille(f);
-      case 'eleve':     return this.ouvrirModalEleve(f);
+      case 'paiement': return this.ouvrirModalPaiement(f);
+      case 'modifier': return this.ouvrirModalFamille(f);
+      case 'eleve': return this.ouvrirModalEleve(f);
       case 'supprimer': return this.confirmerSuppression(f);
     }
   }
