@@ -192,7 +192,7 @@ export class PaiementsGestionListComponent {
     });
   });
 
-  totalMontant = computed(() => this.filtered().reduce((s, p) => s + p.montant_verse, 0));
+  totalMontant = computed(() => this.filtered().reduce((s, p) => s + (+p.montant_verse), 0));
 
   trackByPaiement = (p: PaiementEnrichi) => p.id_paiement;
 
