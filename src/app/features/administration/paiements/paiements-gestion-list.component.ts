@@ -59,16 +59,16 @@ import { PaiementModalComponent, PaiementModalData } from './modal/paiement-moda
     exportFilename="paiements"
     emptyMessage="Aucun paiement ne correspond à ces critères">
 
-    <ng-template cellDef="famille" let-p>
-      <div class="d-flex align-items-center gap-2">
-        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-             [style.background]="avBg(p)" [style.color]="avTxt(p)"
-             style="width:28px;height:28px;font-size:10px;font-weight:600">
-          {{ initiales(p) }}
-        </div>
-        <span class="fw-medium">{{ p.famille.nom_famille }}</span>
-      </div>
-    </ng-template>
+<ng-template cellDef="famille" let-p>
+  <div class="d-flex align-items-center gap-2">
+    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+         [style.background]="avBg(p)" [style.color]="avTxt(p)"
+         style="width:28px;height:28px;font-size:10px;font-weight:600">
+      {{ initiales(p) }}
+    </div>
+    <span class="fw-medium">{{ p.famille?.nom_famille ?? 'Famille inconnue' }}</span>
+  </div>
+</ng-template>
 
     <ng-template cellDef="montant" let-p>
       <span class="fw-bold">{{ fmt(p.montant_verse) }} FCFA</span>
@@ -154,7 +154,7 @@ export class PaiementsGestionListComponent {
   ];
 
   columns: TableColumn<PaiementEnrichi>[] = [
-    { id: 'famille', header: 'Famille', sortable: true, accessor: p => p.famille.nom_famille },
+  { id: 'famille', header: 'Famille', sortable: true, accessor: p => p.famille?.nom_famille ?? '' },
     { id: 'montant', header: 'Montant', align: 'center', sortable: true, accessor: p => p.montant_verse },
     { id: 'recu_numero', header: 'N° Reçu', align: 'center', sortable: true, accessor: p => p.recu_numero },
     { id: 'nb_impressions', header: 'Impressions', align: 'center', sortable: true, accessor: p => p.nb_impressions },
@@ -198,9 +198,16 @@ export class PaiementsGestionListComponent {
 
   fmt(n: number): string { return new Intl.NumberFormat('fr-FR').format(Math.round(n)); }
 
-  initiales(p: PaiementEnrichi): string {
-    return p.famille.nom_famille.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
-  }
+initiales(p: PaiementEnrichi): string {
+  const nom = p?.famille?.nom_famille;
+  if (!nom) return '';
+  return nom
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0] ?? '')
+    .join('')
+    .toUpperCase();
+}
   private hashIdx(p: PaiementEnrichi): number {
     return [...p.id_paiement].reduce((s, c) => s + c.charCodeAt(0), 0) % this.palette.length;
   }
@@ -210,22 +217,22 @@ export class PaiementsGestionListComponent {
   ouvrirRecu(p: PaiementEnrichi): void {
     this.router.navigate(['/paiement/recus', p.id_paiement]);
   }
-  ouvrirWhatsapp(p: PaiementEnrichi): void {
-    const message = `Bonjour, nous confirmons la réception de votre paiement de ${this.fmt(p.montant_verse)} FCFA. Merci.`;
-    this.dialog.open(WhatsappModalComponent, {
-      data: {
-        telPere: p.famille.tel_pere,
-        telMere: p.famille.tel_mere,
-        messageDefaut: message,
-        variables: [
-          { label: 'Montant', valeur: `${this.fmt(p.montant_verse)} FCFA` },
-          { label: 'Reçu N°', valeur: p.recu_numero },
-          { label: 'Date', valeur: p.date_paiement },
-        ],
-      } satisfies WhatsappModalData,
-      width: '560px', maxWidth: '96vw',
-    });
-  }
+ouvrirWhatsapp(p: PaiementEnrichi): void {
+  const message = `Bonjour, nous confirmons la réception de votre paiement de ${this.fmt(p.montant_verse)} FCFA. Merci.`;
+  this.dialog.open(WhatsappModalComponent, {
+    data: {
+      telPere: p.famille?.tel_pere ?? '',
+      telMere: p.famille?.tel_mere ?? '',
+      messageDefaut: message,
+      variables: [
+        { label: 'Montant', valeur: `${this.fmt(p.montant_verse)} FCFA` },
+        { label: 'Reçu N°', valeur: p.recu_numero },
+        { label: 'Date', valeur: p.date_paiement },
+      ],
+    } satisfies WhatsappModalData,
+    width: '560px', maxWidth: '96vw',
+  });
+}
 
   ouvrirModifier(p: PaiementEnrichi): void {
     this.dialog.open(PaiementModalComponent, {
