@@ -15,7 +15,7 @@ import { SessionService } from '../services/@session/session.service';
 
 // ── Guard : connecté ─────────────────────────────────────────────
 export const authGuard: CanActivateFn = () => {
-  const auth   = inject(AuthService);
+  const auth = inject(AuthService);
   const router = inject(Router);
   return auth.isLogged() ? true : router.createUrlTree(['/admin/login']);
 };
@@ -25,16 +25,16 @@ export const authGuard: CanActivateFn = () => {
 //   { path: 'paiements', canActivate: [authGuard, permGuard],
 //     data: { perm: 'paiements' }, ... }
 export const permGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
-  const auth    = inject(AuthService);
-  const router  = inject(Router);
-  const perm    = route.data['perm'] as PermissionId | undefined;
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const perm = route.data['perm'] as PermissionId | undefined;
   if (!perm || auth.hasPermission(perm) || auth.isAdmin()) return true;
   return router.navigate(['/espace-administration/dashboard']);
 };
 
 // ── Guard : admin uniquement ─────────────────────────────────────
 export const adminGuard: CanActivateFn = () => {
-  const auth   = inject(AuthService);
+  const auth = inject(AuthService);
   const router = inject(Router);
   return auth.isAdmin() ? true : router.navigate(['/espace-administration/dashboard']);
 };
@@ -56,4 +56,17 @@ export const sessionGuard: CanActivateFn = () => {
 
   // createUrlTree = redirection directe, sans appel supplémentaire à router.navigate
   return router.createUrlTree(route);
+};
+
+export const loginIsValidGuard: CanActivateFn = () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+ console.log('[login guard] isValid =', session.isValid());
+  if (!session.isValid()) return true;
+
+  // Si on vient d'être expulsé d'une page protégée, on n'y retourne pas
+  // const nav = router.getCurrentNavigation();
+  // if (nav?.previousNavigation) return true;
+
+  return router.createUrlTree(['/espace-administration/dashboard']);
 };

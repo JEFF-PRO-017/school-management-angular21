@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
 import { Session } from '../../models/auth/session.model';
 
 const CLE_SESSION = 'session';
-const DUREE_SESSION_MS = 30 * 60 * 1000;        // durée totale : 30 minutes
+const DUREE_SESSION_MS = 7 * 24 * 60 * 60 * 1000;        // durée totale : 7 jours
 const SEUIL_RENOUVELLEMENT_MS = 5 * 60 * 1000;   // renouvelle si moins de 5 min restantes
 
 @Injectable({ providedIn: 'root' })
