@@ -29,6 +29,7 @@
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.13.1",
+    "idb-keyval": "^6.3.0",
     "jose": "^5.9.3",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",

@@ -14,7 +14,7 @@ export class GetServices {
     protected queue = inject(SheetsQueueServiceService);
     protected sheets = inject(GoogleSheetsService);
 
-    getClasses(): Classe[] { return this.cache.getClasses(); }
+    getClasses(): Classe[] { return this.cache.getClasses() as Classe[]; }
     getFamilles(): any[] { return this.cache.getFamilles(); }
     getEleves(): Eleve[] | any[] { return this.cache.getEleves(); }
     getMatieres(): MatiereConfig[] | any[] { return this.cache.getMatieres(); }

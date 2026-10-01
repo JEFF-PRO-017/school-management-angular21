@@ -1,50 +1,116 @@
-// cache.service.ts — modèle Famille unifié (frais intégrés)
+// cache.service.ts — objet db synchrone en mémoire + sauvegarde IndexedDB en arrière-plan
 import { Injectable, signal, computed } from '@angular/core';
-import {
-  Famille, Eleve, Classe, FraisConfig, Enseignant,
-  MatiereConfig, SoldeSnap, BulletinSnap,
-  Note, Sequence, SEQUENCES,
-  MsgTemplate, LogAlerte, PermissionId
-} from '../models/last_index';
-import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
-import { AnneeScolaireFamille, Moratoire } from '../models/family';
-import { AppUser, AppUserEnrichi, PointageResult, Absence, Paiement, PaiementEnrichi } from '../models';
 
+import { DemandePaiement, EleveTampon, FamilleTampon, PensionTampon } from '../models/parent.models';
+import { AnneeScolaireFamille, Famille, Moratoire } from '../models/family';
+import { AppUser, AppUserEnrichi, PointageResult, Absence, Paiement, PaiementEnrichi, Note, Classe, Eleve, Enseignant, FraisConfig, LogAlerte, MatiereConfig, MsgTemplate, Sequence, SEQUENCES } from '../models';
+import { loadDb, saveTables, wipeStorage } from './db.storage';
+import { Db, emptyDb, TableName } from '../../../../db.model';
+import { SoldeSnap, BulletinSnap } from '../models/last_index';
 
 @Injectable({ providedIn: 'root' })
 export class CacheService {
 
-  // ── Signaux bruts ──────────────────────────────────────────────
-  private _familles = signal<Famille[]>([]);
-  private _classes = signal<Classe[]>([]);
-  private _frais = signal<FraisConfig[]>([]);
-  private _enseignants = signal<Enseignant[]>([]);
-  private _matieres = signal<MatiereConfig[]>([]);
-  private _notes = signal<Note[]>([]);
-  private _paiements = signal<Paiement[]>([]);
-  private _eleves = signal<Eleve[]>([]);
-  private _soldes = signal<SoldeSnap[]>([]);
-  private _bulletins = signal<BulletinSnap[]>([]);
-  private _absences = signal<Absence[]>([]);
-  private _templates = signal<MsgTemplate[]>([]);
-  private _logs = signal<LogAlerte[]>([]);
+  // ══════════════════════════════════════════════════════════════
+  //  SOURCE DE VÉRITÉ : un seul objet db, synchrone, en mémoire
+  // ══════════════════════════════════════════════════════════════
+  private _db = signal<Db>(emptyDb());
+
+  // ── Tranches (chaque computed ne change que si SA table change) ─
+  private _familles = computed(() => this._db().familles);
+  private _classes = computed(() => this._db().classes);
+  private _frais = computed(() => this._db().frais);
+  private _enseignants = computed(() => this._db().enseignants);
+  private _matieres = computed(() => this._db().matieres);
+  private _notes = computed(() => this._db().notes);
+  private _paiements = computed(() => this._db().paiements);
+  private _eleves = computed(() => this._db().eleves);
+  private _soldes = computed(() => this._db().soldes);
+  private _bulletins = computed(() => this._db().bulletins);
+  private _absences = computed(() => this._db().absences);
+  private _templates = computed(() => this._db().templates);
+  private _logs = computed(() => this._db().logs);
+  private _anneeSvc = computed(() => this._db().anneeSvc);
+  private _moratoire = computed(() => this._db().moratoires);
+
+  // ── Tampons (espace parent — données en attente) ──────────────
+  private _famillesTampon = computed(() => this._db().famillesTampon);
+  private _elevesTampon = computed(() => this._db().elevesTampon);
+  private _pensionsTampon = computed(() => this._db().pensionsTampon);
+  private _demandesPaiement = computed(() => this._db().demandesPaiement);
+
+  // ── Non persistés (sensibles ou éphémères) ────────────────────
   private _users = signal<AppUser[]>([]);
-  private _anneeSvc = signal<AnneeScolaireFamille[]>([])
-  private _pointages = signal<PointageResult[]>([])
-
-  // ── Signaux tampon (espace parent — données en attente) ────────
-  private _famillesTampon = signal<FamilleTampon[]>([]);
-  private _elevesTampon = signal<EleveTampon[]>([]);
-  private _pensionsTampon = signal<PensionTampon[]>([]);
-  private _demandesPaiement = signal<DemandePaiement[]>([]);
-
-  private _moratoire = signal<Moratoire[]>([])
-
-
+  private _pointages = signal<PointageResult[]>([]);
 
   // ── Section active — injectée depuis AuthService via setSection() ─
-  // Permet de filtrer les classes par section sans passer par le composant
   private _section = signal<'primaire' | 'secondaire' | 'all'>('all');
+
+  // ══════════════════════════════════════════════════════════════
+  //  PERSISTANCE (asynchrone, invisible pour le reste de l'app)
+  // ══════════════════════════════════════════════════════════════
+  private dirty = new Set<TableName>();
+  private flushTimer: any;
+
+  constructor() {
+    // Si l'onglet se ferme avant la fin du délai, on sauvegarde tout de suite
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', () => { this.flush(); });
+    }
+  }
+
+  /** Point d'entrée UNIQUE pour modifier une table (synchrone) */
+  private write<K extends TableName>(table: K, fn: (l: Db[K]) => Db[K]): void {
+    this._db.update(db => ({ ...db, [table]: fn(db[table]) }) as Db);
+    this.markDirty(table);
+  }
+
+  private markDirty(table: TableName) {
+    this.dirty.add(table);
+    clearTimeout(this.flushTimer);
+    this.flushTimer = setTimeout(() => this.flush(), 300); // regroupe les écritures
+  }
+
+  private async flush() {
+    clearTimeout(this.flushTimer);
+    const tables = [...this.dirty];
+    this.dirty.clear();
+    if (!tables.length) return;
+    try {
+      await saveTables(this._db(), tables);
+    } catch (e) {
+      console.warn('Sauvegarde IndexedDB échouée', e);
+    }
+  }
+
+  /** À appeler au démarrage (APP_INITIALIZER) : IndexedDB → _db */
+  async hydrate(): Promise<void> {
+    try {
+      const saved = await loadDb();
+      this._db.update(db => ({ ...db, ...saved }));
+    } catch (e) {
+      console.warn('Lecture IndexedDB impossible', e);
+    }
+  }
+
+  /** Vide la mémoire seulement (IndexedDB intact) */
+  clearMemory(): void {
+    clearTimeout(this.flushTimer);
+    this.dirty.clear();
+    this._db.set(emptyDb());
+    this._users.set([]);
+    this._pointages.set([]);
+  }
+
+  /** Vide la mémoire ET IndexedDB (à utiliser à la déconnexion) */
+  async invalidateAll(): Promise<void> {
+    this.clearMemory();          // annule aussi toute sauvegarde en attente
+    await wipeStorage();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  INDEX ET COMPUTED D'ENRICHISSEMENT (inchangés)
+  // ══════════════════════════════════════════════════════════════
 
   // ── Niveau 1 : index notes pour O(1) ──────────────────────────
   // Clé : "id_eleve|sequence|id_classe"
@@ -59,8 +125,6 @@ export class CacheService {
   });
 
   // Niveau 1 : index paiements par famille pour O(1)
-  // Clé : id_famille → Paiement[]
-  // On construit cet index UNE SEULE FOIS et les niveaux suivants s'en servent
   private _paiementsParFamille = computed(() => {
     const idx = new Map<string, Paiement[]>();
     for (const p of this._paiements()) {
@@ -70,13 +134,12 @@ export class CacheService {
     return idx;
   });
 
-
   // ── Niveau 2 : élèves enrichis ────────────────────────────────
   private _elevesEnrichis = computed<any[]>(() => {
     const famMap = new Map(this._familles().map(f => [f.id_famille, f]));
     const absMap = this._absences();
     const notesIdx = this._notesIndex();
-    const classe = this._classes()
+    const classe = this._classes();
     return this._eleves().map(e => ({
       ...e,
       classe: classe.find(c => c.id_classe === e.id_classe),
@@ -89,34 +152,28 @@ export class CacheService {
     }));
   });
 
-  // ── Niveau 3 : familles enrichies ─────────────────────────────
-  // Lit : _familles (brut) + _elevesEnrichis (N2) + _paiementsParFamille (N1)
-  //
-  // RÈGLE RESPECTÉE : on crée un NOUVEL objet avec { ...f } pour chaque famille
-  // On ne mute jamais un objet existant dans un computed()
-  private _famillesEnrichies = computed<Famille[] | any[]>(() => {
-    const anneeSvc = this._anneeSvcEnrichies() //N3
-    const elevesEnrichis = this._elevesEnrichis();   // N2
-    const paiementsParFam = this._paiementsParFamille(); // N1
-
-    return this._familles().map(f => ({
-      ...f,                                               // copie tous les champs bruts
-      eleves: elevesEnrichis.filter(e => e.id_famille === f.id_famille),
-      paiements: paiementsParFam.get(f.id_famille) ?? [], // ← enrichissement paiements
-      annee_scolaires: anneeSvc.filter(a => a.id_famille === f.id_famille)
-    }));
-
-  });
-
   private _anneeSvcEnrichies = computed<AnneeScolaireFamille[]>(() => {
-    const moratoires = this._moratoire()
-
+    const moratoires = this._moratoire();
     return this._anneeSvc().map(a => ({
       ...a,
       moratoires: moratoires.filter(m => m.id_annee_scolaire === a.id_annee_scolaire)
-    }))
+    }));
+  });
 
-  })
+  // ── Niveau 3 : familles enrichies ─────────────────────────────
+  // On crée un NOUVEL objet pour chaque famille, on ne mute jamais
+  private _famillesEnrichies = computed<Famille[] | any[]>(() => {
+    const anneeSvc = this._anneeSvcEnrichies();
+    const elevesEnrichis = this._elevesEnrichis();
+    const paiementsParFam = this._paiementsParFamille();
+
+    return this._familles().map(f => ({
+      ...f,
+      eleves: elevesEnrichis.filter(e => e.id_famille === f.id_famille),
+      paiements: paiementsParFam.get(f.id_famille) ?? [],
+      annee_scolaires: anneeSvc.filter(a => a.id_famille === f.id_famille)
+    }));
+  });
 
   // ── Niveau 3 : matières enrichies ─────────────────────────────
   private _matieresEnrichies = computed<MatiereConfig[]>(() => {
@@ -124,18 +181,16 @@ export class CacheService {
     const clsMap = new Map(this._classes().map(c => [c.id_classe, c]));
     return this._matieres().map(m => ({
       ...m,
-      enseignant: ensMap.get(m.id_enseignant),
-      classe: clsMap.get(m.id_classe),
+      enseignant: ensMap.get(m.id_enseignant) as any,
+      classe: clsMap.get(m.id_classe) as any,
     }));
   });
 
-  // ── Niveau 4 : classes enrichies, filtrées par section active ──
-  // _section est mis à jour par AuthService.setSection() via header
-  // getClasses() retourne uniquement les classes de la section visible
+  // ── Niveau 4 : classes enrichies ──────────────────────────────
   private _classesEnrichies = computed<Classe[]>(() => {
     const mats = this._matieresEnrichies();
     const elevs = this._elevesEnrichis();
-    const section = this._section();
+    const section = this._section();   // gardé pour le filtre par section
 
     return this._classes()
       // .filter(c => section === 'all' || c.cycle === section)
@@ -147,27 +202,23 @@ export class CacheService {
   });
 
   private _usersEnrichies = computed<AppUserEnrichi[] | any[]>(() => {
-
     const mats = this._matieresEnrichies();
     const cls = this._classesEnrichies();
 
-    return this._users()
-      .map(u => ({
-        ...u,
-        classes_assignees_infos: cls.find(c => c.enseignant_principal === u.id),
-        matieres: mats.filter(m => m.id_enseignant === u.id)
-      }))
-
-  })
+    return this._users().map(u => ({
+      ...u,
+      classes_assignees_infos: cls.find(c => c.enseignant_principal === u.id),
+      matieres: mats.filter(m => m.id_enseignant === u.id)
+    }));
+  });
 
   private _paiementEnrichies = computed<PaiementEnrichi[] | any[]>(() => {
-    const fas = this._familles()
-    return this._paiements()
-      .map(p => ({
-        ...p,
-        famille: fas.find(f => f.id_famille === p.id_famille)
-      }))
-  })
+    const fas = this._familles();
+    return this._paiements().map(p => ({
+      ...p,
+      famille: fas.find(f => f.id_famille === p.id_famille)
+    }));
+  });
 
   // ── Maps O(1) publiques ───────────────────────────────────────
   readonly famillesMap = computed(() =>
@@ -180,7 +231,9 @@ export class CacheService {
     new Map(this._matieresEnrichies().map(m => [m.id_matiere, m]))
   );
 
-  // ── Getters publics ────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+  //  GETTERS PUBLICS (inchangés)
+  // ══════════════════════════════════════════════════════════════
   getFamilles(): any[] { return this._famillesEnrichies(); }
   getClasses(): Classe[] { return this._classesEnrichies(); }
   getEleves(): Eleve[] { return this._elevesEnrichis(); }
@@ -192,111 +245,101 @@ export class CacheService {
   getNotes(): Note[] { return this._notes(); }
   getPaiements(): PaiementEnrichi[] { return this._paiementEnrichies(); }
 
-  // ── Setters ───────────────────────────────────────────────────
-  setFamilles(d: Famille[]) { this._familles.set(d); }
-  setClasses(d: Classe[] | any[]) { this._classes.set(d); }
-  setFrais(d: FraisConfig[]) { this._frais.set(d); }
-  setEnseignants(d: Enseignant[]) { this._enseignants.set(d); }
-  setMatieres(d: MatiereConfig[] | any[]) { this._matieres.set(d); }
-  setEleves(d: Eleve[] | any[]) { this._eleves.set(d); }
-  setSoldes(d: SoldeSnap[]) { this._soldes.set(d); }
-  setBulletins(d: BulletinSnap[]) { this._bulletins.set(d); }
-  setNotes(d: Note[]) { this._notes.set(d); }
-  setPaiements(d: Paiement[]) { this._paiements.set(d); }
-  setAnneeSvc(a: AnneeScolaireFamille[]) { this._anneeSvc.set(a); }
-  setPointages(p: PointageResult[]) { this._pointages.set(p) }
-  setMoratoires(m: Moratoire[]) { this._moratoire.set(m) }
+  // ══════════════════════════════════════════════════════════════
+  //  SETTERS
+  // ══════════════════════════════════════════════════════════════
+  setFamilles(d: Famille[]) { this.write('familles', () => d ); }
+  setClasses(d: Classe[] | any[]) { this.write('classes', () => d as Classe[]); }
+  setFrais(d: FraisConfig[]) { this.write('frais', () => d); }
+  setEnseignants(d: Enseignant[]) { this.write('enseignants', () => d); }
+  setMatieres(d: MatiereConfig[] | any[]) { this.write('matieres', () => d as MatiereConfig[]); }
+  setEleves(d: Eleve[] | any[]) { this.write('eleves', () => d as Eleve[]); }
+  setSoldes(d: SoldeSnap[]) { this.write('soldes', () => d); }
+  setBulletins(d: BulletinSnap[]) { this.write('bulletins', () => d); }
+  setNotes(d: Note[]) { this.write('notes', () => d); }
+  setPaiements(d: Paiement[]) { this.write('paiements', () => d); }
+  setAnneeSvc(a: AnneeScolaireFamille[]) { this.write('anneeSvc', () => a); }
+  setMoratoires(m: Moratoire[]) { this.write('moratoires', () => m); }
+  setPointages(p: PointageResult[]) { this._pointages.set(p); }   // non persisté
 
-  // ── Upsert / remove ───────────────────────────────────────────
-  upsertFamille(f: Famille) { this._familles.update(l => upsert(l, f, 'id_famille')); }
-  removeFamille(id: string) { this._familles.update(l => l.filter(x => x.id_famille !== id)); }
-  removePaiement(id: string) { this._paiements.update(l => l.filter(x => x.id_paiement !== id)); }
+  // ══════════════════════════════════════════════════════════════
+  //  UPSERT / REMOVE
+  // ══════════════════════════════════════════════════════════════
+  upsertFamille(f: Famille) { this.write('familles', l => upsert(l, f, 'id_famille')); }
+  removeFamille(id: string) { this.write('familles', l => l.filter(x => x.id_famille !== id)); }
+  removePaiement(id: string) { this.write('paiements', l => l.filter(x => x.id_paiement !== id)); }
 
-  upsertEleve(e: Eleve) { this._eleves.update(l => upsert(l, e, 'id_eleve')); }
-  removeEleve(id: string) { this._eleves.update(l => l.filter(x => x.id_eleve !== id)); }
+  upsertEleve(e: Eleve) { this.write('eleves', l => upsert(l, e, 'id_eleve')); }
+  removeEleve(id: string) { this.write('eleves', l => l.filter(x => x.id_eleve !== id)); }
 
-  upsertClasse(c: Classe) { this._classes.update(l => upsert(l, c, 'id_classe')); }
+  upsertClasse(c: Classe) { this.write('classes', l => upsert(l, c, 'id_classe')); }
+  upsertPaiement(p: Paiement) { this.write('paiements', l => upsert(l, p, 'id_paiement')); }
+  upsertSolde(s: SoldeSnap) { this.write('soldes', l => upsert(l, s, 'id_eleve')); }
+  upsertMatiere(m: MatiereConfig) { this.write('matieres', l => upsert(l, m, 'id_matiere')); }
+  upsertAnneeSvc(a: AnneeScolaireFamille) { this.write('anneeSvc', l => upsert(l, a, 'id_annee_scolaire')); }
+  upsertMoratoire(m: Moratoire) { this.write('moratoires', l => upsert(l, m, 'id_moratoire')); }
 
-  upsertPaiement(p: Paiement) { this._paiements.update(l => upsert(l, p, 'id_paiement')); }
-
-  upsertSolde(s: SoldeSnap) { this._soldes.update(l => upsert(l, s, 'id_eleve')); }
-
-  upsertMatiere(m: MatiereConfig) { this._matieres.update(l => upsert(l, m, 'id_matiere')); }
-
-  upsertAnneeSvc(a: AnneeScolaireFamille) { this._anneeSvc.update(l => upsert(l, a, 'id_annee_scolaire')) }
-
-  upsertMoratoire(m: Moratoire) { this._moratoire.update(l => upsert(l, m, 'id_moratoire')) }
-
-  // ── Absences ──────────────────────────────────────────────────────
+  // ── Absences ──────────────────────────────────────────────────
   getAbsences(): Absence[] { return this._absences(); }
-  setAbsences(d: Absence[]) { this._absences.set(d); }
-  addAbsence(a: Absence) { this._absences.update(l => [a, ...l]); }
-  addAbsencesBatch(abs: Absence[]) { this._absences.update(l => [...abs, ...l]); }
-  addPointage(p: PointageResult) { this._pointages.update(l => [p, ...l]) }
+  setAbsences(d: Absence[]) { this.write('absences', () => d); }
+  addAbsence(a: Absence) { this.write('absences', l => [a, ...l]); }
+  addAbsencesBatch(abs: Absence[]) { this.write('absences', l => [...abs, ...l]); }
+  addPointage(p: PointageResult) { this._pointages.update(l => [p, ...l]); }   // non persisté
 
-  // ── Templates ─────────────────────────────────────────────────────
+  // ── Templates ─────────────────────────────────────────────────
   getTemplates(): MsgTemplate[] { return this._templates(); }
-  setTemplates(d: MsgTemplate[]) { this._templates.set(d); }
-  upsertTemplate(t: MsgTemplate) {
-    this._templates.update(l => upsert(l, t, 'id_template'));
-  }
+  setTemplates(d: MsgTemplate[]) { this.write('templates', () => d); }
+  upsertTemplate(t: MsgTemplate) { this.write('templates', l => upsert(l, t, 'id_template')); }
 
-  // ── Logs alertes ──────────────────────────────────────────────────
+  // ── Logs alertes ──────────────────────────────────────────────
   getLogs(): LogAlerte[] { return this._logs(); }
-  setLogs(d: LogAlerte[]) { this._logs.set(d); }
-  upsertLog(l: LogAlerte) {
-    this._logs.update(list => upsert(list, l, 'id_log'));
-  }
+  setLogs(d: LogAlerte[]) { this.write('logs', () => d); }
+  upsertLog(l: LogAlerte) { this.write('logs', list => upsert(list, l, 'id_log')); }
 
-  // ── Utilisateurs ──────────────────────────────────────────────────
+  // ── Utilisateurs (mémoire seulement) ──────────────────────────
   getUsers(): AppUser[] { return this._usersEnrichies(); }
   setUsers(d: AppUser[]) { this._users.set(d); }
-  upsertUser(u: AppUser) {
-    this._users.update(l => upsert(l, u, 'id'));
-  }
-  removeUser(id: string) {
-    this._users.update(l => l.filter(u => u.id !== id));
-  }
+  upsertUser(u: AppUser) { this._users.update(l => upsert(l, u, 'id')); }
+  removeUser(id: string) { this._users.update(l => l.filter(u => u.id !== id)); }
 
   // ── Familles tampon ───────────────────────────────────────────
   getFamillesTampon(): FamilleTampon[] { return this._famillesTampon(); }
-  setFamillesTampon(d: FamilleTampon[]) { this._famillesTampon.set(d); }
+  setFamillesTampon(d: FamilleTampon[]) { this.write('famillesTampon', () => d ); }
   upsertFamilleTampon(f: FamilleTampon) {
-    this._famillesTampon.update(l => upsert(l, f, 'id_famille'));
+    this.write('famillesTampon', l => upsert(l, f, 'id_famille'));
   }
   removeFamilleTampon(id: string) {
-    this._famillesTampon.update(l => l.filter(f => f.id_famille !== id));
+    this.write('famillesTampon', l => l.filter(f => f.id_famille !== id));
   }
 
   // ── Élèves tampon ─────────────────────────────────────────────
-  getElevesTampon(): EleveTampon[] { return this._elevesTampon(); }
-  setElevesTampon(d: EleveTampon[]) { this._elevesTampon.set(d); }
+  getElevesTampon() { return this._elevesTampon(); }
+  setElevesTampon(d: EleveTampon[]) { this.write('elevesTampon', () => d); }
   upsertEleveTampon(e: EleveTampon) {
-    this._elevesTampon.update(l => upsert(l, e, 'id_eleve'));
+    this.write('elevesTampon', l => upsert(l, e, 'id_eleve'));
   }
   removeElevesTamponFamille(idFamille: string) {
-    this._elevesTampon.update(l => l.filter(e => e.id_famille !== idFamille));
+    this.write('elevesTampon', l => l.filter(e => e.id_famille !== idFamille));
   }
 
   // ── Pensions tampon ───────────────────────────────────────────
   getPensionsTampon(): PensionTampon[] { return this._pensionsTampon(); }
-  setPensionsTampon(d: PensionTampon[]) { this._pensionsTampon.set(d); }
+  setPensionsTampon(d: PensionTampon[]) { this.write('pensionsTampon', () => d); }
   upsertPensionTampon(p: PensionTampon) {
-    this._pensionsTampon.update(l => upsert(l, p, 'id'));
+    this.write('pensionsTampon', l => upsert(l, p, 'id'));
   }
 
   // ── Demandes paiement ─────────────────────────────────────────
   getDemandesPaiement(): DemandePaiement[] { return this._demandesPaiement(); }
-  setDemandesPaiement(d: DemandePaiement[]) { this._demandesPaiement.set(d); }
+  setDemandesPaiement(d: DemandePaiement[]) { this.write('demandesPaiement', () => d); }
   upsertDemandePaiement(d: DemandePaiement) {
-    this._demandesPaiement.update(l => upsert(l, d, 'id'));
+    this.write('demandesPaiement', l => upsert(l, d, 'id'));
   }
   removeDemandePaiement(id: string) {
-    this._demandesPaiement.update(l => l.filter(d => d.id !== id));
+    this.write('demandesPaiement', l => l.filter(d => d.id !== id));
   }
 
   // ── Computed consultant — vue enrichie (jointure en mémoire) ──
-  // Accessible depuis ConsultantComponent sans recharger Sheets à chaque fois
   readonly famillesTamponEnrichies = computed(() => {
     const fams = this._famillesTampon();
     const elevs = this._elevesTampon();
@@ -310,11 +353,12 @@ export class CacheService {
     }));
   });
 
-  // ── Section — permet de filtrer _classesEnrichies ─────────────────
+  // ── Section ───────────────────────────────────────────────────
   setSection(s: 'primaire' | 'secondaire' | 'all') { this._section.set(s); }
 
+  // ── Notes en lot ──────────────────────────────────────────────
   setNotesBatch(notes: Note[]): void {
-    this._notes.update(list => {
+    this.write('notes', list => {
       const map = new Map(list.map(n => [n.id_note, n]));
       notes.forEach(n => map.set(n.id_note, n));
       return Array.from(map.values());
@@ -323,21 +367,7 @@ export class CacheService {
 
   deleteNotesBatch(ids: string[]): void {
     const set = new Set(ids);
-    this._notes.update(list => list.filter(n => !set.has(n.id_note)));
-  }
-
-  // ── Invalidation complète ─────────────────────────────────────
-  invalidateAll(): void {
-    this._familles.set([]); this._classes.set([]);
-    this._frais.set([]); this._enseignants.set([]);
-    this._matieres.set([]); this._eleves.set([]);
-    this._soldes.set([]); this._bulletins.set([]);
-    this._notes.set([]); this._paiements.set([]);
-    this._absences.set([]); this._templates.set([]);
-    this._logs.set([]); this._users.set([]);
-    // Tables tampon
-    this._famillesTampon.set([]); this._elevesTampon.set([]);
-    this._pensionsTampon.set([]); this._demandesPaiement.set([]);
+    this.write('notes', list => list.filter(n => !set.has(n.id_note)));
   }
 }
 

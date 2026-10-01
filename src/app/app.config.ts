@@ -8,6 +8,7 @@ import { rateLimitInterceptor } from './core/interceptors/rate-limit.interceptor
 import { DataServiceBase } from './core/services/@data/_data.base.service';
 import { provideServiceWorker } from '@angular/service-worker';
 import { UpdateService } from './core/services/update.service';
+import { CacheService } from './core/services/cache.service';
 
 export const appConfig: ApplicationConfig = {
 
@@ -20,11 +21,16 @@ export const appConfig: ApplicationConfig = {
 
     provideAnimationsAsync(),
 
-    provideAppInitializer(() => {
+    provideAppInitializer(async () => {
       const data = inject(DataServiceBase);
+      const cache = inject(CacheService);
 
-      setTimeout(async () => {
-        await data.ensureSheets();
+      // 1. On attend le cache : l'UI démarre avec les données locales
+      await cache.hydrate();
+
+      // 2. Ensuite seulement, on rafraîchit depuis Sheets, sans bloquer le démarrage
+      setTimeout(() => {
+        data.ensureSheets().catch(err => console.warn('ensureSheets a échoué', err));
       }, 600);
     }),
 

@@ -3,8 +3,9 @@
 // Étend les modèles principaux avec les tables tampon
 // et les types spécifiques à l'espace parent.
 
-import { FamilleEnrichi } from './family';
-import { Famille, Eleve, Paiement, Absence, Note, Sequence } from './last_index';
+import { Eleve } from './academic';
+import { Famille, FamilleEnrichi } from './family';
+import {  Paiement, Absence, Note, Sequence } from './last_index';
 
 // ── Session parent ────────────────────────────────────────────────
 

@@ -23,7 +23,7 @@ import { AuthService }   from '../../../core/services/auth.service';
       <div class="kpi-label">
         <span class="kpi-dot" style="background:#185FA5"></span>Élèves
       </div>
-      <div class="kpi-val" style="color:#185FA5">{{ nbEleves() }}</div>
+      <div class="kpi-val" style="color:#185FA5">{{ nbEleves }}</div>
       <div class="kpi-sub">inscrits actifs</div>
     </div>
     <div class="kpi">
@@ -159,7 +159,8 @@ export class DashboardComponent {
 
   today = new Date().toLocaleDateString('fr-FR', { dateStyle: 'long' });
 
-  nbEleves      = computed(() => (this.cache.getEleves()   ?? []).filter(e => e.statut === 'actif').length);
+  // nbEleves      = computed(() => (this.cache.getEleves()   ?? []).filter(e => e.statut === 'actif').length);
+  nbEleves = 0;
   nbFamilles    = computed(() => (this.cache.getFamilles() ?? []).length);
   nbClasses     = computed(() => (this.cache.getClasses()  ?? []).length);
   nbInsolvables = computed(() => (this.cache.getSoldes()   ?? []).filter(s => s.statut_insolvable).length);
