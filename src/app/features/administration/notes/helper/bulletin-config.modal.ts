@@ -1,6 +1,6 @@
 // bulletin-config.modal.ts
 // Modal simple : titre éditable, trimestre, année, séquences sélectionnées.
-// Ouvert depuis bulletins.component, retourne un BulletinConfig ou null.
+// La config est sauvegardée dans le localStorage (à "Appliquer") et peut être réinitialisée.
 
 import { Component, Inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,62 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { BulletinConfig } from './bulletin.models';
 import { Sequence, SEQUENCES } from '../../../../core/models/last_index';
 
+// ══════════════════════════════════════════════════════════════
+//  Config par défaut + persistance (localStorage)
+//  À utiliser aussi dans bulletins.component pour la valeur initiale :
+//      config = loadBulletinConfig();
+// ══════════════════════════════════════════════════════════════
+const STORAGE_KEY = 'bulletin:config:v1';   // incrémenter si BulletinConfig change
+
+/** Année scolaire courante : à partir de septembre, on passe à l'année suivante */
+function anneeCourante(): string {
+  const now = new Date();
+  const start = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${start}-${start + 1}`;
+}
+
+/** Config par défaut : trimestre 1, deux premières séquences */
+export function defaultBulletinConfig(): BulletinConfig {
+  return {
+    titre: 'BULLETIN TRIMESTRIEL 1',
+    trimestre: 1,
+    annee: anneeCourante(),
+    sequences: SEQUENCES.slice(0, 2) as Sequence[],
+  } as BulletinConfig;
+}
+
+/** Lit la config sauvegardée, sinon renvoie la config par défaut */
+export function loadBulletinConfig(): BulletinConfig {
+  const def = defaultBulletinConfig();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return def;
+    const saved = JSON.parse(raw);
+
+    // On ne garde que les séquences qui existent encore
+    const seqs = (saved.sequences ?? []).filter((s: Sequence) => SEQUENCES.includes(s));
+    return {
+      ...def,
+      ...saved,
+      sequences: seqs.length ? seqs : def.sequences,
+    };
+  } catch {
+    return def;   // JSON corrompu ou localStorage indisponible
+  }
+}
+
+export function saveBulletinConfig(cfg: BulletinConfig): void {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
+  catch (e) { console.warn('Sauvegarde de la config bulletin impossible', e); }
+}
+
+export function clearBulletinConfig(): void {
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignoré */ }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Composant
+// ══════════════════════════════════════════════════════════════
 @Component({
   selector: 'app-bulletin-config-modal',
   standalone: true,
@@ -62,6 +118,10 @@ import { Sequence, SEQUENCES } from '../../../../core/models/last_index';
 
   <!-- Actions -->
   <div class="bcm-actions">
+    <button class="bcm-btn bcm-btn--reset" (click)="reset()" title="Revenir à la configuration par défaut">
+      Réinitialiser
+    </button>
+    <span class="bcm-spacer"></span>
     <button class="bcm-btn bcm-btn--ghost" (click)="annuler()">Annuler</button>
     <button class="bcm-btn bcm-btn--primary" [disabled]="!valide()" (click)="confirmer()">
       Appliquer
@@ -81,10 +141,13 @@ import { Sequence, SEQUENCES } from '../../../../core/models/last_index';
     .bcm-pill:hover { border-color: #185FA5; color: #185FA5; }
     .bcm-pill--on { background: #185FA5; border-color: #185FA5; color: #fff; }
     .bcm-warn { font-size: 11px; color: #993C1D; }
-    .bcm-actions { display: flex; justify-content: flex-end; gap: 8px; border-top: 0.5px solid rgba(0,0,0,.08); padding-top: 12px; margin-top: 4px; }
+    .bcm-actions { display: flex; align-items: center; gap: 8px; border-top: 0.5px solid rgba(0,0,0,.08); padding-top: 12px; margin-top: 4px; }
+    .bcm-spacer { flex: 1; }
     .bcm-btn { height: 32px; padding: 0 16px; border-radius: 6px; font-size: 13px; cursor: pointer; transition: opacity .1s; }
     .bcm-btn--ghost { background: none; border: 0.5px solid rgba(0,0,0,.15); color: #555; }
     .bcm-btn--ghost:hover { background: rgba(0,0,0,.04); }
+    .bcm-btn--reset { background: none; border: none; color: #993C1D; padding: 0 8px; }
+    .bcm-btn--reset:hover { text-decoration: underline; }
     .bcm-btn--primary { background: #185FA5; color: #fff; border: none; }
     .bcm-btn--primary:disabled { opacity: .35; cursor: default; }
     .bcm-btn--primary:not(:disabled):hover { opacity: .88; }
@@ -98,7 +161,7 @@ export class BulletinConfigModal {
     private ref: MatDialogRef<BulletinConfigModal>,
     @Inject(MAT_DIALOG_DATA) public data: BulletinConfig,
   ) {
-    // Copie profonde pour ne pas muter les données avant confirmation
+    // Copie pour ne pas muter les données avant confirmation
     this.cfg = { ...data, sequences: [...data.sequences] };
   }
 
@@ -109,6 +172,18 @@ export class BulletinConfigModal {
   }
 
   valide(): boolean { return this.cfg.sequences.length > 0 && !!this.cfg.titre; }
-  confirmer(): void { this.ref.close(this.cfg); }
-  annuler(): void   { this.ref.close(null); }
+
+  /** Remet le formulaire à la config par défaut et supprime la sauvegarde */
+  reset(): void {
+    clearBulletinConfig();
+    this.cfg = defaultBulletinConfig();
+  }
+
+  /** Sauvegarde dans le localStorage puis renvoie la config au parent */
+  confirmer(): void {
+    saveBulletinConfig(this.cfg);
+    this.ref.close(this.cfg);
+  }
+
+  annuler(): void { this.ref.close(null); }
 }

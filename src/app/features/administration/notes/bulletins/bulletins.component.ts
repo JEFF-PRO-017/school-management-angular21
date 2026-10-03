@@ -5,18 +5,18 @@ import {
   ChangeDetectionStrategy, ChangeDetectorRef, OnInit,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatDialog }  from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { AuthService }     from '../../../../core/services/auth.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { WhatsappService } from '../../../../core/services/whatsapp.service';
 import { Eleve, MatiereConfig, Sequence, EleveEnrichi } from '../../../../core/models/last_index';
-import { BulletinConfigModal } from '../helper/bulletin-config.modal';
+import { BulletinConfigModal, loadBulletinConfig } from '../helper/bulletin-config.modal';
 import {
   BulletinConfig, GroupeMatiere, BulletinData,
   NiveauClasse, PVData, PVLigne, FicheSaisieData
 } from '../helper/bulletin.models';
-import { toFloat, toNote } from '../helper/pdf-helpers';
+import { moyennePonderee, toFloat, toNote } from '../helper/pdf-helpers';
 import { BulletinPdfService } from '../../../../core/services/bulletin-pdf.service';
 import { GetServices } from '../../../../core/services/@data';
 
@@ -328,39 +328,34 @@ import { GetServices } from '../../../../core/services/@data';
 })
 export class BulletinsComponent implements OnInit {
 
-  private auth   = inject(AuthService);
-  private wa     = inject(WhatsappService);  // ← toute la logique WA est ici
+  private auth = inject(AuthService);
+  private wa = inject(WhatsappService);  // ← toute la logique WA est ici
   private pdfSvc = inject(BulletinPdfService);
   private dialog = inject(MatDialog);
-  private snack  = inject(MatSnackBar);
-  private cdr    = inject(ChangeDetectorRef);
-  private get  = inject(GetServices)
+  private snack = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
+  private get = inject(GetServices)
 
   ctrlClasse = new FormControl('');
-  loading    = signal(false);
-  genAll     = signal(false);
-  genPV      = signal(false);
-  envoisWA   = signal(false);   // spinner pendant les envois WA
+  loading = signal(false);
+  genAll = signal(false);
+  genPV = signal(false);
+  envoisWA = signal(false);   // spinner pendant les envois WA
 
   selection = signal<Set<string>>(new Set());
 
-  config: BulletinConfig = {
-    titre:     'BULLETIN TRIMESTRIEL 1',
-    trimestre: 1,
-    annee:     `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`,
-    sequences: ['SEQ1', 'SEQ2'],
-  };
+  config: BulletinConfig = loadBulletinConfig();
 
-  private _eleves   = signal<Eleve[]>([]);
+  private _eleves = signal<Eleve[]>([]);
   private _matieres = signal<MatiereConfig[]>([]);
-  private _groupes  = signal<GroupeMatiere[]>([]);
+  private _groupes = signal<GroupeMatiere[]>([]);
 
   classesDisponibles = computed(() => {
     return this.auth.getClassesAssignees()
   });
 
   rows = computed(() => {
-    const eleves   = this._eleves();
+    const eleves = this._eleves();
     const matieres = this._matieres();
     if (!eleves.length || !matieres.length) return [];
 
@@ -380,7 +375,7 @@ export class BulletinsComponent implements OnInit {
       .sort((a, b) => b - a);
 
     return withMoy.map(r => {
-      const moy  = r.moyTrim ?? r.moySeqs[0];
+      const moy = r.moyTrim ?? r.moySeqs[0];
       const rang = moy !== null ? sorted.indexOf(moy) + 1 : null;
       return { ...r, rang };
     });
@@ -424,7 +419,7 @@ export class BulletinsComponent implements OnInit {
     if (!this.ctrlClasse.value) return;
     this.loading.set(true);
     await Promise.resolve();
-    const classe   = (this.get.getClasses() ?? [])
+    const classe = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
     const matieres = classe?.matieres ?? [];
     this._matieres.set(matieres);
@@ -454,8 +449,8 @@ export class BulletinsComponent implements OnInit {
   // ── WhatsApp — 100% délégué à WhatsappService ───────────────
 
   async envoyerMoyennesWA(): Promise<void> {
-    const cibles  = this.ciblesWA();
-    const classe  = (this.get.getClasses() ?? [])
+    const cibles = this.ciblesWA();
+    const classe = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
     const periode = this.config.annee;
 
@@ -475,15 +470,15 @@ export class BulletinsComponent implements OnInit {
         this.config.titre,
         moySeqsPayload,
         row.moyTrim ?? null,
-        row.rang    ?? null,
+        row.rang ?? null,
         this.rows().length,
         null,       // template — null = message par défaut du service
         periode
       );
 
-      if (r === 'envoye')        envoyes++;
-      else if (r === 'doublon')  doublons++;
-      else                       echecs++;
+      if (r === 'envoye') envoyes++;
+      else if (r === 'doublon') doublons++;
+      else echecs++;
     }
 
     this.envoisWA.set(false);
@@ -534,13 +529,13 @@ export class BulletinsComponent implements OnInit {
 
     const pvData: PVData = {
       nomClasse: cls?.nom_classe ?? '',
-      config:    this.config,
+      config: this.config,
       matieres,
       lignes: this.rows().map((row, i): PVLigne => {
         const moy = row.moyTrim ?? row.moySeqs[0];
         return {
           numero: i + 1,
-          eleve:  row.eleve,
+          eleve: row.eleve,
           notesParSeq: Object.fromEntries(
             this.config.sequences.map(seq => [
               seq,
@@ -565,7 +560,7 @@ export class BulletinsComponent implements OnInit {
             );
             return acc + (n !== null ? n * toFloat(m.coefficient) : 0);
           }, 0),
-          rang:     row.rang,
+          rang: row.rang,
           decision: moy !== null ? (moy >= 10 ? 'ADMIS' : 'ECHEC') : '',
         };
       }),
@@ -585,11 +580,11 @@ export class BulletinsComponent implements OnInit {
       .find(c => c.id_classe === this.ctrlClasse.value);
     const fdata: FicheSaisieData = {
       nomClasse: cls?.nom_classe ?? '',
-      nomEcole:  'CSB BERCEAU DU SAVOIR',
+      nomEcole: 'CSB BERCEAU DU SAVOIR',
       sequences: this.config.sequences,
-      annee:     this.config.annee,
-      matieres:  this._matieres(),
-      eleves:    this._eleves(),
+      annee: this.config.annee,
+      matieres: this._matieres(),
+      eleves: this._eleves(),
     };
     this.pdfSvc.telecharger(
       this.pdfSvc.genererFicheSaisie(fdata),
@@ -610,38 +605,37 @@ export class BulletinsComponent implements OnInit {
     return Array.from(map.entries()).map(([nom, mats]) => ({ nom, matieres: mats }));
   }
 
-  private _moySeq(eleve: Eleve, seq: Sequence, matieres: MatiereConfig[]): number | null {
+  _moySeq(
+    eleve: EleveEnrichi, seq: Sequence, matieres: MatiereConfig[]
+  ): number | null {
     const notes = eleve.sequences?.find(s => s.sequence === seq)?.notes_eleve ?? [];
-    let pts = 0, coeff = 0, has = false;
-    matieres.forEach(m => {
-      const c = toFloat(m.coefficient);
-      const n = toNote(notes.find(n => n.matiere === m.nom_matiere)?.note_obtenue);
-      if (n !== null) { pts += n * c; has = true; }
-      coeff += c;
-    });
-    return has && coeff > 0 ? pts / coeff : null;
+    const parMatiere = new Map(notes.map(n => [n.matiere, n.note_obtenue]));
+
+    return moyennePonderee(
+      matieres.map(m => ({ note: parMatiere.get(m.nom_matiere), coef: m.coefficient }))
+    );
   }
 
   private _buildBulletinData(eleve: Eleve): BulletinData {
     const classe = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value);
-    const rws  = this.rows();
-    const row  = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);
+    const rws = this.rows();
+    const row = rws.find(r => r.eleve.id_eleve === eleve.id_eleve);
     const moys = rws
       .map(r => r.moyTrim ?? r.moySeqs[0])
       .filter((v): v is number => v !== null);
 
     return {
       eleve,
-      nomClasse:         classe?.nom_classe ?? '',
-      niveau:            this._detectNiveau(classe?.nom_classe ?? ''),
-      config:            this.config,
-      groupes:           this._groupes(),
-      rang:              row?.rang ?? null,
-      effectif:          rws.length,
-      moyPremier:        moys.length ? Math.max(...moys) : null,
-      moyDernier:        moys.length ? Math.min(...moys) : null,
-      tauxReussite:      moys.length
+      nomClasse: classe?.nom_classe ?? '',
+      niveau: this._detectNiveau(classe?.nom_classe ?? ''),
+      config: this.config,
+      groupes: this._groupes(),
+      rang: row?.rang ?? null,
+      effectif: rws.length,
+      moyPremier: moys.length ? Math.max(...moys) : null,
+      moyDernier: moys.length ? Math.min(...moys) : null,
+      tauxReussite: moys.length
         ? (moys.filter(m => m >= 10).length / moys.length) * 100 : null,
       moyGeneraleClasse: moys.length
         ? moys.reduce((a, b) => a + b, 0) / moys.length : null,
@@ -653,9 +647,9 @@ export class BulletinsComponent implements OnInit {
 
   private _detectNiveau(nomClasse: string): NiveauClasse {
     const n = nomClasse.toLowerCase();
-    if (n.includes('tech') || n.includes('pro'))   return 'technique';
-    if (n.includes('ang')  || n.includes('bil'))   return 'secondaire-ang';
-    if (['cm','ce','cp'].some(x => n.includes(x))) return 'primaire';
+    if (n.includes('tech') || n.includes('pro')) return 'technique';
+    if (n.includes('ang') || n.includes('bil')) return 'secondaire-ang';
+    if (['cm', 'ce', 'cp'].some(x => n.includes(x))) return 'primaire';
     return 'secondaire-fr';
   }
 
@@ -670,8 +664,8 @@ export class BulletinsComponent implements OnInit {
 
   mentionCls(moy: number | null): string {
     if (moy === null) return 'bl-mention--none';
-    if (moy >= 10)    return 'bl-mention--ok';
-    if (moy >= 8)     return 'bl-mention--warn';
+    if (moy >= 10) return 'bl-mention--ok';
+    if (moy >= 8) return 'bl-mention--warn';
     return 'bl-mention--bad';
   }
 }

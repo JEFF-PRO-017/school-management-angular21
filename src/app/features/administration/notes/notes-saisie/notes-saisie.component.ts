@@ -27,6 +27,7 @@ import { TransfertEleveDialogComponent } from '../transfert-eleve-dialog/transfe
 import { AddServices, GetServices } from '../../../../core/services/@data';
 import { DeleteServices } from '../../../../core/services/@data/_delete.services';
 import { Classe } from '../../../../core/models';
+import { moyennePonderee } from '../helper/pdf-helpers';
 
 // ── Types internes ─────────────────────────────────────────────────────────
 
@@ -213,21 +214,23 @@ export class NotesSaisieComponent implements OnInit {
 
   // ── Calcul moyennes — basé sur matieresActives() uniquement ───────────────
 
-  private _calcMoyennes(ligne: Ligne): void {
-    const actives = this.matieresActives();
-    ligne.moySeq = this.seqActives.map((_, si) => {
-      let pts = 0, totCoeff = 0, has = false;
-      actives.forEach(m => {
-        const mi = this.realMatIdx(m);
-        const v = ligne.cells[si]?.[mi]?.valeur;
-        if (v !== null && v !== undefined) { pts += ((parseFloat(v?.toString() || '0')) * (+m.coefficient)); has = true; }
-        totCoeff += (+m.coefficient);
-      });
-      return has && totCoeff > 0 ? pts / totCoeff : null;
-    });
-    const valides = ligne.moySeq.filter((v): v is number => v !== null);
-    ligne.moyTrim = valides.length ? valides.reduce((a, b) => a + b, 0) / valides.length : null;
-  }
+private _calcMoyennes(ligne: Ligne): void {
+  const actives = this.matieresActives();
+
+  ligne.moySeq = this.seqActives.map((_, si) =>
+    moyennePonderee(
+      actives.map(m => ({
+        note: ligne.cells[si]?.[this.realMatIdx(m)]?.valeur,
+        coef: m.coefficient,
+      }))
+    )
+  );
+
+  const valides = ligne.moySeq.filter((v): v is number => v !== null);
+  ligne.moyTrim = valides.length
+    ? valides.reduce((a, b) => a + b, 0) / valides.length
+    : null;
+}
 
   // ── Accesseurs template ────────────────────────────────────────────────────
 

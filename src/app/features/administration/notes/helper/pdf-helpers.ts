@@ -2,6 +2,7 @@
 // parseFloat sécurisé partout : les notes et coefficients viennent parfois en string.
 
 import jsPDF from 'jspdf';
+import {  EleveEnrichi, MatiereConfig, Sequence } from '../../../../core/models';
 
 // ── Types couleurs ─────────────────────────────────────────────────────────
 export type RGB = [number, number, number];
@@ -34,22 +35,29 @@ export function toNote(val: unknown): number | null {
 // ── Calculs ────────────────────────────────────────────────────────────────
 
 /** Moyenne pondérée sécurisée sur une liste de {note, coeff} */
-export function moyennePonderee(
-  items: { note: number | null; coeff: number }[]
-): number | null {
-  let pts = 0, totC = 0, has = false;
-  for (const { note, coeff } of items) {
-    const c = toFloat(coeff);
-    if (note !== null) { pts += toFloat(note) * c; has = true; }
-    totC += c;
-  }
-  return has && totC > 0 ? pts / totC : null;
-}
+// export function moyennePonderee(
+//   items: { note: number | null; coeff: number }[]
+// ): number | null {
+//   let pts = 0, totC = 0, has = false;
+//   for (const { note, coeff } of items) {
+//     const c = toFloat(coeff);
+//     if (note !== null) { pts += toFloat(note) * c; has = true; }
+//     totC += c;
+//   }
+//   return has && totC > 0 ? pts / totC : null;
+// }
 
 /** Moyenne simple d'un tableau de nombres (ignore null) */
-export function moyenneSimple(vals: (number | null)[]): number | null {
-  const v = vals.filter((x): x is number => x !== null);
-  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+export function moyenneSimple(
+  vals: (number | null | undefined)[],
+  coefs?: (number | string | null | undefined)[]
+): number | null {
+  return moyennePonderee(
+    vals.map((v, i) => ({
+      note: v,
+      coef: coefs ? coefs[i] : 1,      // pas de coefs → poids 1
+    }))
+  );
 }
 
 /** Formate un nombre en string avec N décimales, ou retourne '—' si null */
@@ -127,4 +135,18 @@ export function txtVertical(
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...(opts.color ?? BLANC));
   doc.text(text, cx, cy, { angle: 90, align: 'center', baseline: 'middle' });
+}
+
+  export function moyennePonderee(
+  items: { note: unknown; coef: unknown }[]
+): number | null {
+  let pts = 0, tot = 0;
+  for (const { note, coef } of items) {
+    const n = toNote(note);
+    const c = toFloat(coef);
+    if (n === null || !(c > 0)) continue;   // note vide ou coef invalide : ignorée
+    pts += n * c;
+    tot += c;                                // coef compté seulement si la note existe
+  }
+  return tot > 0 ? pts / tot : null;
 }

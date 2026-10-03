@@ -173,12 +173,18 @@ export function sectionGroupe(
       toNote(eleve.sequences?.find((s: any) => s.sequence === seq)
         ?.notes_eleve?.find((n: any) => n.matiere === mat.nom_matiere)?.note_obtenue)
     );
+
+    // Moyenne de la matière sur les séquences (poids égaux, séquences vides ignorées)
     const moy = moyenneSimple(notesSeq);
     const moyCoef = moy !== null ? moy * coeff : null;
-    if (moyCoef !== null) totalPts += moyCoef;
-    totalCoef += coeff;
 
-    const h2 = rH * 2;  // 4.3 * 2 = 8.6mm
+    // Le coefficient n'est compté que si la matière a au moins une note
+    if (moyCoef !== null && coeff > 0) {
+      totalPts += moyCoef;
+      totalCoef += coeff;
+    }
+
+    const h2 = rH * 2;
     doc.setFillColor(...BLANC);
     doc.setDrawColor(...NOIR); doc.setLineWidth(0.22);
     doc.rect(ML, y, wMat, h2, 'FD');
@@ -295,6 +301,7 @@ export function sectionTotauxGlobaux(
 
 // ── Récapitulatif ─────────────────────────────────────────────────────────
 // v3 : rH 4.3, sigH 3.5
+// v3 : rH 4.3, sigH 3.5
 export function sectionRecap(doc: jsPDF, y: number, d: BulletinData, moyGlobale: number | null): number {
   const seqs = d.config.sequences;
   const rH = 4.3;   // v3
@@ -362,6 +369,10 @@ export function sectionRecap(doc: jsPDF, y: number, d: BulletinData, moyGlobale:
     ['Conseil Disc.', d.conseilDiscipline ? 'OUI' : ''],
   ];
 
+  // Liste des matières calculée UNE fois (et non à chaque ligne)
+  const toutesMatieres = (d.groupes ?? []).flatMap(g => g.matieres);
+  const coefs = toutesMatieres.map(mat => mat.coefficient);
+
   const nRows = Math.max(seqs.length, profil.length, conduite.length);
   for (let i = 0; i < nRows; i++) {
     doc.setFillColor(...BLANC); doc.setDrawColor(...NOIR); doc.setLineWidth(0.18);
@@ -370,12 +381,15 @@ export function sectionRecap(doc: jsPDF, y: number, d: BulletinData, moyGlobale:
     doc.rect(ML + col1W + col2W, y, col3W, rH, 'FD');
 
     if (i < seqs.length) {
-      const seqMoy = moyenneSimple(
-        (d.groupes ?? []).flatMap(g => g.matieres).map(mat =>
-          toNote(d.eleve.sequences?.find((s: any) => s.sequence === seqs[i])
-            ?.notes_eleve?.find((n: any) => n.matiere === mat.nom_matiere)?.note_obtenue)
-        )
+      // Notes de la séquence i, une par matière (null si vide)
+      const notes = toutesMatieres.map(mat =>
+        toNote(d.eleve.sequences?.find((s: any) => s.sequence === seqs[i])
+          ?.notes_eleve?.find((n: any) => n.matiere === mat.nom_matiere)?.note_obtenue)
       );
+
+      // Moyenne PONDÉRÉE : matière sans note ignorée, son coefficient aussi
+      const seqMoy = moyenneSimple(notes, coefs);
+
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...NOIR);
       doc.text(seqs[i].replace('SEQ', 'SEQ '),
         ML + 1.5, y + rH / 2 + 0.2, { baseline: 'middle' });
