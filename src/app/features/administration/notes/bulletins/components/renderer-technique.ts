@@ -8,9 +8,9 @@ import { cell, BLANC, toFloat, toNote, moyenneSimple, NOIR, ROUGE, fmt, VERT } f
 import { sectionBandeVerticale, sectionEntete, sectionTitreBulletin, sectionInfoEleve, calcDims, ML, IW, sectionTotauxGlobaux, sectionRecap } from './bulletin-sections';
 
 
-export function renderBulletinTechnique(doc: jsPDF, d: BulletinData): void {
+export async function renderBulletinTechnique(doc: jsPDF, d: BulletinData): Promise<void> {
   sectionBandeVerticale(doc);
-  let y = sectionEntete(doc, 6, d.config.annee);
+  let y = await sectionEntete(doc, 6, d.config.annee);
   y = sectionTitreBulletin(doc, y, d.config.titre || `BULLETIN TECHNIQUE TRIMESTRIEL ${d.config.trimestre}`);
   y = sectionInfoEleve(doc, y, d);
 

@@ -18,9 +18,9 @@ function mentionEN(n: number | null): string {
   return 'Fail';
 }
 
-export function renderBulletinAnglophone(doc: jsPDF, d: BulletinData): void {
+export async function renderBulletinAnglophone(doc: jsPDF, d: BulletinData): Promise<void> {
   sectionBandeVerticale(doc);
-  let y = sectionEntete(doc, 6, d.config.annee);
+  let y = await sectionEntete(doc, 6, d.config.annee);
 
   // Double titre FR/EN (noir sur blanc)
   const iW = IW;

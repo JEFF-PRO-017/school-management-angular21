@@ -15,20 +15,21 @@ export class BulletinPdfService {
 
   // ── Bulletin individuel ──────────────────────────────────────────────────
 
-  genererBulletin(data: BulletinData): Blob {
+  async genererBulletin(data: BulletinData): Promise<Blob> {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    this._renderBulletin(doc, data);
+   await this._renderBulletin(doc, data);
     return doc.output('blob');
   }
 
   // ── Bulletins classe entière (1 page par élève) ──────────────────────────
 
-  genererBulletinsClasse(bulletins: BulletinData[]): Blob {
+  async genererBulletinsClasse(bulletins: BulletinData[]): Promise<Blob> {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    bulletins.forEach((data, i) => {
+    for (let i = 0; i < bulletins.length; i++) {
+      const data = bulletins[i];
       if (i > 0) doc.addPage();
-      this._renderBulletin(doc, data);
-    });
+      await this._renderBulletin(doc, data);
+    }
     return doc.output('blob');
   }
 
@@ -64,13 +65,13 @@ export class BulletinPdfService {
 
   // ── Routing vers le bon renderer ─────────────────────────────────────────
 
-  private _renderBulletin(doc: jsPDF, data: BulletinData): void {
+  private async _renderBulletin(doc: jsPDF, data: BulletinData): Promise<void> {
     switch (data.niveau) {
-      case 'primaire':       renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinPrimaire
-      case 'secondaire-ang': renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinAnglophone
-      case 'technique':      renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinTechnique
+      case 'primaire':       await renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinPrimaire
+      case 'secondaire-ang': await renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinAnglophone
+      case 'technique':      await renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinTechnique
       case 'secondaire-fr':
-      default:               renderBulletinSecondaire(doc, data); break;
+      default:               await renderBulletinSecondaire(doc, data); break;
     }
   }
 }

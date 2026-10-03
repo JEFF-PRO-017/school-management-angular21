@@ -150,3 +150,30 @@ export function txtVertical(
   }
   return tot > 0 ? pts / tot : null;
 }
+
+
+// image.utils.ts
+
+/** Charge une image (asset ou URL) et la convertit en data URL base64 */
+export async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;   // image introuvable : le PDF doit se générer quand même
+  }
+}
+
+/** Détecte le format depuis la data URL */
+export function imageFormat(dataUrl: string): 'PNG' | 'JPEG' | 'WEBP' {
+  if (dataUrl.startsWith('data:image/png')) return 'PNG';
+  if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+  return 'JPEG';
+}

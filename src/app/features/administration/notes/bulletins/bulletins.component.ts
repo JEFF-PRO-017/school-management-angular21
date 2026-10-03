@@ -491,15 +491,15 @@ export class BulletinsComponent implements OnInit {
 
   // ── PDF ───────────────────────────────────────────────────────
 
-  apercu(eleve: Eleve): void {
+  async apercu(eleve: Eleve): Promise<void> {
     this.pdfSvc.apercu(
-      this.pdfSvc.genererBulletin(this._buildBulletinData(eleve))
+      await this.pdfSvc.genererBulletin(this._buildBulletinData(eleve))
     );
   }
 
-  telecharger(eleve: Eleve): void {
+  async telecharger(eleve: Eleve): Promise<void> {
     this.pdfSvc.telecharger(
-      this.pdfSvc.genererBulletin(this._buildBulletinData(eleve)),
+      await this.pdfSvc.genererBulletin(this._buildBulletinData(eleve)),
       `bulletin_${eleve.nom}_${this.config.sequences.join('-')}.pdf`
     );
     this.snack.open('Bulletin téléchargé', '', { duration: 2000 });
@@ -512,7 +512,7 @@ export class BulletinsComponent implements OnInit {
     const cls = (this.get.getClasses() ?? [])
       .find(c => c.id_classe === this.ctrlClasse.value)?.nom_classe ?? '';
     this.pdfSvc.telecharger(
-      this.pdfSvc.genererBulletinsClasse(bulletins),
+      await this.pdfSvc.genererBulletinsClasse(bulletins),
       `bulletins_${cls}_${this.config.sequences.join('-')}.pdf`
     );
     this.genAll.set(false);

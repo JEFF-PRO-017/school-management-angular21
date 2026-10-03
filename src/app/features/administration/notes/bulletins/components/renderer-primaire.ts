@@ -23,9 +23,9 @@ function norm10(note: number | null, sur: number): number | null {
   return note === null ? null : (sur === 20 ? note / 2 : note);
 }
 
-export function renderBulletinPrimaire(doc: jsPDF, d: BulletinData): void {
+export async function renderBulletinPrimaire(doc: jsPDF, d: BulletinData): Promise<void> {
   sectionBandeVerticale(doc);
-  let y = sectionEntete(doc, 6, d.config.annee);
+  let y = await sectionEntete(doc, 6, d.config.annee);
 
   // Titre avec "PÉRIODE" au lieu de "TRIMESTRE"
   const titres: Record<number, string> = { 1: 'PREMIER TRIMESTRE', 2: 'DEUXIÈME TRIMESTRE', 3: 'TROISIÈME TRIMESTRE' };

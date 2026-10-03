@@ -14,7 +14,7 @@
 import jsPDF from 'jspdf';
 import { Sequence, MatiereConfig } from '../../../../../core/models/last_index';
 import { BulletinData, PVData, FicheSaisieData } from '../../helper/bulletin.models';
-import { RGB, BLANC, NOIR, cell, toFloat, toNote, moyenneSimple, ROUGE, fmt, VERT } from '../../helper/pdf-helpers';
+import { RGB, BLANC, NOIR, cell, toFloat, toNote, moyenneSimple, ROUGE, fmt, VERT, loadImageAsDataUrl, imageFormat } from '../../helper/pdf-helpers';
 
 export const ML = 10, MR = 10, W = 210, H = 297;
 export const BANDE_X = W - MR;
@@ -33,7 +33,9 @@ export function sectionBandeVerticale(doc: jsPDF): void {
 
 // ── En-tête ───────────────────────────────────────────────────────────────
 // v3 : y+16 au lieu de y+17 (-1mm), fontSize école 16→14
-export function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?: any): number {
+export async function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?: any): Promise<number> {
+  debugger
+  const logo = await loadImageAsDataUrl('/assets/logo-csb.png');
   const xR = IW + ML;
 
 
@@ -49,8 +51,8 @@ export function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?:
   doc.text('Tél: +237 679 33 78 60 / 656 48 82 90 / 674 73 50 44', xTxt, y + 14, { baseline: 'middle' });
 
 
-  if (logoBase64) {
-    try { doc.addImage(logoBase64, 'PNG', ML +105, y, 15, 14); } catch {
+  if (logo) {
+    try { doc.addImage(logo, imageFormat(logo), ML + 105, y, 15, 14); } catch {
     }
   }
 
