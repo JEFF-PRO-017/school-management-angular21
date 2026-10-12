@@ -8,7 +8,6 @@
 // l'avatar, la bordure de la carte et le badge de statut.
 import { Component, Input, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IconComponent } from '../icon.component';
 import { EleveEnrichi, Note } from '../../../../core/models';
 import { BilanTrimestre } from '../note.service';
 import { DeleteServices } from '../../../../core/services/@data/_delete.services';
@@ -17,7 +16,7 @@ import { DeleteServices } from '../../../../core/services/@data/_delete.services
   selector: 'app-dashboard-enfants',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink],
   template: `
     <div class="mx-3 mt-4">
       <div class="text-uppercase text-muted small fw-semibold mb-2">Mes enfants ({{ eleves.length }})</div>
@@ -27,20 +26,20 @@ import { DeleteServices } from '../../../../core/services/@data/_delete.services
       } @else {
         @for (e of eleves; track e.id_eleve) {
           <div class="card border shadow-sm rounded-4 p-3 mb-2"
-               [class.border-success]="estActif(e)" [class.border-secondary-subtle]="!estActif(e)">
+               [class.border-primary]="estActif(e)" [class.border-secondary-subtle]="!estActif(e)">
 
             <!-- Zone cliquable : ouvre la fiche détail -->
             <a class="d-flex align-items-center gap-3 text-decoration-none text-reset"
                [routerLink]="['/espace-parent/enfants', e.id_eleve]">
               <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0"
-                   [class.bg-success]="estActif(e)" [class.bg-secondary]="!estActif(e)"
+                   [class.bg-primary]="estActif(e)" [class.bg-secondary]="!estActif(e)"
                    style="width:42px;height:42px">
                 {{ e.nom[0] }}{{ e.prenom[0] }}
               </div>
               <div class="flex-grow-1">
                 <div class="fw-semibold">{{ e.prenom }} {{ e.nom }}</div>
                 <div class="small text-muted">{{ e.classe?.nom_classe ?? '—' }} · {{ e.classe?.niveau ?? '' }}</div>
-                <span class="badge" [class.bg-success]="estActif(e)" [class.bg-secondary]="!estActif(e)">
+                <span class="badge" [class.bg-primary]="estActif(e)" [class.bg-secondary]="!estActif(e)">
                   {{ e.statut }}
                 </span>
               </div>
@@ -68,7 +67,7 @@ import { DeleteServices } from '../../../../core/services/@data/_delete.services
             </div>
 
 <!-- Actions : Modifier toujours visible, Supprimer en plus si NON-ACTIF -->
-<div class="d-flex gap-2 mt-3">
+<!-- <div class="d-flex gap-2 mt-3">
   <a class="btn btn-outline-primary flex-fill"
      [routerLink]="['/espace-parent/enfants', e.id_eleve, 'edit']">
     <app-icon name="pencil" class="me-1"></app-icon> Modifier
@@ -84,14 +83,14 @@ import { DeleteServices } from '../../../../core/services/@data/_delete.services
       }
     </button>
   }
-</div>
+</div> -->
           </div>
         }
       }
 
-      <a class="btn btn-outline-primary w-100 mt-1" [routerLink]="['/espace-parent/enfants/create']">
+      <!-- <a class="btn btn-outline-primary w-100 mt-1" [routerLink]="['/espace-parent/enfants/create']">
         <app-icon name="user-plus" class="me-1"></app-icon> Ajouter un enfant
-      </a>
+      </a> -->
     </div>
   `,
 })
@@ -131,13 +130,13 @@ export class DashboardEnfantsComponent {
   moyenneCouleur(m: any): string {
     m = +m; // conversion du string en nombre (pour gérer les notes sur 20 ou sur 100)
     if (m === null) return 'body';
-    if (m >= 10) return 'success';
+    if (m >= 10) return 'primary';
     if (m >= 8) return 'warning';
     return 'danger';
   }
 
   absencesCouleur(n: number): string {
-    if (n === 0) return 'success';
+    if (n === 0) return 'primary';
     if (n < 3) return 'warning';
     return 'danger';
   }

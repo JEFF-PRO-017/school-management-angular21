@@ -24,6 +24,7 @@ import { NotifService } from '../notif.service';
     <app-parent-header titre="Notifications"></app-parent-header>
     <app-parent-navbar></app-parent-navbar>
 
+    <div class="p-3 text-center"><span class="badge text-bg-warning">FONCTIONNALITÉ INNACTIVE,<br> VOUS SEREZ INFORMER DÈS LA MISE À JOUR <br>MERCI !!!</span></div>
     <div class="container-fluid p-3">
 
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">

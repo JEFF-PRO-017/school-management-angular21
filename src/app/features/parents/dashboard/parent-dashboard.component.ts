@@ -42,7 +42,7 @@ import { NoteService, BilanTrimestre } from './note.service';
 
     <app-dashboard-header
       [nomFamille]="nomFamille()" [dateAujourdhui]="dateAujourdhui()"
-      [nbNotifs]="nbNotifs()" [rafraichissement]="rafraichissement()" [visible]="barresVisibles()"
+      [nbNotifs]="nbNotifs()" [visible]="barresVisibles()"
       (notificationsClick)="allerNotifications()" (refreshClick)="rafraichir()" />
 
     <!-- Bandeau insolvable -->
@@ -78,8 +78,7 @@ import { NoteService, BilanTrimestre } from './note.service';
     <app-dashboard-enfants [eleves]="eleves()" [bilans]="bilans()" [noteAleatoireTrimestreEnCours]="noteAleatoireTrimestre()" />
 
     <app-dashboard-footer
-      [rafraichissement]="rafraichissement()" [visible]="barresVisibles()"
-      (refreshClick)="rafraichir()" (logoutClick)="logout()" />
+          [visible]="barresVisibles()" (logoutClick)="logout()" />
   `,
 })
 export class ParentDashboardComponent implements OnInit, OnDestroy {

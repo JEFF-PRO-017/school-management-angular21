@@ -56,7 +56,7 @@ import { MoratoireService } from '../moratoire.service';
         <ng-template cellDef="statut" let-m>
           <span
             class="badge"
-            [class.bg-success]="statutDe(m) === 'ACTIF'"
+            [class.bg-primary]="statutDe(m) === 'ACTIF'"
             [class.bg-secondary]="statutDe(m) === 'NON-ACTIF'"
             [class.bg-danger]="statutDe(m) === 'REFUSÉ'"
             [class.bg-warning]="statutDe(m) !== 'ACTIF' && statutDe(m) !== 'NON-ACTIF' && statutDe(m) !== 'REFUSÉ'">
@@ -66,7 +66,7 @@ import { MoratoireService } from '../moratoire.service';
 
         <ng-template cellDef="regler" let-m>
           @if (estRegle(m)) {
-            <span class="badge bg-success">Réglé</span>
+            <span class="badge bg-primary">Réglé</span>
           } @else {
             <span class="badge bg-warning text-dark">En attente</span>
           }

@@ -3,13 +3,13 @@
 // Se cache au scroll vers le bas et réapparaît au scroll vers le haut
 // (l'état "visible" est calculé par le parent et simplement transmis ici).
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
-import { IconComponent } from '../icon.component';
+import { ReseauxComponent } from '../../../../shared/components/Reseaux/reseaux.composant';
 
 @Component({
   selector: 'app-dashboard-header',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [ReseauxComponent],
   template: `
     <div class="bg-primary text-white p-3 position-fixed top-0 start-0 w-100 shadow-sm"
          style="z-index:1030; transition:transform .25s ease"
@@ -23,7 +23,7 @@ import { IconComponent } from '../icon.component';
 
         <div class="d-flex align-items-center gap-2">
           <!-- Notifications -->
-          <div class="position-relative">
+          <!-- <div class="position-relative">
             <button class="btn btn-outline-light btn-sm rounded-circle p-2" (click)="notificationsClick.emit()">
               <app-icon name="bell"></app-icon>
             </button>
@@ -32,13 +32,10 @@ import { IconComponent } from '../icon.component';
                 {{ nbNotifs }}
               </span>
             }
-          </div>
+          </div> -->
 
           <!-- Actualiser -->
-          <button class="btn btn-outline-light btn-sm rounded-circle p-2"
-                  (click)="refreshClick.emit()" [disabled]="rafraichissement">
-            <app-icon name="arrow-rotate-right" [spin]="rafraichissement"></app-icon>
-          </button>
+          <app-reseaux></app-reseaux>
         </div>
       </div>
 

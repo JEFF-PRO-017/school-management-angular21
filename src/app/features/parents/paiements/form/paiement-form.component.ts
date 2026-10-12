@@ -27,6 +27,8 @@ import { ParentHeaderComponent } from '../../components/parent-header.component'
     <app-parent-header titre="Initier un paiement"></app-parent-header>
     <app-breadcrumb [items]="fil"></app-breadcrumb>
 
+    <div class="p-3 text-center"><span class="badge text-bg-warning">FONCTIONNALITÉ INNACTIVE,<br> VOUS SEREZ INFORMER DÈS LA MISE À JOUR <br>MERCI !!!</span></div>
+
     <div class="container-fluid p-3" style="max-width:640px">
 
       <form [formGroup]="form" (ngSubmit)="onDemanderConfirmation()" novalidate>

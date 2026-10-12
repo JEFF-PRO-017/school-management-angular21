@@ -7,12 +7,14 @@ import {
 } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ReseauxComponent } from '../../../shared/components/Reseaux/reseaux.composant';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-parent-header',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, ReseauxComponent],
   template: `
     <div class="header d-flex align-items-center justify-content-between bg-primary text-white px-2 py-2 shadow-sm">
 
@@ -32,6 +34,9 @@ import { ActivatedRoute, Router } from '@angular/router';
         {{ titreAffiche }}
       </div>
 
+      <div class="">
+        <app-reseaux></app-reseaux>
+      </div>
       <!-- Menu 3 points -->
       <div class="dropdown">
         <button
@@ -48,19 +53,46 @@ import { ActivatedRoute, Router } from '@angular/router';
           </svg>
         </button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="parentHeaderMenu">
-          <li>
+          <!-- <li>
             <button class="dropdown-item d-flex align-items-center gap-2" (click)="onEcrireAdministration()">
               <i class="bi bi-envelope"></i> Écrire à l'administration
             </button>
-          </li>
-          <li>
+          </li> -->
+                    <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" (click)="enfants()">
+              <i class="bi bi-cash-coin"></i> Les Enfants
+            </button>
+    </li>
+                        <li>
             <button class="dropdown-item d-flex align-items-center gap-2" (click)="onInitierPaiement()">
               <i class="bi bi-cash-coin"></i> Initier un paiement
+            </button>
+    </li>
+                        <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" (click)="paiements()">
+              <i class="bi bi-cash-coin"></i> Reçus paiements
+            </button>
+    </li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" (click)="moratoires()">
+              <i class="bi bi-cash-coin"></i> Mes Moratoires
             </button>
           </li>
           <li>
             <button class="dropdown-item d-flex align-items-center gap-2" (click)="onDemandeMoratoire()">
               <i class="bi bi-file-earmark-text"></i> Demande moratoire
+            </button>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" (click)="onDashboard()">
+              <i class="bi bi-house"></i> Tableau de bord
+            </button>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" (click)="logout()">
+              <i class="bi bi-box-arrow-right"></i> Déconnexion
             </button>
           </li>
         </ul>
@@ -90,8 +122,9 @@ export class ParentHeaderComponent implements OnInit {
   constructor(
     public router: Router,
     private route: ActivatedRoute,
-    private location: Location
-  ) {}
+    private location: Location,
+    private auth :AuthService
+  ) { }
 
   ngOnInit(): void {
     if (this.titre) {
@@ -127,4 +160,19 @@ export class ParentHeaderComponent implements OnInit {
   onDemandeMoratoire(): void {
     this.router.navigate(['/espace-parent/moratoires/create']);
   }
+
+  onDashboard(): void {
+    this.router.navigate(['/espace-parent/dashboard']);
+  }
+  enfants(): void {
+    this.router.navigate(['/espace-parent/enfants']);
+  }
+  paiements(): void {
+    this.router.navigate(['/espace-parent/paiements']);
+  }
+  moratoires(): void {
+    this.router.navigate(['/espace-parent/moratoires']);
+  }
+    logout(): void { this.auth.logout(); }
+
 }

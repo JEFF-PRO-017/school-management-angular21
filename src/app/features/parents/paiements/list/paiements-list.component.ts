@@ -23,6 +23,7 @@ import { PaiementService } from '../paiement.service';
     <app-parent-header titre="Paiements"></app-parent-header>
     <app-parent-navbar></app-parent-navbar>
 
+    
     <div class="container-fluid p-3">
 
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
