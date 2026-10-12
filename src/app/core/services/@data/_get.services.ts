@@ -1,5 +1,5 @@
 import { inject, Injectable } from "@angular/core";
-import { AppUser, DemandePaiement, Eleve, EleveTampon, Enseignant, FamilleTampon, FraisConfig, H_TAMPON, MatiereConfig, MsgTemplate, Paiement, PaiementEnrichi, PensionTampon, SHEET_TAMPON } from "../../models";
+import { AppUser, DemandePaiement, Eleve, EleveTampon, Enseignant, FamilleTampon, FraisConfig, H_TAMPON, MatiereConfig, Moratoire, MsgTemplate, Paiement, PaiementEnrichi, PensionTampon, SHEET_TAMPON } from "../../models";
 import { Classe, SoldeSnap } from "../../models/last_index";
 import { GoogleSheetsService } from "../@google-sheets/google-sheets.service";
 import { CacheService } from "../cache.service";
@@ -36,22 +36,23 @@ export class GetServices {
         const raw = await this.sheets.fetchRaw(SHEET_TAMPON.eleves);
         return parse<EleveTampon>(raw, H_TAMPON.eleves);
     }
-
     /** Charge toutes les pensions tampon */
     async getPensionsTampon(): Promise<PensionTampon[]> {
         const raw = await this.sheets.fetchRaw(SHEET_TAMPON.pensions);
         return parse<PensionTampon>(raw, H_TAMPON.pensions);
     }
-
     /** Charge toutes les demandes de paiement initiées */
     async getDemandePaiements(): Promise<DemandePaiement[]> {
         const raw = await this.sheets.fetchRaw(SHEET_TAMPON.paiements);
         return parse<DemandePaiement>(raw, H_TAMPON.paiements);
     }
-
-
     getUsers(): AppUser[] | any[] {
         return this.cache.getUsers();
     }
+    async getMoratoiresLoading(): Promise<Moratoire[] | any[]> {
+        const raw  = await this.sheets.fetchRaw(SHEET.moratoires);
+        return parse<Moratoire>(raw, H.moratoires);
+    }
+    async getMoratoires(): Promise<Moratoire[] | any[]> {return this.cache.getMoratoires();}
 
 }

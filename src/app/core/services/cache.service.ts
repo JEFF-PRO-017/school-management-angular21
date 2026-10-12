@@ -43,8 +43,8 @@ export class CacheService {
   // private _users = signal<AppUser[]>([]);
   // private _pointages = signal<PointageResult[]>([]);
 
-  private _users = computed(()=>this._db().users)
-  private _pointages = computed(()=>this._db().pointages)
+  private _users = computed(() => this._db().users)
+  private _pointages = computed(() => this._db().pointages)
 
   // ── Section active — injectée depuis AuthService via setSection() ─
   private _section = signal<'primaire' | 'secondaire' | 'all'>('all');
@@ -163,6 +163,7 @@ export class CacheService {
     }));
   });
 
+
   // ── Niveau 3 : familles enrichies ─────────────────────────────
   // On crée un NOUVEL objet pour chaque famille, on ne mute jamais
   private _famillesEnrichies = computed<Famille[] | any[]>(() => {
@@ -247,11 +248,12 @@ export class CacheService {
   getBulletins(): BulletinSnap[] { return this._bulletins(); }
   getNotes(): Note[] { return this._notes(); }
   getPaiements(): PaiementEnrichi[] { return this._paiementEnrichies(); }
+  getMoratoires(): Moratoire[] { return this._moratoire(); }
 
   // ══════════════════════════════════════════════════════════════
   //  SETTERS
   // ══════════════════════════════════════════════════════════════
-  setFamilles(d: Famille[]) { this.write('familles', () => d ); }
+  setFamilles(d: Famille[]) { this.write('familles', () => d); }
   setClasses(d: Classe[] | any[]) { this.write('classes', () => d as Classe[]); }
   setFrais(d: FraisConfig[]) { this.write('frais', () => d); }
   setEnseignants(d: Enseignant[]) { this.write('enseignants', () => d); }
@@ -263,7 +265,7 @@ export class CacheService {
   setPaiements(d: Paiement[]) { this.write('paiements', () => d); }
   setAnneeSvc(a: AnneeScolaireFamille[]) { this.write('anneeSvc', () => a); }
   setMoratoires(m: Moratoire[]) { this.write('moratoires', () => m); }
-  setPointages(p: PointageResult[]) { this.write('pointages', () => p) } 
+  setPointages(p: PointageResult[]) { this.write('pointages', () => p) }
 
   // ══════════════════════════════════════════════════════════════
   //  UPSERT / REMOVE
@@ -274,6 +276,7 @@ export class CacheService {
 
   upsertEleve(e: Eleve) { this.write('eleves', l => upsert(l, e, 'id_eleve')); }
   removeEleve(id: string) { this.write('eleves', l => l.filter(x => x.id_eleve !== id)); }
+  removeMoratoire(id:string){ this.write('moratoires', l => l.filter(x => x.id_moratoire !== id)); }
 
   upsertClasse(c: Classe) { this.write('classes', l => upsert(l, c, 'id_classe')); }
   upsertPaiement(p: Paiement) { this.write('paiements', l => upsert(l, p, 'id_paiement')); }
@@ -287,7 +290,7 @@ export class CacheService {
   setAbsences(d: Absence[]) { this.write('absences', () => d); }
   addAbsence(a: Absence) { this.write('absences', l => [a, ...l]); }
   addAbsencesBatch(abs: Absence[]) { this.write('absences', l => [...abs, ...l]); }
-  addPointage(p: PointageResult) { this.write('pointages', l => [p, ...l]); } 
+  addPointage(p: PointageResult) { this.write('pointages', l => [p, ...l]); }
 
   // ── Templates ─────────────────────────────────────────────────
   getTemplates(): MsgTemplate[] { return this._templates(); }
@@ -301,13 +304,13 @@ export class CacheService {
 
   // ── Utilisateurs (mémoire seulement) ──────────────────────────
   getUsers(): AppUser[] { return this._usersEnrichies(); }
-  setUsers(d: AppUser[]) {  this.write('users', () => d);}
-  upsertUser(u: AppUser) { this.write('users', l => upsert(l, u, 'id'));  }
-  removeUser(id: string) {  this.write('users', l => l.filter(u => u.id !== id));}
+  setUsers(d: AppUser[]) { this.write('users', () => d); }
+  upsertUser(u: AppUser) { this.write('users', l => upsert(l, u, 'id')); }
+  removeUser(id: string) { this.write('users', l => l.filter(u => u.id !== id)); }
 
   // ── Familles tampon ───────────────────────────────────────────
   getFamillesTampon(): FamilleTampon[] { return this._famillesTampon(); }
-  setFamillesTampon(d: FamilleTampon[]) { this.write('famillesTampon', () => d ); }
+  setFamillesTampon(d: FamilleTampon[]) { this.write('famillesTampon', () => d); }
   upsertFamilleTampon(f: FamilleTampon) {
     this.write('famillesTampon', l => upsert(l, f, 'id_famille'));
   }

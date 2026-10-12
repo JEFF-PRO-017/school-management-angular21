@@ -25,17 +25,28 @@ import { FamilleApercuDialogComponent } from './famille-apercu-dialog.component'
   (supprimer)="supprimer($event)">
 
   <ng-template cellDef="regler" let-m>
-    <span class="badge" [class.text-bg-success]="m.regler" [class.text-bg-secondary]="!m.regler">
-      {{ m.regler ? 'Réglé' : 'Non réglé' }}
+    <span class="badge" [class.text-bg-success]="m.regler==='TRUE'" [class.text-bg-secondary]="m.regler!=='TRUE'">
+      {{ m.regler==="TRUE" ? 'Réglé' : 'Non réglé' }}
     </span>
   </ng-template>
 
   <ng-template cellDef="statut" let-m>
     <span class="badge text-bg-warning">{{ m.statut }}</span>
   </ng-template>
+  
+    <ng-template cellDef="commentaire" let-m>
+    <span class="badge text-bg-warning">{{ m.commentaire }}</span>
+  </ng-template>
 
   <ng-template cellDef="actions" let-m>
-    <button class="btn btn-sm btn-outline-primary" (click)="voirFamille(m)">👁 Voir famille</button>
+    
+    <div class="btn-group btn-group-sm" role="group" aria-label="Small button group">
+      @if (m.statut === 'NON-ACTIF') {
+      <button type="button" class="btn btn-outline-primary" (click)="supprimer([m])">Supprimer</button>
+      <button type="button" class="btn btn-outline-primary" (click)="valider([m])">Valider</button>
+      }
+      <button type="button" class="btn btn-outline-primary" (click)="voirFamille(m)">Famille</button>
+    </div>
   </ng-template>
 
 </app-entity-validation-table>
@@ -44,7 +55,6 @@ import { FamilleApercuDialogComponent } from './famille-apercu-dialog.component'
 export class MoratoiresValidationComponent implements OnInit {
   private get = inject(GetServices);
   private patch = inject(PatchServices);
-  private del = inject(DeleteServices);
   private dialog = inject(MatDialog);
 
   moratoires = signal<MoratoireEnrichi[]>([]);
@@ -55,9 +65,10 @@ export class MoratoiresValidationComponent implements OnInit {
 
   columns: TableColumn<MoratoireEnrichi>[] = [
     { id: 'numero_moratoire', header: 'N°', accessor: m => m.numero_moratoire ?? '—' },
-    { id: 'famille', header: 'Famille', accessor: m => m.famille?.nom_famille ?? m.id_famille, sortable: true, filterable: true },
+    { id: 'famille', header: 'Famille', accessor: m => m.famille?.nom_famille ?? m.id_famille, sortable: true, },
     { id: 'date_debut', header: 'Début', accessor: m => m.date_debut, sortable: true },
     { id: 'date_fin', header: 'Fin', accessor: m => m.date_fin, sortable: true },
+    { id: 'commentaire', header: 'Commentaire', accessor: m => m.commentaire, sortable: true },
     { id: 'regler', header: 'Réglé', align: 'center' },
     { id: 'statut', header: 'Statut', align: 'center' },
     { id: 'actions', header: 'Actions', exportable: false, align: 'center' },
@@ -67,38 +78,47 @@ export class MoratoiresValidationComponent implements OnInit {
 
   async charger(): Promise<void> {
     this.loading.set(true);
-    // try {
-    //   const all = await this.get.getMoratoires();
-    //   this.moratoires.set((all ?? []).filter(m => m.statut !== 'ACTIF'));
-    // } finally {
-    //   this.loading.set(false);
-    // }
+    try {
+      const all = await this.get.getMoratoires();
+      console.log('Moratoires chargés :', all);
+      this.moratoires.set((all ?? []).filter(m => m.regler !== "TRUE"));
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   async valider(rows: MoratoireEnrichi[]): Promise<void> {
     this.busy.set(true);
-    // try {
-    //   for (const m of rows) await this.patch.updateMoratoire({ ...m, statut: 'ACTIF' });
-    //   await this.charger();
-    // } finally {
-    //   this.busy.set(false);
-    // }
+    try {
+      for (const m of rows) {
+        await this.patch.updateMoratoire({ ...m, statut: 'ACTIF' });
+        this.moratoires.set(this.moratoires().filter(mo => mo.id_moratoire !== m.id_moratoire));
+      };
+      // await this.charger();
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   async supprimer(rows: MoratoireEnrichi[]): Promise<void> {
     this.busy.set(true);
-    // try {
-    //   for (const m of rows) await this.del.deleteMoratoire(m.id_moratoire);
-    //   await this.charger();
-    // } finally {
-    //   this.busy.set(false);
-    // }
+    try {
+      for (const m of rows) {
+        await this.patch.updateMoratoire({ ...m, statut: 'REFUSÉ', regler: "TRUE" });
+        this.moratoires.set(this.moratoires().filter(mo => mo.id_moratoire !== m.id_moratoire))
+      }
+      // await this.charger();
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   voirFamille(m: MoratoireEnrichi): void {
-    if (!m.famille) return;
+    if (!m.id_moratoire) return;
+    const famille = this.get.getFamilles().find(f => f.id_famille === m.id_famille);
+    if (!famille) return;
     this.dialog.open(FamilleApercuDialogComponent, {
-      data: { famille: m.famille }, width: '420px', maxWidth: '96vw',
+      data: { famille: famille }, width: '420px', maxWidth: '96vw',
     });
   }
 }

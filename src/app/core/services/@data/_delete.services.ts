@@ -53,4 +53,10 @@ export class DeleteServices {
         if (row === -1) return;
         this.queue.enqueue({ sheetName: SHEET.eleves, rowIndex: row - 1 }, 'deleteRow');
     }
+    async deleteMoratoire(id:string):Promise<void>{
+        this.cache.removeMoratoire(id);
+        const row = await this.sheets.findRowById(SHEET.moratoires, id);
+        if (row === -1) return;
+        this.queue.enqueue({ sheetName: SHEET.moratoires, rowIndex: row - 1 }, 'deleteRow');
+    }
 }

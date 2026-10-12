@@ -61,7 +61,7 @@ export interface TableColumn<T = any> {
 @Directive({ selector: 'ng-template[cellDef]', standalone: true })
 export class CellDefDirective {
   @Input('cellDef') columnId!: string;
-  constructor(public template: TemplateRef<any>) {}
+  constructor(public template: TemplateRef<any>) { }
 }
 
 type SortDir = 'asc' | 'desc';
@@ -173,9 +173,9 @@ type SortDir = 'asc' | 'desc';
 }
   `,
 })
-export class TableComponent<T = any> implements  AfterContentInit {
+export class TableComponent<T = any> implements AfterContentInit {
   @Input({ required: true }) columns: TableColumn<T>[] = [];
-    // au lieu de : @Input({ required: true }) data: T[] = [];
+  // au lieu de : @Input({ required: true }) data: T[] = [];
   private dataSignal = signal<T[]>([]);
 
   @Input({ required: true })
@@ -187,7 +187,7 @@ export class TableComponent<T = any> implements  AfterContentInit {
     return this.dataSignal();
   }
 
-  @Input() isGlobalFilter =false;
+  @Input() isGlobalFilter = false;
   @Input() searchPlaceholder = 'Rechercher…';
   @Input() isExport = false;
   @Input() exportFilename = 'export';
@@ -208,6 +208,18 @@ export class TableComponent<T = any> implements  AfterContentInit {
   @Input() divClass = 'table-responsive border rounded';
   @Input() isBordered = false;
 
+  @Input() set externalCellDefs(defs: readonly CellDefDirective[] | null | undefined) {
+    this._externalDefs = defs ?? [];
+    this.rebuildCellTemplates();
+  }
+  private _externalDefs: readonly CellDefDirective[] = [];
+
+  private rebuildCellTemplates(): void {
+    const map: Record<string, TemplateRef<any>> = {};
+    this._externalDefs.forEach(cd => map[cd.columnId] = cd.template);
+    this.cellDefsQuery?.forEach(cd => map[cd.columnId] = cd.template);
+    this.cellTemplates.set(map);
+  }
   @ContentChildren(CellDefDirective) private cellDefsQuery!: QueryList<CellDefDirective>;
   cellTemplates = signal<Record<string, TemplateRef<any> | undefined>>({});
 
@@ -215,11 +227,11 @@ export class TableComponent<T = any> implements  AfterContentInit {
     this.rebuildCellTemplates();
     this.cellDefsQuery.changes.subscribe(() => this.rebuildCellTemplates());
   }
-  private rebuildCellTemplates(): void {
-    const map: Record<string, TemplateRef<any>> = {};
-    this.cellDefsQuery.forEach(cd => map[cd.columnId] = cd.template);
-    this.cellTemplates.set(map);
-  }
+  // private rebuildCellTemplates(): void {
+  //   const map: Record<string, TemplateRef<any>> = {};
+  //   this.cellDefsQuery.forEach(cd => map[cd.columnId] = cd.template);
+  //   this.cellTemplates.set(map);
+  // }
 
   // ── état ─────────────────────────────────────────────────────
   globalFilterInput = '';

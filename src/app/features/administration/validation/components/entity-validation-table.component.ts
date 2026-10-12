@@ -1,5 +1,5 @@
-import { Component, Input, Output, EventEmitter, signal, ChangeDetectionStrategy } from '@angular/core';
-import { TableComponent, TableColumn } from '../../../../shared/components/table/table.component';
+import { Component, Input, Output, EventEmitter, signal, ChangeDetectionStrategy, ContentChildren, QueryList } from '@angular/core';
+import { TableComponent, TableColumn ,CellDefDirective} from '../../../../shared/components/table/table.component';
 
 @Component({
   selector: 'app-entity-validation-table',
@@ -29,16 +29,15 @@ import { TableComponent, TableColumn } from '../../../../shared/components/table
     </div>
   </div>
 
-  <app-table
+<app-table
     [columns]="columns"
     [data]="data"
     [selectable]="true"
     [rowIdFn]="idFn"
     [isGlobalFilter]="true"
     [emptyMessage]="'Aucun élément en attente'"
-    (selectionChange)="selection.set($event)">
-    <ng-content></ng-content>
-  </app-table>
+    [externalCellDefs]="cellDefs?.toArray()"
+    (selectionChange)="selection.set($event)" />
 </div>
   `
 })
@@ -53,6 +52,7 @@ export class EntityValidationTableComponent<T = any> {
   @Output() refresh = new EventEmitter<void>();
   @Output() valider = new EventEmitter<T[]>();
   @Output() supprimer = new EventEmitter<T[]>();
+  @ContentChildren(CellDefDirective) cellDefs?: QueryList<CellDefDirective>;
 
   selection = signal<T[]>([]);
 

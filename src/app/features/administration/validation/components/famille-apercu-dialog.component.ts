@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { Famille, FamilleEnrichi } from '../../../../core/models/family';
+import { RouterLink } from '@angular/router';
 
 export interface FamilleApercuData { famille: Famille | FamilleEnrichi; }
 
 @Component({
   selector: 'app-famille-apercu-dialog',
   standalone: true,
-  imports: [MatDialogModule],
+  imports: [MatDialogModule, RouterLink],
   template: `
 <div class="p-3" style="min-width:320px;max-width:420px">
   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -26,6 +27,7 @@ export interface FamilleApercuData { famille: Famille | FamilleEnrichi; }
       <!-- <li>⏳ {{ enrichie.moratoires?.length ?? 0 }} moratoire(s)</li> -->
     }
   </ul>
+  <button class="btn btn-outline-primary btn-sm" routerLink="espace-administration/familles/{{ data.famille.id_famille }}">voir famille</button>
 </div>
   `
 })

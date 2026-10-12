@@ -44,8 +44,8 @@ export interface Moratoire {
     date_fin: string;
     commentaire?: string;
     numero_moratoire?: string;
-    regler: boolean;
-    statut: 'ACTIF' | 'NON-ACTIF'
+    regler: boolean|'TRUE'|'FALSE';
+    statut: 'ACTIF' | 'NON-ACTIF'|'REFUSÉ';
 }
 
 export interface MoratoireEnrichi extends Moratoire {
