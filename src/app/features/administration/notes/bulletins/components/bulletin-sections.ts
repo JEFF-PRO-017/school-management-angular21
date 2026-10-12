@@ -34,7 +34,6 @@ export function sectionBandeVerticale(doc: jsPDF): void {
 // ── En-tête ───────────────────────────────────────────────────────────────
 // v3 : y+16 au lieu de y+17 (-1mm), fontSize école 16→14
 export async function sectionEntete(doc: jsPDF, y: number, annee: string, logoBase64?: any): Promise<number> {
-  debugger
   const logo = await loadImageAsDataUrl('/assets/logo-csb.png');
   const xR = IW + ML;
 

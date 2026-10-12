@@ -1,6 +1,6 @@
 // db.model.ts — forme de l'objet "db" gardé en mémoire (synchrone)
 
-import { Absence, AnneeScolaireFamille, Classe, DemandePaiement, Eleve, EleveTampon, Enseignant, Famille, FamilleTampon, FraisConfig, LogAlerte, MatiereConfig, Moratoire, MsgTemplate, Note, Paiement, PensionTampon } from "./src/app/core/models";
+import { Absence, AnneeScolaireFamille, AppUser, Classe, DemandePaiement, Eleve, EleveTampon, Enseignant, Famille, FamilleTampon, FraisConfig, LogAlerte, MatiereConfig, Moratoire, MsgTemplate, Note, Paiement, PensionTampon, PointageResult } from "./src/app/core/models";
 import { SoldeSnap, BulletinSnap } from "./src/app/core/models/last_index";
 
 
@@ -25,6 +25,8 @@ export interface Db {
   elevesTampon: EleveTampon[];
   pensionsTampon: PensionTampon[];
   demandesPaiement: DemandePaiement[];
+  users:AppUser[],
+  pointages:PointageResult[]
 }
 
 export type TableName = keyof Db;
@@ -34,7 +36,7 @@ export function emptyDb(): Db {
     familles: [], classes: [], frais: [], enseignants: [], matieres: [],
     notes: [], paiements: [], eleves: [], soldes: [], bulletins: [],
     absences: [], templates: [], logs: [], anneeSvc: [], moratoires: [],
-    famillesTampon: [], elevesTampon: [], pensionsTampon: [], demandesPaiement: [],
+    famillesTampon: [], elevesTampon: [], pensionsTampon: [], demandesPaiement: [],users:[],pointages:[]
   };
 }
 

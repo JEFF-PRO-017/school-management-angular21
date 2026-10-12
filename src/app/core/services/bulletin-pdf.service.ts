@@ -5,6 +5,7 @@ import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import { renderPV, renderFicheSaisie, renderBulletinSecondaire } from '../../features/administration/notes/bulletins/components/renderer-secondaire';
 import { BulletinData, PVData, FicheSaisieData } from '../../features/administration/notes/helper/bulletin.models';
+import { renderBulletinPrimaire } from '../../features/administration/notes/bulletins/components/renderer-primaire';
 
 // import { renderBulletinPrimaire }   from './renderer-primaire';    // à créer
 // import { renderBulletinAnglophone } from './renderer-anglophone';  // à créer
@@ -67,8 +68,8 @@ export class BulletinPdfService {
 
   private async _renderBulletin(doc: jsPDF, data: BulletinData): Promise<void> {
     switch (data.niveau) {
-      case 'primaire':       await renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinPrimaire
-      case 'secondaire-ang': await renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinAnglophone
+      case 'primaire':       await renderBulletinPrimaire(doc, data); break; // remplacer par renderBulletinPrimaire
+      case 'secondaire-ang': await renderBulletinPrimaire(doc, data); break; // remplacer par renderBulletinAnglophone
       case 'technique':      await renderBulletinSecondaire(doc, data); break; // remplacer par renderBulletinTechnique
       case 'secondaire-fr':
       default:               await renderBulletinSecondaire(doc, data); break;

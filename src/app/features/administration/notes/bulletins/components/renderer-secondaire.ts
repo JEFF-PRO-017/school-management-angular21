@@ -11,7 +11,6 @@ import { sectionBandeVerticale, sectionEntete, sectionTitreBulletin, sectionInfo
 export  async function renderBulletinSecondaire(doc: jsPDF, d: BulletinData): Promise<void> {
   // sectionBandeVerticale(doc);
   let y = await   sectionEntete(doc, 6, d.config.annee);
-  debugger;
   y = sectionTitreBulletin(doc, y, d.config.titre);
   y = sectionInfoEleve(doc, y, d);
 

@@ -40,8 +40,11 @@ export class CacheService {
   private _demandesPaiement = computed(() => this._db().demandesPaiement);
 
   // ── Non persistés (sensibles ou éphémères) ────────────────────
-  private _users = signal<AppUser[]>([]);
-  private _pointages = signal<PointageResult[]>([]);
+  // private _users = signal<AppUser[]>([]);
+  // private _pointages = signal<PointageResult[]>([]);
+
+  private _users = computed(()=>this._db().users)
+  private _pointages = computed(()=>this._db().pointages)
 
   // ── Section active — injectée depuis AuthService via setSection() ─
   private _section = signal<'primaire' | 'secondaire' | 'all'>('all');
@@ -98,8 +101,8 @@ export class CacheService {
     clearTimeout(this.flushTimer);
     this.dirty.clear();
     this._db.set(emptyDb());
-    this._users.set([]);
-    this._pointages.set([]);
+    // this._users.set([]);
+    // this._pointages.set([]);
   }
 
   /** Vide la mémoire ET IndexedDB (à utiliser à la déconnexion) */
@@ -260,7 +263,7 @@ export class CacheService {
   setPaiements(d: Paiement[]) { this.write('paiements', () => d); }
   setAnneeSvc(a: AnneeScolaireFamille[]) { this.write('anneeSvc', () => a); }
   setMoratoires(m: Moratoire[]) { this.write('moratoires', () => m); }
-  setPointages(p: PointageResult[]) { this._pointages.set(p); }   // non persisté
+  setPointages(p: PointageResult[]) { this.write('pointages', () => p) } 
 
   // ══════════════════════════════════════════════════════════════
   //  UPSERT / REMOVE
@@ -284,7 +287,7 @@ export class CacheService {
   setAbsences(d: Absence[]) { this.write('absences', () => d); }
   addAbsence(a: Absence) { this.write('absences', l => [a, ...l]); }
   addAbsencesBatch(abs: Absence[]) { this.write('absences', l => [...abs, ...l]); }
-  addPointage(p: PointageResult) { this._pointages.update(l => [p, ...l]); }   // non persisté
+  addPointage(p: PointageResult) { this.write('pointages', l => [p, ...l]); } 
 
   // ── Templates ─────────────────────────────────────────────────
   getTemplates(): MsgTemplate[] { return this._templates(); }
@@ -298,9 +301,9 @@ export class CacheService {
 
   // ── Utilisateurs (mémoire seulement) ──────────────────────────
   getUsers(): AppUser[] { return this._usersEnrichies(); }
-  setUsers(d: AppUser[]) { this._users.set(d); }
-  upsertUser(u: AppUser) { this._users.update(l => upsert(l, u, 'id')); }
-  removeUser(id: string) { this._users.update(l => l.filter(u => u.id !== id)); }
+  setUsers(d: AppUser[]) {  this.write('users', () => d);}
+  upsertUser(u: AppUser) { this.write('users', l => upsert(l, u, 'id'));  }
+  removeUser(id: string) {  this.write('users', l => l.filter(u => u.id !== id));}
 
   // ── Familles tampon ───────────────────────────────────────────
   getFamillesTampon(): FamilleTampon[] { return this._famillesTampon(); }
