@@ -18,6 +18,7 @@ import { ConfirmWordModalComponent } from '../../components/confirm-word-modal.c
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
 import { MoratoireService } from '../moratoire.service';
+import { DashboardFooterComponent } from '../../dashboard/components/dashboard-footer.component';
 
 @Component({
   selector: 'app-moratoires-list',
@@ -28,9 +29,10 @@ import { MoratoireService } from '../moratoire.service';
     ParentHeaderComponent,
     ParentNavbarComponent,
     TableComponent,
-    CellDefDirective,               // ← ajouté
+    CellDefDirective, // ← ajouté
     ConfirmWordModalComponent,
-  ],
+    DashboardFooterComponent
+],
   template: `
     <app-parent-header titre="Moratoires"></app-parent-header>
     <app-parent-navbar></app-parent-navbar>
@@ -97,6 +99,8 @@ import { MoratoireService } from '../moratoire.service';
       message="Cette action est irréversible. Le moratoire sera définitivement supprimé."
       (confirmed)="onConfirmerSuppression()">
     </app-confirm-word-modal>
+    
+    <app-dashboard-footer></app-dashboard-footer>
   `,
 })
 export class MoratoiresListComponent {

@@ -12,6 +12,7 @@ import { ParentService } from '../../../../core/services';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
 import { NotifService } from '../notif.service';
+import { DashboardFooterComponent } from '../../dashboard/components/dashboard-footer.component';
 
 
 
@@ -19,7 +20,7 @@ import { NotifService } from '../notif.service';
   selector: 'app-notifications-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ParentHeaderComponent, ParentNavbarComponent],
+  imports: [CommonModule, ParentHeaderComponent, ParentNavbarComponent, DashboardFooterComponent],
   template: `
     <app-parent-header titre="Notifications"></app-parent-header>
     <app-parent-navbar></app-parent-navbar>
@@ -82,6 +83,7 @@ import { NotifService } from '../notif.service';
         </div>
       }
     </div>
+    <app-dashboard-footer></app-dashboard-footer>
   `,
 })
 export class NotificationsListComponent {

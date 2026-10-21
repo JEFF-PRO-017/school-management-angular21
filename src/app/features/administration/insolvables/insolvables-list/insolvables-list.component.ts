@@ -164,11 +164,11 @@ export interface EleveData extends EleveEnrichi {
       </ng-template>
 
       <ng-template cellDef="rdv" let-e>
-        @if (prochainRdv(e.famille)) {
+        @if ((e.famille.date_prochain_rdv) ) {
           <span class="badge"
                 [class.text-bg-danger]="e.moratoire_depasse"
                 [class.text-bg-info]="!e.moratoire_depasse">
-            {{ prochainRdv(e.famille) }}
+            {{ e.famille.date_prochain_rdv }}
           </span>
         } @else {
           <span class="text-muted">—</span>
@@ -265,9 +265,8 @@ export class InsolvablesListComponent implements OnInit {
     const maxRestant = this.maxRestant();
     const dateRef = this.dateRefSignal();
     const classe = this.filtreClasse();
-
     if (seuil <= 0 && maxRestant <= 0 && !dateRef && !classe) return this.elevesData();
-    return this.elevesData().filter(e => {
+    const r= this.elevesData().filter(e => {
       if (seuil > 0 && e.montant_par_enfant >= seuil) return false;
       if (maxRestant > 0 && e.reste_par_enfant <= maxRestant) return false;
       if (dateRef) {
@@ -277,6 +276,9 @@ export class InsolvablesListComponent implements OnInit {
       if (classe && e.classe?.id_classe !== classe) return false;
       return true;
     });
+    console.log('filtered',r)
+    debugger
+    return r
   });
 
   // ── Sélection (cross-page, inchangée) ────────────────────────────

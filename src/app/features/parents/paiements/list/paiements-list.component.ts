@@ -11,6 +11,7 @@ import { TableComponent, TableColumn } from '../../../../shared/components/table
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
 import { PaiementService } from '../paiement.service';
+import { DashboardFooterComponent } from '../../dashboard/components/dashboard-footer.component';
 
 
 
@@ -18,7 +19,7 @@ import { PaiementService } from '../paiement.service';
   selector: 'app-paiements-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ParentHeaderComponent, ParentNavbarComponent, TableComponent],
+  imports: [CommonModule, ParentHeaderComponent, ParentNavbarComponent, TableComponent, DashboardFooterComponent],
   template: `
     <app-parent-header titre="Paiements"></app-parent-header>
     <app-parent-navbar></app-parent-navbar>
@@ -75,6 +76,7 @@ import { PaiementService } from '../paiement.service';
 
       </app-table>
     </div>
+    <app-dashboard-footer></app-dashboard-footer>
   `,
 })
 export class PaiementsListComponent {

@@ -16,12 +16,13 @@ import { ParentService } from '../../../../core/services';
 import { ParentHeaderComponent } from '../../components/parent-header.component';
 import { ParentNavbarComponent } from '../../components/parent-navbar.component';
 import { DeleteServices } from '../../../../core/services/@data/_delete.services';
+import { DashboardFooterComponent } from '../../dashboard/components/dashboard-footer.component';
 
 @Component({
   selector: 'app-enfants-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ParentHeaderComponent, ParentNavbarComponent],
+  imports: [CommonModule, ParentHeaderComponent, ParentNavbarComponent, DashboardFooterComponent],
   template: `
     <app-parent-header titre="Mes enfants"></app-parent-header>
     <app-parent-navbar></app-parent-navbar>
@@ -77,6 +78,7 @@ import { DeleteServices } from '../../../../core/services/@data/_delete.services
         </div>
       }
     </div>
+    <app-dashboard-footer></app-dashboard-footer>
   `,
 })
 export class EnfantsListComponent implements OnInit {

@@ -101,7 +101,7 @@ type Onglet = 'evaluations' | 'absences';
       </div>
     } @else {
       <div class="text-center text-muted py-5">Élève introuvable</div>
-    }
+    }zz
   `,
 })
 export class EnfantDetailComponent {

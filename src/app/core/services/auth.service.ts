@@ -91,7 +91,7 @@ async logout(): Promise<void> {
   this._user.set(null);
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(SECTION_KEY);
-  this.sessionService.clear();
+  // this.sessionService.clear();
 
   // 2. Données locales (mémoire + IndexedDB)
   await this.cache.invalidateAll();

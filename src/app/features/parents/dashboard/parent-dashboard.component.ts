@@ -46,12 +46,12 @@ import { NoteService, BilanTrimestre } from './note.service';
       (notificationsClick)="allerNotifications()" (refreshClick)="rafraichir()" />
 
     <!-- Bandeau insolvable -->
-    @if (insolvable()) {
+    <!-- @if (insolvable()) {
       <div class="alert alert-danger border-start border-4 border-danger rounded-3 mx-3 mt-2 mb-0">
         <strong class="d-block"><app-icon name="triangle-exclamation" class="me-1"></app-icon> Solde impayé</strong>
         Votre solde est en retard. Contactez l'administration.
       </div>
-    }
+    } -->
 
     <!-- Notifications urgentes -->
     @if (notifsUrgentes().length > 0) {
