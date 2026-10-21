@@ -9,6 +9,7 @@ import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReseauxComponent } from '../../../shared/components/Reseaux/reseaux.composant';
 import { AuthService } from '../../../core/services/auth.service';
+import { ParentService } from '../../../core/services';
 
 @Component({
   selector: 'app-parent-header',
@@ -123,7 +124,8 @@ export class ParentHeaderComponent implements OnInit {
     public router: Router,
     private route: ActivatedRoute,
     private location: Location,
-    private auth :AuthService
+    private auth: AuthService,
+    private parentService:ParentService
   ) { }
 
   ngOnInit(): void {
@@ -173,6 +175,6 @@ export class ParentHeaderComponent implements OnInit {
   moratoires(): void {
     this.router.navigate(['/espace-parent/moratoires']);
   }
-    logout(): void { this.auth.logout(); }
+  async logout(): Promise<void> { this.parentService.logout(); }
 
 }

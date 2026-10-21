@@ -14,12 +14,14 @@
 
 import { Injectable, inject, signal, computed } from '@angular/core';
 
-import { DashboardParent, PARENT_DATA_KEY, SHEET_TAMPON, DemandePaiement } from '../models/parent.models';
+import { PARENT_DATA_KEY, SHEET_TAMPON, DemandePaiement } from '../models/parent.models';
 import { GoogleSheetsService } from './@google-sheets/google-sheets.service';
 import { SHEET, H, parse, DataServiceBase, GetServices } from './@data';
 import { Session } from '../models/auth/session.model';
 import { SessionService } from './@session/session.service';
 import { Famille, FamilleEnrichi } from '../models';
+import { CacheService } from './cache.service';
+import { Router } from '@angular/router';
 
 @Injectable({ providedIn: 'root' })
 export class ParentService {
@@ -28,6 +30,8 @@ export class ParentService {
   private sessionService = inject(SessionService);
   private dataServiceBase = inject(DataServiceBase);
   private get = inject(GetServices);
+  private cache = inject(CacheService);
+  private router = inject(Router)
 
   // ── State ────────────────────────────────────────────────────
   readonly erreur = signal<string | null>(null);
@@ -108,8 +112,15 @@ export class ParentService {
     }
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
     localStorage.removeItem(PARENT_DATA_KEY);
+    this.sessionService.clear();
+
+    // 2. Données locales (mémoire + IndexedDB)
+    await this.cache.invalidateAll();
+
+    // 3. Navigation en dernier, sans historique du dashboard
+    await this.router.navigate(['/espace-parent/login'], { replaceUrl: true });
     // TODO: sessionService.clear() si applicable — laissé tel quel (commenté dans la version d'origine).
   }
 

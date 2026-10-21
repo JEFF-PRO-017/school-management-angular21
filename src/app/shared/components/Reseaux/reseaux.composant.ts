@@ -4,17 +4,17 @@ import { CommonModule } from '@angular/common';
 import { faBars, faClockRotateLeft, faTrash, faArrowsRotate, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../../core/services';
 import { DataServiceBase } from '../../../core/services/@data';
-import { OnOfflineService } from '../../../core/services/on-offline.services';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { SheetsQueueServiceService } from '../../../core/services/sheets-queue.service';
 
 
 
 @Component({
-    selector: 'app-reseaux',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [CommonModule, FaIconComponent],
-    template: `
+  selector: 'app-reseaux',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FaIconComponent],
+  template: `
     <div class="d-flex align-items-center gap-2 small text-muted">
 
       <!-- File d'attente : n'apparaît que s'il y a des opérations en attente -->
@@ -73,35 +73,68 @@ import { FaIconComponent } from '@fortawesome/angular-fontawesome';
   `,
 })
 export class ReseauxComponent {
-    private auth = inject(AuthService);
-    readonly data = inject(DataServiceBase);
-    private onOfflineService = inject(OnOfflineService);
+  private auth = inject(AuthService);
+  readonly data = inject(DataServiceBase);
+  private queue = inject(SheetsQueueServiceService);
+
+  // Icônes utilisées dans le template
+  icons = { faBars, faClockRotateLeft, faTrash, faArrowsRotate, faRightFromBracket };
+
+  user = this.auth.user;
+  online = signal(navigator.onLine);
+
+  queueSize(): number { return this.queue.size(); }
 
 
-    // Icônes utilisées dans le template
-    icons = { faBars, faClockRotateLeft, faTrash, faArrowsRotate, faRightFromBracket };
+  // ── Queue ─────────────────────────────────────────────────────────
 
-    user = this.auth.user;
-    online = signal(this.onOfflineService.online());
+  // ── Queue ─────────────────────────────────────────────────────────
+
+  viderQueue(): void {
+    if (!confirm(
+      `Vider ${this.queue.size()} opération(s) en attente ?\n` +
+      `Ces modifications ne seront PAS envoyées à Google Sheets.`
+    )) return;
+    this.queue.clearQueue();
+  }
 
 
-    // ── Queue ─────────────────────────────────────────────────────────
 
-    viderQueue(): void {
-        return this.onOfflineService.viderQueue();
+  // ── Données ───────────────────────────────────────────────────────
+
+  /** Recharge depuis Sheets sans vider le cache d'abord */
+
+  /** Recharge depuis Sheets sans vider le cache d'abord */
+  async recharger(): Promise<void> {
+    if (this.data.reloading()) return;
+    this.data.reloading.set(true);
+    try {
+      await this.data.initAppData();
+    } finally {
+      this.data.reloading.set(false);
     }
-    queueSize(): number { return this.onOfflineService.queueSize(); }
+  }
 
-    // ── Données ───────────────────────────────────────────────────────
 
-    /** Recharge depuis Sheets sans vider le cache d'abord */
-    async recharger(): Promise<void> {
-        return this.onOfflineService.recharger();
+  /** Vide tout le cache local puis recharge depuis Sheets */
+  async invaliderEtRecharger(): Promise<void> {
+    if (!confirm(
+      'Vider toutes les données locales et recharger depuis Google Sheets ?\n' +
+      'La page se rechargera automatiquement.'
+    )) return;
+    if (this.data.reloading()) return;
+    this.data.reloading.set(true);
+    try {
+      this.data.invalidateCache();
+      await this.data.initAppData();
+    } finally {
+      this.data.reloading.set(false);
     }
+  }
 
-    /** Vide tout le cache local puis recharge depuis Sheets */
-    async invaliderEtRecharger(): Promise<void> {
-        return this.onOfflineService.invaliderEtRecharger();
-    }
+  constructor() {
+    window.addEventListener('online', () => this.online.set(true));
+    window.addEventListener('offline', () => this.online.set(false));
+  }
 
 }

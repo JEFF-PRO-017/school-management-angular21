@@ -86,19 +86,19 @@ export class AuthService {
     }
   }
 
-async logout(): Promise<void> {
-  // 1. Session : tout ce que isValid() lit doit disparaître ici
-  this._user.set(null);
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(SECTION_KEY);
-  // this.sessionService.clear();
+  async logout(): Promise<void> {
+    // 1. Session : tout ce que isValid() lit doit disparaître ici
+    this._user.set(null);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SECTION_KEY);
+    this.sessionService.clear();
 
-  // 2. Données locales (mémoire + IndexedDB)
-  await this.cache.invalidateAll();
+    // 2. Données locales (mémoire + IndexedDB)
+    await this.cache.invalidateAll();
 
-  // 3. Navigation en dernier, sans historique du dashboard
-  await this.router.navigate(['/admin/login'], { replaceUrl: true });
-}
+    // 3. Navigation en dernier, sans historique du dashboard
+    await this.router.navigate(['/admin/login'], { replaceUrl: true });
+  }
 
   // ── Permissions ───────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ async logout(): Promise<void> {
     if (!user) return [];
     return all.filter(m => m.id_enseignant === user.id);
   };
-  
+
 
   // ── Helpers privés ────────────────────────────────────────────────
 
