@@ -1,5 +1,5 @@
 // header.component.ts — barre supérieure : statut réseau, actions rapides, compte
-import { Component, Output, EventEmitter, inject,  computed } from '@angular/core';
+import { Component, Output, EventEmitter, inject, computed, Input} from '@angular/core';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import {
   faBars, faClockRotateLeft, faTrash, faArrowsRotate, faRightFromBracket,
@@ -21,6 +21,9 @@ export class HeaderComponent {
   private auth = inject(AuthService);
   readonly data = inject(DataServiceBase);
   titleApp = titleApp;
+
+  /** Etat de la sidebar desktop (fourni par le layout) */
+  @Input() sidebarOpen = true;
 
   // Icônes utilisées dans le template
   icons = { faBars, faClockRotateLeft, faTrash, faArrowsRotate, faRightFromBracket };

@@ -103,7 +103,7 @@ export class FamilleService {
     dernierRdvFamille(f: FamilleEnrichi | any): string | null {
         if (!f) return null;
         const datesMoratoiresEnAttente: string[] = (this.anneeSvcEncours(f)?.moratoires ?? [])
-            .filter((m: any) => !m.regler && m.date_fin)
+            .filter((m: any) => m.regler==="TRUE")
             .map((m: any) => m.date_fin as string);
 
         return datesMoratoiresEnAttente.length
@@ -217,6 +217,7 @@ export class FamilleService {
         if (nbEnfantsFamille === 0) return [];
 
         const fs = this.initService(famille);
+        console.log(fs.dernierRdvFamille)
         const moratoireDepasse = this.estMoratoireDepasse(fs.dernierRdvFamille, aujourdhui);
         const insolvable = this.estInsolvable(fs.montantAttentu, fs.montantVerse);
 
@@ -231,7 +232,7 @@ export class FamilleService {
 
         const contexte: ContexteEleve = {
             nbEnfantsFamille, fs, moratoireDepasse, insolvable,
-            reductionsParEleve, versementsParEleve, montantDuParEleve
+            reductionsParEleve, versementsParEleve, montantDuParEleve,
         };
 
         return elevesActifs.map((eleve, index) => this.construireEleveData(eleve, index, contexte));
@@ -264,6 +265,7 @@ export class FamilleService {
             restant_famille: ctx.fs.montantRestant,
             moratoire_depasse: ctx.moratoireDepasse,
             insolvable: ctx.insolvable,
+            ctx: ctx, // pour debug uniquement
         };
     }
 

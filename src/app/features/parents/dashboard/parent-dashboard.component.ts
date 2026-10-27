@@ -151,6 +151,7 @@ export class ParentDashboardComponent implements OnInit, OnDestroy {
 
   prochainRdvAffiche = computed(() => {
     const date = this.financier().dernierRdvFamille;
+    console.log('date',date)
     if (!date) return null;
     try {
       return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });

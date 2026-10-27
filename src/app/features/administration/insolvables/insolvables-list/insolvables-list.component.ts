@@ -24,6 +24,7 @@ export interface EleveData extends EleveEnrichi {
   restant_famille: number;
   moratoire_depasse: boolean;
   insolvable: boolean;
+  ctx:any;
 }
 
 @Component({
@@ -164,11 +165,11 @@ export interface EleveData extends EleveEnrichi {
       </ng-template>
 
       <ng-template cellDef="rdv" let-e>
-        @if ((e.famille.date_prochain_rdv) ) {
+        @if ((e.ctx.fs.dernierRdvFamille) ) {
           <span class="badge"
                 [class.text-bg-danger]="e.moratoire_depasse"
                 [class.text-bg-info]="!e.moratoire_depasse">
-            {{ e.famille.date_prochain_rdv }}
+            {{ e.ctx.fs.dernierRdvFamille }}
           </span>
         } @else {
           <span class="text-muted">—</span>
@@ -270,14 +271,14 @@ export class InsolvablesListComponent implements OnInit {
       if (seuil > 0 && e.montant_par_enfant >= seuil) return false;
       if (maxRestant > 0 && e.reste_par_enfant <= maxRestant) return false;
       if (dateRef) {
-        const rdv = _dernierRdvFamille(e.famille);
+        const rdv = e.ctx.fs.dernierRdvFamille;
+        console.log('rdv',rdv,'dateRef',dateRef , rdv > dateRef)
         if (rdv && rdv > dateRef) return false;
       }
       if (classe && e.classe?.id_classe !== classe) return false;
       return true;
     });
-    console.log('filtered',r)
-    debugger
+  
     return r
   });
 

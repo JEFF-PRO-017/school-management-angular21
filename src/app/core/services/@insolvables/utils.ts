@@ -3,7 +3,7 @@ import { FamilleEnrichi } from "../../models";
  export function _dernierRdvFamille(f: FamilleEnrichi|any): string | null {
     if (!f) return null;
     const rdvs = (f.moratoires ?? [])
-      .filter((m: any) => !m.regler && m.date_fin)
+      .filter((m: any) =>  m.regler==="TRUE")
       .map((m: any) => m.date_fin as string);
     return rdvs.length ? rdvs.sort().at(-1)! : null;
   }

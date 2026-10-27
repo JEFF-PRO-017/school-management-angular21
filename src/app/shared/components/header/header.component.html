@@ -1,11 +1,16 @@
-<!-- header.component.html — barre supérieure, Bootstrap + Font Awesome -->
 <header class="d-flex align-items-center gap-2 px-3 bg-white border-bottom" style="height:56px">
 
-  <!-- Logo + burger : visibles uniquement sur mobile -->
-  <div class="d-flex d-md-none align-items-center gap-2">
-    <button class="btn btn-sm btn-light border-0 p-2" (click)="toggleMenu.emit()" aria-label="Ouvrir le menu">
-      <fa-icon [icon]="icons.faBars"></fa-icon>
-    </button>
+  <!-- Burger : visible sur tous les écrans -->
+  <button class="btn btn-sm btn-light border-0 p-2"
+          (click)="toggleMenu.emit()"
+          aria-label="Ouvrir/fermer le menu">
+    <fa-icon [icon]="icons.faBars"></fa-icon>
+  </button>
+
+  <!-- Logo + titre : toujours sur mobile, sur grand écran seulement si la sidebar est fermée -->
+  <div class="align-items-center gap-2"
+       [class.d-flex]="true"
+       [class.d-md-none]="sidebarOpen">
     <img src="assets/icons/icon-72x72.png" width="22" height="22" alt="Logo" class="rounded-1">
     <span class="fw-semibold small text-primary">{{ titleApp }}</span>
   </div>
