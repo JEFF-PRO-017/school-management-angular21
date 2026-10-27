@@ -103,9 +103,9 @@ export class FamilleService {
     dernierRdvFamille(f: FamilleEnrichi | any): string | null {
         if (!f) return null;
         const datesMoratoiresEnAttente: string[] = (this.anneeSvcEncours(f)?.moratoires ?? [])
-            .filter((m: any) => m.regler==="TRUE")
+            .filter((m: any) => m.regler==="FALSE")
             .map((m: any) => m.date_fin as string);
-
+            // debugger
         return datesMoratoiresEnAttente.length
             ? datesMoratoiresEnAttente.sort().at(-1)!
             : null;
